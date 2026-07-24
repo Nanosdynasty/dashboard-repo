@@ -14,7 +14,7 @@
       <div class="logo">GEM</div>
       <div>
         <h1>Global Energy Transition Dashboard</h1>
-        <p class="subtitle">Energy · Vessels · Ports · Live AIS · Sea routes</p>
+        <p class="subtitle">Energy · Vessels · Ports · Sea routes</p>
       </div>
     </div>
     <div class="header-actions">
@@ -91,19 +91,14 @@
           </div>
 
           <div class="tools-box">
-            <h3>Live AIS</h3>
-            <p class="hint">Shows all vessels by default (dense map). Use IMO/MMSI below to track specific ships only.</p>
-            <input type="password" id="ais-key" placeholder="AISStream API key" />
-            <button id="btn-ais" class="btn btn-teal full">Connect live AIS</button>
-            <p class="hint" id="ais-status">Opens with Vessels if key saved · all ships by default</p>
-          </div>
-
-          <div class="tools-box">
-            <h3>Track by IMO / MMSI</h3>
-            <textarea id="imo-list" rows="4" placeholder="Paste IMO or MMSI, one per line or comma-separated"></textarea>
-            <button id="btn-track-imo" class="btn btn-orange full">Track these vessels only</button>
-            <button id="btn-clear-imo" class="btn btn-ghost full">Clear filter (show all)</button>
-            <p class="hint" id="imo-status">Leave empty to show all vessels on the map</p>
+            <h3>Track vessel by IMO / MMSI</h3>
+            <p class="hint">No continuous live map. Paste ship IDs to fetch current position (uses AIS for ~25s).</p>
+            <p class="hint"><strong>Best:</strong> 9-digit <strong>MMSI</strong>. 7-digit <strong>IMO</strong> is matched if the ship broadcasts static data during the sample.</p>
+            <textarea id="imo-list" rows="4" placeholder="Example:&#10;636018288&#10;9234662&#10;or comma-separated"></textarea>
+            <button id="btn-track-imo" class="btn btn-orange full">Find these vessels</button>
+            <button id="btn-clear-imo" class="btn btn-ghost full">Clear vessels from map</button>
+            <p class="hint" id="imo-status">Paste IDs then click Find</p>
+            <div id="vessel-results" class="vessel-results"></div>
           </div>
         </div>
       </div>
