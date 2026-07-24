@@ -1,4 +1,4 @@
-/* GEM Dashboard v3.5 — AIS proxy with detailed status */
+/* GEM Dashboard v3.6 — Server AIS key built-in */
 const state={tracker:"coal_plants",offset:0,limit:100,total:0,map:null,markers:null,vesselLayer:null,routeLayer:null,seaLabels:null,ports:[],portByName:{},routeClicks:[],aisSocket:null,imoFilter:new Set(),shipMeta:{},vesselMarkers:new Map(),vesselTrails:new Map()};
 const ENERGY=["coal_plants","coal_terminals","solar","wind","hydro","nuclear"];
 const STATUS_COLORS={operating:"#65BD8B",construction:"#FE4F2D",announced:"#4A57A8","pre-permit":"#4A57A8",permitted:"#4A57A8",proposed:"#4A57A8",shelved:"#7F142A",cancelled:"#7F142A",mothballed:"#8a9aa3",retired:"#8a9aa3"};
@@ -6,7 +6,8 @@ const ALL_STATUSES=["operating","construction","announced","pre-permit","permitt
 const SEA_LABELS=[{name:"Mediterranean Sea",lat:35,lon:18},{name:"Red Sea",lat:20,lon:38},{name:"Persian Gulf",lat:26.5,lon:52},{name:"Arabian Sea",lat:15,lon:65},{name:"Bay of Bengal",lat:15,lon:88},{name:"South China Sea",lat:12,lon:115},{name:"East China Sea",lat:28,lon:125},{name:"Yellow Sea",lat:35,lon:124},{name:"Sea of Japan",lat:40,lon:135},{name:"North Sea",lat:56,lon:3},{name:"Baltic Sea",lat:58,lon:20},{name:"Black Sea",lat:43,lon:34},{name:"Caribbean Sea",lat:15,lon:-75},{name:"Gulf of Mexico",lat:25,lon:-90},{name:"North Atlantic",lat:35,lon:-40},{name:"South Atlantic",lat:-25,lon:-15},{name:"Indian Ocean",lat:-20,lon:80},{name:"North Pacific",lat:40,lon:170},{name:"South Pacific",lat:-25,lon:-140},{name:"Southern Ocean",lat:-60,lon:0},{name:"Arctic Ocean",lat:75,lon:0},{name:"Suez Canal",lat:30.5,lon:32.4},{name:"Panama Canal",lat:9.1,lon:-79.7},{name:"Strait of Hormuz",lat:26.5,lon:56.5},{name:"Strait of Malacca",lat:2.5,lon:101.5},{name:"Bab el-Mandeb",lat:12.6,lon:43.3},{name:"Cape of Good Hope",lat:-34.3,lon:18.4},{name:"Cape Horn",lat:-55.9,lon:-67.3},{name:"English Channel",lat:50.2,lon:-1},{name:"Gulf of Aden",lat:12.5,lon:48},{name:"Singapore Strait",lat:1.2,lon:103.8},{name:"Taiwan Strait",lat:24,lon:119},{name:"Bosporus",lat:41.1,lon:29.1},{name:"Gibraltar",lat:36,lon:-5.5}];
 
 document.addEventListener("DOMContentLoaded",()=>{initMap();initStatusDD();initNavGroups();loadTrackers();loadPorts();bindUI();switchView("map");loadData();
-  const saved=localStorage.getItem("ais_key");if(saved){document.getElementById("ais-key").value=saved;}
+  // Key is on server — optional browser field only for override
+  const saved=localStorage.getItem("ais_key");if(saved){const el=document.getElementById("ais-key");if(el)el.value=saved;}
 });
 
 function initMap(){
@@ -27,8 +28,7 @@ function initNavGroups(){
       if(g.id==="group-vessels"&&!wasOpen){
         if(ENERGY.includes(state.tracker)){state.tracker="world_ports";state.offset=0;
           document.querySelectorAll(".tracker-item").forEach(x=>x.classList.toggle("active",x.dataset.id==="world_ports"));loadData();}
-        const key=document.getElementById("ais-key").value.trim()||localStorage.getItem("ais_key")||"";
-        if(key&&(!state.aisSocket||state.aisSocket.readyState>1))connectAIS();
+        if(!state.aisSocket||state.aisSocket.readyState>1)connectAIS();
       }
     };
   });
@@ -84,7 +84,7 @@ function makeItem(t){
     document.querySelectorAll(".nav-group").forEach(g=>g.classList.remove("open"));
     document.getElementById(t.id==="world_ports"?"group-vessels":"group-energy").classList.add("open");
     loadCountries();loadData();
-    if(t.id==="world_ports"){const key=document.getElementById("ais-key").value.trim()||localStorage.getItem("ais_key")||"";if(key&&(!state.aisSocket||state.aisSocket.readyState>1))connectAIS();}
+    if(t.id==="world_ports"&&(!state.aisSocket||state.aisSocket.readyState>1))connectAIS();
   };
   return div;
 }
@@ -206,21 +206,22 @@ function aisWsUrl(){
 }
 function setAisStatus(t){const el=document.getElementById("ais-status");if(el)el.textContent=t;}
 function connectAIS(){
-  const key=document.getElementById("ais-key").value.trim()||localStorage.getItem("ais_key")||"";
-  if(!key){setAisStatus("Enter AISStream API key first (aisstream.io/apikeys)");return;}
-  localStorage.setItem("ais_key",key);
+  // Server has the key; browser key is optional override only
+  const override=(document.getElementById("ais-key")&&document.getElementById("ais-key").value.trim())||"";
+  if(override)localStorage.setItem("ais_key",override);
   if(state.aisSocket)try{state.aisSocket.close();}catch(_){}
   state.vesselLayer.clearLayers();
   state.vesselMarkers.clear();state.vesselTrails.clear();
-  setAisStatus("Connecting via server proxy…");
+  setAisStatus("Connecting (server key)…");
   const ids=parseImoList();
   const ws=new WebSocket(aisWsUrl());state.aisSocket=ws;
   ws.onopen=()=>{
-    const sub={APIKey:key};
+    const sub={};
+    if(override)sub.APIKey=override;
     const mmsis=ids.filter(x=>x.length===9);
     if(mmsis.length)sub.FiltersShipMMSI=mmsis;
     ws.send(JSON.stringify(sub));
-    setAisStatus("Proxy open — sending key to AISStream…");
+    setAisStatus("Proxy open — using server AIS key…");
   };
   ws.onmessage=ev=>{try{
     const msg=JSON.parse(ev.data);
@@ -276,7 +277,7 @@ function connectAIS(){
     }
     setAisStatus(`Live — ${state.vesselMarkers.size} vessels`+(state.imoFilter.size?" (filtered)":" (all)"));
   }catch(e){console.warn("AIS parse",e);}};
-  ws.onerror=()=>setAisStatus("AIS proxy error — redeploy / check key");
+  ws.onerror=()=>setAisStatus("AIS proxy error — redeploy");
   ws.onclose=()=>setAisStatus("AIS disconnected");
 }
 function bindUI(){
