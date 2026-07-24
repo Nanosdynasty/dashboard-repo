@@ -40,7 +40,7 @@ def register_all():
         con.execute(f"CREATE OR REPLACE TABLE user_{safe} AS SELECT * FROM read_csv_auto('{upath}')")
 
 register_all()
-app = FastAPI(title="GEM Dashboard", version="2.0.0")
+app = FastAPI(title="GEM Dashboard", version="3.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
@@ -54,12 +54,42 @@ class ChatRequest(BaseModel):
     local_llm_url: Optional[str] = None
     local_model: Optional[str] = "local-model"
 
+def _infer_passage(coords):
+    if not coords:
+        return None
+    tags = []
+    for lon, lat in coords:
+        if 29 < lat < 32 and 32 < lon < 33:
+            tags.append("Suez Canal")
+        elif 8.5 < lat < 9.5 and -80 < lon < -79:
+            tags.append("Panama Canal")
+        elif 25.5 < lat < 27 and 56 < lon < 57.5:
+            tags.append("Strait of Hormuz")
+        elif 1 < lat < 4 and 100 < lon < 104:
+            tags.append("Malacca Strait")
+        elif 12 < lat < 14 and 42 < lon < 44:
+            tags.append("Bab el-Mandeb")
+        elif lat < -33 and 15 < lon < 22:
+            tags.append("Cape of Good Hope")
+        elif lat < -54 and -70 < lon < -65:
+            tags.append("Cape Horn")
+        elif 35.5 < lat < 36.5 and -6 < lon < -5:
+            tags.append("Strait of Gibraltar")
+    seen, out = set(), []
+    for t in tags:
+        if t not in seen:
+            seen.add(t)
+            out.append(t)
+    return ", ".join(out) if out else None
+
 class RouteRequest(BaseModel):
     from_lon: float
     from_lat: float
     to_lon: float
     to_lat: float
     speed_knots: float = 12.0
+    from_name: Optional[str] = None
+    to_name: Optional[str] = None
 
 @app.get("/api/trackers")
 async def list_trackers():
@@ -184,20 +214,40 @@ async def countries_by_capacity(tracker_id: str):
     except Exception as e:
         raise HTTPException(400, str(e))
 
+@app.get("/api/ports")
+async def list_ports(q: Optional[str] = None, limit: int = Query(5000, le=10000)):
+    try:
+        sql = 'SELECT "Plant name" as name, "Country/Area" as country, TRY_CAST(Latitude AS DOUBLE) as lat, TRY_CAST(Longitude AS DOUBLE) as lon FROM world_ports WHERE Latitude IS NOT NULL AND Longitude IS NOT NULL'
+        params = []
+        if q:
+            sql += ' AND ("Plant name" ILIKE ? OR "Country/Area" ILIKE ?)'
+            params.extend([f"%{q}%", f"%{q}%"])
+        sql += f" ORDER BY name LIMIT {limit}"
+        df = con.execute(sql, params).fetchdf()
+        return json.loads(df.to_json(orient="records"))
+    except Exception as e:
+        raise HTTPException(400, str(e))
+
 @app.post("/api/route")
 async def sea_route(req: RouteRequest):
     try:
         import searoute as sr
-        feature = sr.searoute([req.from_lon, req.from_lat], [req.to_lon, req.to_lat],
-                              units="km", speed_knot=req.speed_knots)
+        feature = sr.searoute(
+            [req.from_lon, req.from_lat],
+            [req.to_lon, req.to_lat],
+            units="nm",
+            speed_knot=req.speed_knots,
+            append_orig_dest=True,
+        )
         props = feature.get("properties", {})
         coords = feature.get("geometry", {}).get("coordinates", [])
-        distance_km = float(props.get("length", 0))
-        # 1 nautical mile = 1.852 km
-        distance_nm = distance_km / 1.852
-        # also statute miles for convenience
-        distance_mi = distance_km / 1.609344
+        distance_nm = float(props.get("length", 0))
+        if props.get("units") == "km":
+            distance_nm = distance_nm / 1.852
+        distance_km = distance_nm * 1.852
+        distance_mi = distance_nm * 1.15078
         duration_hours = float(props.get("duration_hours", 0))
+        via = _infer_passage(coords)
         return {
             "distance_nm": round(distance_nm, 1),
             "distance_miles": round(distance_mi, 1),
@@ -206,6 +256,9 @@ async def sea_route(req: RouteRequest):
             "speed_knots": req.speed_knots,
             "coordinates": coords,
             "units": "nm",
+            "via": via,
+            "from_name": req.from_name,
+            "to_name": req.to_name,
         }
     except Exception as e:
         raise HTTPException(400, f"Route error: {e}")
