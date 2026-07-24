@@ -49,7 +49,7 @@ def register_all():
         con.execute(f"CREATE OR REPLACE TABLE user_{safe} AS SELECT * FROM read_csv_auto('{upath}')")
 
 register_all()
-app = FastAPI(title="GEM Dashboard", version="3.3.0")
+app = FastAPI(title="GEM Dashboard", version="3.3.1")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
@@ -312,41 +312,20 @@ async def sea_route(req: RouteRequest):
 
 @app.get("/api/ais/config")
 async def ais_config():
-    """Tell frontend whether server has a built-in AIS key (never returns the key)."""
     return {"server_key_configured": bool(AISSTREAM_API_KEY), "auto_connect": bool(AISSTREAM_API_KEY)}
 
 @app.websocket("/ws/ais")
 async def ais_proxy(ws: WebSocket):
-    """Proxy AISStream (browser cannot connect directly — CORS blocked)."""
+    """Proxy AISStream. Must send subscription within 3 seconds of upstream open."""
     await ws.accept()
     upstream = None
     try:
-        # Optional client message (MMSI filter / override key). Server key is default.
+        # Always use server key first — never wait for client before connecting upstream
         api_key = AISSTREAM_API_KEY
-        mmsis: List[str] = []
-        try:
-            init = await asyncio.wait_for(ws.receive_text(), timeout=5.0)
-            cfg = json.loads(init) if init else {}
-            client_key = (cfg.get("APIKey") or cfg.get("apiKey") or cfg.get("Apikey") or "").strip()
-            if client_key:
-                api_key = client_key
-            mmsis = cfg.get("FiltersShipMMSI") or []
-        except asyncio.TimeoutError:
-            pass
-        except Exception:
-            pass
-
         if not api_key:
-            await ws.send_text(json.dumps({"error": "No AISStream API key configured on server"}))
+            await ws.send_text(json.dumps({"error": "No AISStream API key on server"}))
             await ws.close()
             return
-
-        sub = {
-            "APIKey": api_key,
-            "BoundingBoxes": [[[-90, -180], [90, 180]]],
-        }
-        if mmsis:
-            sub["FiltersShipMMSI"] = [str(m) for m in mmsis][:50]
 
         await ws.send_text(json.dumps({"status": "connecting_upstream"}))
 
@@ -357,24 +336,36 @@ async def ais_proxy(ws: WebSocket):
             await ws.close()
             return
 
+        # Connect + subscribe ASAP (AISStream closes if no sub within 3s)
         try:
             upstream = await asyncio.wait_for(
                 wslib.connect(
                     "wss://stream.aisstream.io/v0/stream",
-                    open_timeout=20,
-                    ping_interval=20,
-                    ping_timeout=20,
+                    open_timeout=15,
+                    ping_interval=None,  # let AISStream manage; avoid double-ping issues
                     max_size=2**22,
+                    close_timeout=5,
                 ),
-                timeout=25,
+                timeout=20,
             )
         except Exception as e:
-            await ws.send_text(json.dumps({"error": f"Cannot reach AISStream: {e}"}))
+            await ws.send_text(json.dumps({
+                "error": f"Cannot reach AISStream: {e}. Check Render outbound network."
+            }))
             await ws.close()
             return
 
+        # Official format: APIKey + BoundingBoxes (required). Subscribe immediately.
+        sub = {
+            "APIKey": api_key,
+            "BoundingBoxes": [[[-90.0, -180.0], [90.0, 180.0]]],
+            "FilterMessageTypes": ["PositionReport"],
+        }
         await upstream.send(json.dumps(sub))
-        await ws.send_text(json.dumps({"status": "connected", "note": "Using server AIS key · worldwide stream"}))
+        await ws.send_text(json.dumps({
+            "status": "connected",
+            "note": "Subscribed worldwide PositionReport with server key",
+        }))
 
         msg_count = 0
 
@@ -392,31 +383,64 @@ async def ais_proxy(ws: WebSocket):
                             pass
                     await ws.send_text(message)
             except Exception as e:
+                err = str(e)
+                hint = ""
+                if "close frame" in err.lower() or "1006" in err or "connection closed" in err.lower():
+                    if msg_count == 0:
+                        hint = (
+                            " — usually INVALID or REVOKED API key. "
+                            "Create a new key at https://aisstream.io/apikeys and set "
+                            "AISSTREAM_API_KEY on Render (or update app.py)."
+                        )
                 try:
-                    await ws.send_text(json.dumps({"error": f"Upstream closed: {e}", "messages_received": msg_count}))
+                    await ws.send_text(json.dumps({
+                        "error": f"Upstream closed: {err}{hint}",
+                        "messages_received": msg_count,
+                    }))
                 except Exception:
                     pass
+
+        async def client_watch():
+            """Accept optional MMSI filter / key override AFTER stream is live."""
+            nonlocal api_key
+            try:
+                while True:
+                    raw = await ws.receive_text()
+                    try:
+                        cfg = json.loads(raw)
+                    except Exception:
+                        continue
+                    client_key = (cfg.get("APIKey") or cfg.get("apiKey") or "").strip()
+                    mmsis = cfg.get("FiltersShipMMSI") or []
+                    new_sub = {
+                        "APIKey": client_key if client_key else AISSTREAM_API_KEY,
+                        "BoundingBoxes": [[[-90.0, -180.0], [90.0, 180.0]]],
+                        "FilterMessageTypes": ["PositionReport"],
+                    }
+                    if mmsis:
+                        new_sub["FiltersShipMMSI"] = [str(m) for m in mmsis][:50]
+                    if upstream and upstream.open:
+                        await upstream.send(json.dumps(new_sub))
+                        await ws.send_text(json.dumps({"status": "resubscribed", "mmsis": len(mmsis)}))
+            except Exception:
+                pass
 
         async def heartbeat():
             try:
                 while True:
-                    await asyncio.sleep(15)
-                    await ws.send_text(json.dumps({"status": "heartbeat", "messages_received": msg_count}))
-            except Exception:
-                pass
-
-        async def client_watch():
-            try:
-                while True:
-                    await ws.receive_text()
+                    await asyncio.sleep(12)
+                    await ws.send_text(json.dumps({
+                        "status": "heartbeat",
+                        "messages_received": msg_count,
+                    }))
             except Exception:
                 pass
 
         done, pending = await asyncio.wait(
             [
                 asyncio.create_task(upstream_to_client()),
-                asyncio.create_task(heartbeat()),
                 asyncio.create_task(client_watch()),
+                asyncio.create_task(heartbeat()),
             ],
             return_when=asyncio.FIRST_COMPLETED,
         )
