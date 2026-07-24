@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: gem-energy-dashboard
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: XAI_API_KEY
+        sync: false   # set manually in Render dashboard for real Grok
+      - key: PYTHON_VERSION
+        value: "3.12"
+    disk:
+      name: uploads
+      mountPath: /app/uploads
+      sizeGB: 1

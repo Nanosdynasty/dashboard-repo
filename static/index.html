@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Global Energy Transition Dashboard · GEM Style</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="brand">
+      <div class="logo">GEM</div>
+      <div>
+        <h1>Global Energy Transition Dashboard</h1>
+        <p class="subtitle">Multi-tracker · Coal · Solar · Wind · Hydro · Nuclear · Upload & Analyse</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button id="btn-upload" class="btn btn-orange">⬆ Upload Data</button>
+      <button id="btn-export" class="btn btn-teal">⬇ Export Excel</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <h3>Trackers</h3>
+      <div id="tracker-list" class="tracker-list"></div>
+
+      <h3 style="margin-top:1.5rem">Filters</h3>
+      <div class="filter-group">
+        <label>Status</label>
+        <select id="filter-status" multiple size="5">
+          <option value="operating">Operating</option>
+          <option value="construction">Construction</option>
+          <option value="announced">Announced</option>
+          <option value="pre-permit">Pre-permit</option>
+          <option value="permitted">Permitted</option>
+          <option value="shelved">Shelved</option>
+          <option value="cancelled">Cancelled</option>
+          <option value="mothballed">Mothballed</option>
+          <option value="retired">Retired</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Country</label>
+        <input type="text" id="filter-country" placeholder="e.g. China, India..." />
+      </div>
+      <div class="filter-group">
+        <label>Capacity (MW)</label>
+        <div class="range-row">
+          <input type="number" id="filter-min-mw" placeholder="Min" />
+          <input type="number" id="filter-max-mw" placeholder="Max" />
+        </div>
+      </div>
+      <div class="filter-group">
+        <label>Search</label>
+        <input type="text" id="filter-search" placeholder="Plant / Owner..." />
+      </div>
+      <button id="btn-apply" class="btn btn-teal full">Apply Filters</button>
+      <button id="btn-reset" class="btn btn-ghost full">Reset</button>
+    </aside>
+
+    <!-- Main -->
+    <main class="main">
+      <!-- KPI strip -->
+      <section id="kpi-strip" class="kpi-strip"></section>
+
+      <!-- Map + Table toggle -->
+      <div class="view-tabs">
+        <button class="tab active" data-view="map">🗺 Map</button>
+        <button class="tab" data-view="table">📋 Table</button>
+        <button class="tab" data-view="chat">💬 Ask Grok / Local LLM</button>
+      </div>
+
+      <div id="view-map" class="view active">
+        <div id="map" class="map"></div>
+        <div class="map-legend">
+          <span><i class="dot operating"></i> Operating</span>
+          <span><i class="dot construction"></i> Construction</span>
+          <span><i class="dot announced"></i> Announced / Pre-permit</span>
+          <span><i class="dot cancelled"></i> Cancelled / Shelved</span>
+          <span><i class="dot retired"></i> Retired / Mothballed</span>
+        </div>
+      </div>
+
+      <div id="view-table" class="view">
+        <div class="table-wrap">
+          <table id="data-table">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="table-footer">
+          <span id="table-info">—</span>
+          <div>
+            <button id="btn-prev" class="btn btn-ghost">← Prev</button>
+            <button id="btn-next" class="btn btn-ghost">Next →</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="view-chat" class="view">
+        <div class="chat-panel">
+          <div class="chat-settings">
+            <label>
+              <input type="checkbox" id="use-local-llm" /> Use local LLM (LM Studio / Ollama)
+            </label>
+            <input type="text" id="local-llm-url" value="http://localhost:1234/v1" placeholder="Local LLM base URL" style="display:none" />
+          </div>
+          <div id="chat-messages" class="chat-messages"></div>
+          <div class="chat-input-row">
+            <input type="text" id="chat-input" placeholder="Ask in plain English: e.g. How much operating coal capacity is in India?" />
+            <button id="btn-send" class="btn btn-teal">Send</button>
+          </div>
+          <div id="sql-result" class="sql-result" style="display:none"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Upload modal -->
+  <div id="upload-modal" class="modal hidden">
+    <div class="modal-content">
+      <h2>Upload additional data</h2>
+      <p>Excel, CSV or JSON. The data will be registered as a new tracker and can be queried with natural language.</p>
+      <input type="file" id="file-input" accept=".xlsx,.xls,.csv,.json" />
+      <div id="upload-status"></div>
+      <div class="modal-actions">
+        <button id="btn-cancel-upload" class="btn btn-ghost">Cancel</button>
+        <button id="btn-do-upload" class="btn btn-orange">Upload</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
