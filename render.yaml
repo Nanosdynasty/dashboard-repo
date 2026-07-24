@@ -9,7 +9,4 @@ services:
         sync: false   # set manually in Render dashboard for real Grok
       - key: PYTHON_VERSION
         value: "3.12"
-    disk:
-      name: uploads
-      mountPath: /app/uploads
-      sizeGB: 1
+
