@@ -1,13 +1,9 @@
-/* GEM Dashboard v3.1 — Energy + Vessels, DWT filter, live movement */
-const state={tracker:"coal_plants",offset:0,limit:100,total:0,map:null,markers:null,vesselLayer:null,routeLayer:null,seaLabels:null,ports:[],portByName:{},routeClicks:[],aisSocket:null,imoFilter:new Set(),shipMeta:{},vesselMarkers:new Map(),vesselTrails:new Map(),minDwt:60000};
+/* GEM Dashboard v3.2 — All vessels by default; IMO filter only when searching */
+const state={tracker:"coal_plants",offset:0,limit:100,total:0,map:null,markers:null,vesselLayer:null,routeLayer:null,seaLabels:null,ports:[],portByName:{},routeClicks:[],aisSocket:null,imoFilter:new Set(),shipMeta:{},vesselMarkers:new Map(),vesselTrails:new Map()};
 const ENERGY=["coal_plants","coal_terminals","solar","wind","hydro","nuclear"];
 const STATUS_COLORS={operating:"#65BD8B",construction:"#FE4F2D",announced:"#4A57A8","pre-permit":"#4A57A8",permitted:"#4A57A8",proposed:"#4A57A8",shelved:"#7F142A",cancelled:"#7F142A",mothballed:"#8a9aa3",retired:"#8a9aa3"};
 const ALL_STATUSES=["operating","construction","announced","pre-permit","permitted","proposed","shelved","cancelled","mothballed","retired"];
 const SEA_LABELS=[{name:"Mediterranean Sea",lat:35,lon:18},{name:"Red Sea",lat:20,lon:38},{name:"Persian Gulf",lat:26.5,lon:52},{name:"Arabian Sea",lat:15,lon:65},{name:"Bay of Bengal",lat:15,lon:88},{name:"South China Sea",lat:12,lon:115},{name:"East China Sea",lat:28,lon:125},{name:"Yellow Sea",lat:35,lon:124},{name:"Sea of Japan",lat:40,lon:135},{name:"North Sea",lat:56,lon:3},{name:"Baltic Sea",lat:58,lon:20},{name:"Black Sea",lat:43,lon:34},{name:"Caribbean Sea",lat:15,lon:-75},{name:"Gulf of Mexico",lat:25,lon:-90},{name:"North Atlantic",lat:35,lon:-40},{name:"South Atlantic",lat:-25,lon:-15},{name:"Indian Ocean",lat:-20,lon:80},{name:"North Pacific",lat:40,lon:170},{name:"South Pacific",lat:-25,lon:-140},{name:"Southern Ocean",lat:-60,lon:0},{name:"Arctic Ocean",lat:75,lon:0},{name:"Suez Canal",lat:30.5,lon:32.4},{name:"Panama Canal",lat:9.1,lon:-79.7},{name:"Strait of Hormuz",lat:26.5,lon:56.5},{name:"Strait of Malacca",lat:2.5,lon:101.5},{name:"Bab el-Mandeb",lat:12.6,lon:43.3},{name:"Cape of Good Hope",lat:-34.3,lon:18.4},{name:"Cape Horn",lat:-55.9,lon:-67.3},{name:"English Channel",lat:50.2,lon:-1},{name:"Gulf of Aden",lat:12.5,lon:48},{name:"Singapore Strait",lat:1.2,lon:103.8},{name:"Taiwan Strait",lat:24,lon:119},{name:"Bosporus",lat:41.1,lon:29.1},{name:"Gibraltar",lat:36,lon:-5.5}];
-
-/** AIS has no DWT; bulk LOA proxy: ~200m ≈ 60k DWT, ~225m ≈ 80k, ~290m Capesize */
-function dwtToMinLength(dwt){if(!dwt||dwt<=0)return 0;return Math.max(120,Math.round(80+dwt/500));}
-function getMinDwt(){const el=document.getElementById("ais-min-dwt");const v=el?+el.value:60000;return isNaN(v)?60000:v;}
 
 document.addEventListener("DOMContentLoaded",()=>{initMap();initStatusDD();initNavGroups();loadTrackers();loadPorts();bindUI();switchView("map");loadData();
   const saved=localStorage.getItem("ais_key");if(saved){document.getElementById("ais-key").value=saved;}
@@ -31,7 +27,6 @@ function initNavGroups(){
       if(g.id==="group-vessels"&&!wasOpen){
         if(ENERGY.includes(state.tracker)){state.tracker="world_ports";state.offset=0;
           document.querySelectorAll(".tracker-item").forEach(x=>x.classList.toggle("active",x.dataset.id==="world_ports"));loadData();}
-        // Auto-start live vessel movement if API key saved
         const key=document.getElementById("ais-key").value.trim()||localStorage.getItem("ais_key")||"";
         if(key&&(!state.aisSocket||state.aisSocket.readyState>1))connectAIS();
       }
@@ -188,31 +183,24 @@ function parseImoList(){
   const ids=raw.split(/[\s,;]+/).map(s=>s.trim()).filter(s=>/^\d{7,9}$/.test(s));
   state.imoFilter=new Set(ids);return ids;
 }
-function passesDwtFilter(sm){
-  const minDwt=getMinDwt();
-  state.minDwt=minDwt;
-  if(minDwt<=0)return true;
-  if(!sm||!sm.length)return false; // wait for static data for size filter
-  const minLen=dwtToMinLength(minDwt);
-  const isCargo=(sm.type>=70&&sm.type<=79)||sm.type===0; // 0 unknown until typed
-  return sm.length>=minLen&&(sm.type===0||(sm.type>=70&&sm.type<=79));
-}
-function vesselIcon(cog){
+/** Small oriented dash like dense AIS maps (green/purple by speed) */
+function vesselIcon(cog,sog){
   const rot=(cog!=null&&cog<360)?cog:0;
-  return L.divIcon({className:"vessel-arrow",html:`<div style="transform:rotate(${rot}deg);width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:14px solid #FE4F2D;filter:drop-shadow(0 0 1px #fff);"></div>`,iconSize:[12,14],iconAnchor:[6,7]});
+  const moving=sog!=null&&sog>0.5;
+  const color=moving?"#6B4C9A":"#3D9B6A";
+  return L.divIcon({className:"vessel-dash",html:`<div style="transform:rotate(${rot}deg);width:10px;height:3px;background:${color};border-radius:1px;opacity:0.9;"></div>`,iconSize:[10,3],iconAnchor:[5,1.5]});
 }
 function updateVesselTrail(mmsi,lat,lon){
   let trail=state.vesselTrails.get(mmsi);
   if(!trail){trail=[];state.vesselTrails.set(mmsi,trail);}
   trail.push([lat,lon]);
-  if(trail.length>12)trail.shift();
+  if(trail.length>8)trail.shift();
   return trail;
 }
 function connectAIS(){
   const key=document.getElementById("ais-key").value.trim()||localStorage.getItem("ais_key")||"";
   if(!key){document.getElementById("ais-status").textContent="Enter AISStream API key first";return;}
   localStorage.setItem("ais_key",key);
-  state.minDwt=getMinDwt();
   if(state.aisSocket)try{state.aisSocket.close();}catch(_){}
   state.vesselLayer.clearLayers();
   state.vesselMarkers.clear();state.vesselTrails.clear();
@@ -220,8 +208,9 @@ function connectAIS(){
   document.getElementById("ais-status").textContent="Connecting…";
   const ids=parseImoList();
   const sub={APIKey:key,BoundingBoxes:[[[-90,-180],[90,180]]],FilterMessageTypes:["PositionReport","ShipStaticData"]};
+  // Only restrict stream by MMSI when user is tracking specific ships
   const mmsis=ids.filter(x=>x.length===9);if(mmsis.length)sub.FiltersShipMMSI=mmsis;
-  ws.onopen=()=>{ws.send(JSON.stringify(sub));document.getElementById("ais-status").textContent=mmsis.length?"Live movement — "+mmsis.length+" MMSI":"Live movement — dry bulk ≥ "+state.minDwt.toLocaleString()+" DWT";};
+  ws.onopen=()=>{ws.send(JSON.stringify(sub));document.getElementById("ais-status").textContent=ids.length?"Live — tracking "+ids.length+" ship(s)":"Live — all vessels";};
   ws.onmessage=ev=>{try{
     const msg=JSON.parse(ev.data),meta=msg.MetaData||{},mmsi=String(meta.MMSI||meta.mmsi||"");if(!mmsi)return;
     const pr=msg.Message?.PositionReport||msg.PositionReport||{};
@@ -238,40 +227,37 @@ function connectAIS(){
     const heading=pr.TrueHeading!=null?pr.TrueHeading:pr.trueHeading;
     const course=(heading!=null&&heading<360)?heading:(cog!=null&&cog<360)?cog:null;
 
+    // Filter ONLY when user searched for specific ships
     if(state.imoFilter.size){
       const sm=state.shipMeta[mmsi]||{};
       if(!(state.imoFilter.has(mmsi)||(sm.imo&&state.imoFilter.has(sm.imo))))return;
-    }else{
-      const sm=state.shipMeta[mmsi];
-      if(sm){if(!passesDwtFilter(sm))return;}
-      // without static data yet: still show moving cargo-sized candidates once we have length; skip pure unknowns to reduce clutter after warm-up
-      else if(state.vesselMarkers.size>80)return;
     }
+
     const sm=state.shipMeta[mmsi]||{};
     const name=sm.name||meta.ShipName||meta.shipName||("MMSI "+mmsi);
     const trail=updateVesselTrail(mmsi,lat,lon);
     const existing=state.vesselMarkers.get(mmsi);
     if(existing){
       existing.marker.setLatLng([lat,lon]);
-      if(course!=null)existing.marker.setIcon(vesselIcon(course));
+      existing.marker.setIcon(vesselIcon(course,sog));
       if(existing.trailLine){existing.trailLine.setLatLngs(trail);}
-      else if(trail.length>1){existing.trailLine=L.polyline(trail,{color:"#FE4F2D",weight:2,opacity:0.45}).addTo(state.vesselLayer);}
+      else if(trail.length>1){existing.trailLine=L.polyline(trail,{color:"#6B4C9A",weight:1.5,opacity:0.35}).addTo(state.vesselLayer);}
     }else{
-      const marker=L.marker([lat,lon],{icon:vesselIcon(course||0)});
-      const dwtEst=sm.length?Math.round((sm.length-80)*500):null;
-      marker.bindPopup(`<strong>${name}</strong><br/>MMSI ${mmsi}`+(sm.imo?"<br/>IMO "+sm.imo:"")+(sm.length?"<br/>LOA "+sm.length+" m": "")+(dwtEst?"<br/>~"+dwtEst.toLocaleString()+" DWT (est.)":"")+(sog!=null?"<br/>SOG "+Number(sog).toFixed(1)+" kn":"")+(course!=null?"<br/>COG "+Math.round(course)+"°":"")+"<br/>Live dry bulk");
+      const marker=L.marker([lat,lon],{icon:vesselIcon(course,sog),interactive:true});
+      marker.bindPopup(`<strong>${name}</strong><br/>MMSI ${mmsi}`+(sm.imo?"<br/>IMO "+sm.imo:"")+(sm.length?"<br/>LOA "+sm.length+" m":"")+(sog!=null?"<br/>SOG "+Number(sog).toFixed(1)+" kn":"")+(course!=null?"<br/>COG "+Math.round(course)+"°":""));
       state.vesselLayer.addLayer(marker);
       let trailLine=null;
-      if(trail.length>1){trailLine=L.polyline(trail,{color:"#FE4F2D",weight:2,opacity:0.45}).addTo(state.vesselLayer);}
+      if(trail.length>1){trailLine=L.polyline(trail,{color:"#6B4C9A",weight:1.5,opacity:0.35}).addTo(state.vesselLayer);}
       state.vesselMarkers.set(mmsi,{marker,trailLine});
-      if(state.vesselMarkers.size>500){
+      // Keep denser map — allow more vessels than before
+      if(state.vesselMarkers.size>2500){
         const first=state.vesselMarkers.keys().next().value;
         const old=state.vesselMarkers.get(first);
         state.vesselLayer.removeLayer(old.marker);if(old.trailLine)state.vesselLayer.removeLayer(old.trailLine);
         state.vesselMarkers.delete(first);state.vesselTrails.delete(first);
       }
     }
-    document.getElementById("ais-status").textContent=`Live movement — ${state.vesselMarkers.size} vessels ≥ ${state.minDwt.toLocaleString()} DWT`+(state.imoFilter.size?" (IMO filter)":"");
+    document.getElementById("ais-status").textContent=`Live — ${state.vesselMarkers.size} vessels`+(state.imoFilter.size?" (filtered)":" (all)");
   }catch(_){}};
   ws.onerror=()=>{document.getElementById("ais-status").textContent="AIS error — check API key";};
   ws.onclose=()=>{document.getElementById("ais-status").textContent="AIS disconnected";};
@@ -288,9 +274,9 @@ function bindUI(){
   document.getElementById("btn-export").onclick=()=>window.open(`/api/export/${state.tracker}?${getFilterParams()}`,"_blank");
   document.getElementById("btn-ais").onclick=connectAIS;
   document.getElementById("btn-route").onclick=calcRoute;
-  document.getElementById("btn-track-imo").onclick=()=>{const ids=parseImoList();document.getElementById("imo-status").textContent=ids.length?"Filtering to "+ids.length+" IMO/MMSI — reconnect AIS":"Paste numbers first";if(ids.length)connectAIS();};
-  const dwtEl=document.getElementById("ais-min-dwt");
-  if(dwtEl)dwtEl.addEventListener("change",()=>{state.minDwt=getMinDwt();if(state.aisSocket&&state.aisSocket.readyState===1)connectAIS();});
+  document.getElementById("btn-track-imo").onclick=()=>{const ids=parseImoList();document.getElementById("imo-status").textContent=ids.length?"Showing only "+ids.length+" ship(s)":"Paste IMO/MMSI first";if(ids.length)connectAIS();};
+  const clearBtn=document.getElementById("btn-clear-imo");
+  if(clearBtn)clearBtn.onclick=()=>{document.getElementById("imo-list").value="";state.imoFilter=new Set();document.getElementById("imo-status").textContent="Filter cleared — showing all vessels";connectAIS();};
   document.getElementById("use-local-llm").onchange=e=>{document.getElementById("local-llm-url").style.display=e.target.checked?"block":"none";};
   document.getElementById("btn-send").onclick=sendChat;
   document.getElementById("chat-input").onkeydown=e=>{if(e.key==="Enter")sendChat();};
