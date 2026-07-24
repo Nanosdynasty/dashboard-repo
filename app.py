@@ -192,12 +192,20 @@ async def sea_route(req: RouteRequest):
                               units="km", speed_knot=req.speed_knots)
         props = feature.get("properties", {})
         coords = feature.get("geometry", {}).get("coordinates", [])
+        distance_km = float(props.get("length", 0))
+        # 1 nautical mile = 1.852 km
+        distance_nm = distance_km / 1.852
+        # also statute miles for convenience
+        distance_mi = distance_km / 1.609344
+        duration_hours = float(props.get("duration_hours", 0))
         return {
-            "distance_km": round(float(props.get("length", 0)), 1),
-            "duration_hours": round(float(props.get("duration_hours", 0)), 2),
+            "distance_nm": round(distance_nm, 1),
+            "distance_miles": round(distance_mi, 1),
+            "distance_km": round(distance_km, 1),
+            "duration_hours": round(duration_hours, 2),
             "speed_knots": req.speed_knots,
             "coordinates": coords,
-            "units": "km",
+            "units": "nm",
         }
     except Exception as e:
         raise HTTPException(400, f"Route error: {e}")
