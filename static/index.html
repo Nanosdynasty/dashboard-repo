@@ -91,20 +91,19 @@
           </div>
 
           <div class="tools-box">
-            <h3>Live AIS — Dry bulk</h3>
-            <p class="hint">AIS has no DWT field; filter uses cargo type + length proxy (≈60k DWT ≈ 200 m LOA)</p>
-            <label class="hint">Min DWT</label>
-            <input type="number" id="ais-min-dwt" value="60000" min="0" step="5000" title="Minimum deadweight tonnes" />
+            <h3>Live AIS</h3>
+            <p class="hint">Shows all vessels by default (dense map). Use IMO/MMSI below to track specific ships only.</p>
             <input type="password" id="ais-key" placeholder="AISStream API key" />
-            <button id="btn-ais" class="btn btn-teal full">Connect live dry bulk</button>
-            <p class="hint" id="ais-status">Opens with Vessels if key saved · movement on by default</p>
+            <button id="btn-ais" class="btn btn-teal full">Connect live AIS</button>
+            <p class="hint" id="ais-status">Opens with Vessels if key saved · all ships by default</p>
           </div>
 
           <div class="tools-box">
             <h3>Track by IMO / MMSI</h3>
             <textarea id="imo-list" rows="4" placeholder="Paste IMO or MMSI, one per line or comma-separated"></textarea>
-            <button id="btn-track-imo" class="btn btn-orange full">Track these vessels</button>
-            <p class="hint" id="imo-status">Shows only listed ships when AIS is connected</p>
+            <button id="btn-track-imo" class="btn btn-orange full">Track these vessels only</button>
+            <button id="btn-clear-imo" class="btn btn-ghost full">Clear filter (show all)</button>
+            <p class="hint" id="imo-status">Leave empty to show all vessels on the map</p>
           </div>
         </div>
       </div>
