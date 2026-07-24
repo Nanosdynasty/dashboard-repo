@@ -1,6 +1,6 @@
 """Global Energy Transition Dashboard"""
 from __future__ import annotations
-import os, json, io, uuid, asyncio
+import os, json, io, uuid, asyncio, logging
 from pathlib import Path
 from typing import Optional, Dict, List, Any
 from datetime import datetime
@@ -12,6 +12,9 @@ from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import httpx
+
+log = logging.getLogger("ais")
+logging.basicConfig(level=logging.INFO)
 
 BASE_DIR = Path(__file__).parent
 DATA_DIR = BASE_DIR / "data"
@@ -40,7 +43,7 @@ def register_all():
         con.execute(f"CREATE OR REPLACE TABLE user_{safe} AS SELECT * FROM read_csv_auto('{upath}')")
 
 register_all()
-app = FastAPI(title="GEM Dashboard", version="3.2.0")
+app = FastAPI(title="GEM Dashboard", version="3.2.1")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
@@ -303,58 +306,111 @@ async def sea_route(req: RouteRequest):
 
 @app.websocket("/ws/ais")
 async def ais_proxy(ws: WebSocket):
-    """Proxy AISStream because browser CORS is blocked by aisstream.io."""
+    """Proxy AISStream (browser cannot connect directly — CORS blocked)."""
     await ws.accept()
     upstream = None
     try:
-        init = await asyncio.wait_for(ws.receive_text(), timeout=15.0)
+        init = await asyncio.wait_for(ws.receive_text(), timeout=20.0)
         cfg = json.loads(init)
-        api_key = (cfg.get("APIKey") or cfg.get("apiKey") or "").strip()
+        api_key = (cfg.get("APIKey") or cfg.get("apiKey") or cfg.get("Apikey") or "").strip()
         if not api_key:
-            await ws.send_text(json.dumps({"error": "APIKey required"}))
+            await ws.send_text(json.dumps({"error": "APIKey required — get one at https://aisstream.io/apikeys"}))
             await ws.close()
             return
+
         mmsis = cfg.get("FiltersShipMMSI") or []
+        # Official minimal subscription (docs example). No FilterMessageTypes = all types.
         sub = {
             "APIKey": api_key,
             "BoundingBoxes": [[[-90, -180], [90, 180]]],
-            "FilterMessageTypes": ["PositionReport", "ShipStaticData", "StandardClassBPositionReport", "ExtendedClassBPositionReport"],
         }
         if mmsis:
             sub["FiltersShipMMSI"] = [str(m) for m in mmsis][:50]
 
-        import websockets as wslib
-        upstream = await wslib.connect("wss://stream.aisstream.io/v0/stream", open_timeout=15)
-        await upstream.send(json.dumps(sub))
-        await ws.send_text(json.dumps({"status": "connected"}))
+        await ws.send_text(json.dumps({"status": "connecting_upstream"}))
 
-        async def client_to_upstream():
-            try:
-                while True:
-                    msg = await ws.receive_text()
-                    # allow client to update subscription
-                    try:
-                        data = json.loads(msg)
-                        if "APIKey" in data or "BoundingBoxes" in data:
-                            await upstream.send(msg)
-                    except Exception:
-                        pass
-            except Exception:
-                pass
+        try:
+            import websockets as wslib
+        except ImportError:
+            await ws.send_text(json.dumps({"error": "Server missing websockets package — redeploy"}))
+            await ws.close()
+            return
+
+        try:
+            upstream = await asyncio.wait_for(
+                wslib.connect(
+                    "wss://stream.aisstream.io/v0/stream",
+                    open_timeout=20,
+                    ping_interval=20,
+                    ping_timeout=20,
+                    max_size=2**22,
+                ),
+                timeout=25,
+            )
+        except Exception as e:
+            await ws.send_text(json.dumps({"error": f"Cannot reach AISStream: {e}"}))
+            await ws.close()
+            return
+
+        await upstream.send(json.dumps(sub))
+        await ws.send_text(json.dumps({"status": "connected", "note": "Subscribed worldwide Position stream"}))
+
+        msg_count = 0
 
         async def upstream_to_client():
+            nonlocal msg_count
             try:
                 async for message in upstream:
                     if isinstance(message, bytes):
                         message = message.decode("utf-8", errors="ignore")
+                    msg_count += 1
+                    if msg_count == 1:
+                        try:
+                            await ws.send_text(json.dumps({"status": "first_message", "count": 1}))
+                        except Exception:
+                            pass
                     await ws.send_text(message)
+            except Exception as e:
+                try:
+                    await ws.send_text(json.dumps({"error": f"Upstream closed: {e}", "messages_received": msg_count}))
+                except Exception:
+                    pass
+
+        async def heartbeat():
+            try:
+                while True:
+                    await asyncio.sleep(15)
+                    await ws.send_text(json.dumps({"status": "heartbeat", "messages_received": msg_count}))
             except Exception:
                 pass
 
-        await asyncio.gather(client_to_upstream(), upstream_to_client())
+        async def client_watch():
+            try:
+                while True:
+                    await ws.receive_text()
+            except Exception:
+                pass
+
+        done, pending = await asyncio.wait(
+            [
+                asyncio.create_task(upstream_to_client()),
+                asyncio.create_task(heartbeat()),
+                asyncio.create_task(client_watch()),
+            ],
+            return_when=asyncio.FIRST_COMPLETED,
+        )
+        for t in pending:
+            t.cancel()
+
     except WebSocketDisconnect:
         pass
+    except asyncio.TimeoutError:
+        try:
+            await ws.send_text(json.dumps({"error": "Timeout waiting for API key from browser"}))
+        except Exception:
+            pass
     except Exception as e:
+        log.exception("AIS proxy error")
         try:
             await ws.send_text(json.dumps({"error": str(e)}))
         except Exception:
