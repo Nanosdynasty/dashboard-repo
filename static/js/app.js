@@ -141,7 +141,10 @@ async function calcRoute(){
     const j=await res.json();if(!res.ok)throw new Error(j.detail||"Route failed");
     state.routeLayer.clearLayers();
     if(j.coordinates&&j.coordinates.length){const ll=j.coordinates.map(c=>[c[1],c[0]]);L.polyline(ll,{color:"#FE4F2D",weight:3}).addTo(state.routeLayer);state.map.fitBounds(ll);}
-    document.getElementById("route-result").textContent=`Distance: ${j.distance_km.toLocaleString()} km · ~${j.duration_hours.toFixed(1)} h`;
+    const nm=(j.distance_nm!=null?j.distance_nm:(j.distance_km/1.852));
+    const mi=(j.distance_miles!=null?j.distance_miles:(j.distance_km/1.609344));
+    const kn=j.speed_knots||12;
+    document.getElementById("route-result").textContent="Distance: "+nm.toLocaleString(undefined,{maximumFractionDigits:1})+" nm ("+mi.toLocaleString(undefined,{maximumFractionDigits:1})+" mi) · "+kn+" kn · ~"+j.duration_hours.toFixed(1)+" h";
   }catch(e){document.getElementById("route-result").textContent="Error: "+e.message;}
 }
 function connectAIS(){
