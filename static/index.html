@@ -92,10 +92,12 @@
 
           <div class="tools-box">
             <h3>Live AIS — Dry bulk</h3>
-            <p class="hint">Default: dry bulk cargo &gt; ~60,000 DWT (length ≥ 200 m)</p>
+            <p class="hint">AIS has no DWT field; filter uses cargo type + length proxy (≈60k DWT ≈ 200 m LOA)</p>
+            <label class="hint">Min DWT</label>
+            <input type="number" id="ais-min-dwt" value="60000" min="0" step="5000" title="Minimum deadweight tonnes" />
             <input type="password" id="ais-key" placeholder="AISStream API key" />
             <button id="btn-ais" class="btn btn-teal full">Connect live dry bulk</button>
-            <p class="hint" id="ais-status">Key from aisstream.io (free)</p>
+            <p class="hint" id="ais-status">Opens with Vessels if key saved · movement on by default</p>
           </div>
 
           <div class="tools-box">
