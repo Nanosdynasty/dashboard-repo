@@ -21,6 +21,12 @@ DATA_DIR = BASE_DIR / "data"
 UPLOAD_DIR = BASE_DIR / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
 
+# AISStream key: env AISSTREAM_API_KEY overrides; default embedded for this deploy
+AISSTREAM_API_KEY = (
+    os.getenv("AISSTREAM_API_KEY")
+    or "b692b9b39eeebee0716442f7afc26e7963d7b695"
+).strip()
+
 TRACKERS = {
     "coal_plants": {"label": "Coal Plants", "file": "coal_plants.csv.gz", "icon": "🔥"},
     "coal_terminals": {"label": "Coal Terminals", "file": "coal_terminals.csv", "icon": "🚢"},
@@ -43,7 +49,7 @@ def register_all():
         con.execute(f"CREATE OR REPLACE TABLE user_{safe} AS SELECT * FROM read_csv_auto('{upath}')")
 
 register_all()
-app = FastAPI(title="GEM Dashboard", version="3.2.1")
+app = FastAPI(title="GEM Dashboard", version="3.3.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
@@ -304,22 +310,37 @@ async def sea_route(req: RouteRequest):
     except Exception as e:
         raise HTTPException(400, f"Route error: {e}")
 
+@app.get("/api/ais/config")
+async def ais_config():
+    """Tell frontend whether server has a built-in AIS key (never returns the key)."""
+    return {"server_key_configured": bool(AISSTREAM_API_KEY), "auto_connect": bool(AISSTREAM_API_KEY)}
+
 @app.websocket("/ws/ais")
 async def ais_proxy(ws: WebSocket):
     """Proxy AISStream (browser cannot connect directly — CORS blocked)."""
     await ws.accept()
     upstream = None
     try:
-        init = await asyncio.wait_for(ws.receive_text(), timeout=20.0)
-        cfg = json.loads(init)
-        api_key = (cfg.get("APIKey") or cfg.get("apiKey") or cfg.get("Apikey") or "").strip()
+        # Optional client message (MMSI filter / override key). Server key is default.
+        api_key = AISSTREAM_API_KEY
+        mmsis: List[str] = []
+        try:
+            init = await asyncio.wait_for(ws.receive_text(), timeout=5.0)
+            cfg = json.loads(init) if init else {}
+            client_key = (cfg.get("APIKey") or cfg.get("apiKey") or cfg.get("Apikey") or "").strip()
+            if client_key:
+                api_key = client_key
+            mmsis = cfg.get("FiltersShipMMSI") or []
+        except asyncio.TimeoutError:
+            pass
+        except Exception:
+            pass
+
         if not api_key:
-            await ws.send_text(json.dumps({"error": "APIKey required — get one at https://aisstream.io/apikeys"}))
+            await ws.send_text(json.dumps({"error": "No AISStream API key configured on server"}))
             await ws.close()
             return
 
-        mmsis = cfg.get("FiltersShipMMSI") or []
-        # Official minimal subscription (docs example). No FilterMessageTypes = all types.
         sub = {
             "APIKey": api_key,
             "BoundingBoxes": [[[-90, -180], [90, 180]]],
@@ -353,7 +374,7 @@ async def ais_proxy(ws: WebSocket):
             return
 
         await upstream.send(json.dumps(sub))
-        await ws.send_text(json.dumps({"status": "connected", "note": "Subscribed worldwide Position stream"}))
+        await ws.send_text(json.dumps({"status": "connected", "note": "Using server AIS key · worldwide stream"}))
 
         msg_count = 0
 
@@ -404,11 +425,6 @@ async def ais_proxy(ws: WebSocket):
 
     except WebSocketDisconnect:
         pass
-    except asyncio.TimeoutError:
-        try:
-            await ws.send_text(json.dumps({"error": "Timeout waiting for API key from browser"}))
-        except Exception:
-            pass
     except Exception as e:
         log.exception("AIS proxy error")
         try:
@@ -515,7 +531,13 @@ async def chat(req: ChatRequest):
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok", "trackers": list(TRACKERS.keys()), "user_datasets": list(user_datasets.keys()), "time": datetime.utcnow().isoformat()}
+    return {
+        "status": "ok",
+        "trackers": list(TRACKERS.keys()),
+        "user_datasets": list(user_datasets.keys()),
+        "ais_key_configured": bool(AISSTREAM_API_KEY),
+        "time": datetime.utcnow().isoformat(),
+    }
 
 if __name__ == "__main__":
     import uvicorn
