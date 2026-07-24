@@ -68,8 +68,8 @@ register_all()
 # FastAPI app
 # ---------------------------------------------------------------------------
 app = FastAPI(
-    title="Global Energy Transition Dashboard",
-    description="GEM-style multi-tracker dashboard with upload, NL analysis & Excel export",
+    title="HRP Dashboard",
+    description="Multi-tracker dashboard with upload, NL analysis & Excel export",
     version="1.0.0",
 )
 
@@ -350,7 +350,7 @@ async def export_excel(
 # ---------------------------------------------------------------------------
 # Natural language / Chat (Grok + local LLM)
 # ---------------------------------------------------------------------------
-SYSTEM_PROMPT = """You are an expert energy data analyst for the Global Energy Transition Dashboard (GEM-style).
+SYSTEM_PROMPT = """You are an expert energy data analyst for the HRP Dashboard.
 You have access to these DuckDB tables: coal_plants, solar, wind, hydro, nuclear, and any user_* tables.
 Key columns typically include: "Plant name", "Unit name", "Country/Area", Status, "Capacity (MW)", Latitude, Longitude, Owner, Parent, Region, Start year, etc.
 

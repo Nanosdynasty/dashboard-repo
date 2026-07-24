@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: gem-energy-dashboard
+    name: hrp-dashboard
     runtime: docker
     plan: free
     healthCheckPath: /api/health
