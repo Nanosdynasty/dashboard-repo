@@ -1,12 +1,12 @@
 """Global Energy Transition Dashboard"""
 from __future__ import annotations
-import os, json, io, uuid
+import os, json, io, uuid, asyncio
 from pathlib import Path
 from typing import Optional, Dict, List, Any
 from datetime import datetime
 import pandas as pd
 import duckdb
-from fastapi import FastAPI, UploadFile, File, Query, HTTPException
+from fastapi import FastAPI, UploadFile, File, Query, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -40,7 +40,7 @@ def register_all():
         con.execute(f"CREATE OR REPLACE TABLE user_{safe} AS SELECT * FROM read_csv_auto('{upath}')")
 
 register_all()
-app = FastAPI(title="GEM Dashboard", version="3.1.0")
+app = FastAPI(title="GEM Dashboard", version="3.2.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
@@ -85,7 +85,6 @@ def _infer_passage(coords):
     return ", ".join(out) if out else None
 
 def _length_to_nm(length: float, units: str) -> float:
-    """Normalize searoute length to nautical miles (industry standard)."""
     u = (units or "").lower().strip()
     if u in ("naut", "nm", "nmi", "nautical", "nauticals"):
         return float(length)
@@ -95,25 +94,15 @@ def _length_to_nm(length: float, units: str) -> float:
         return float(length) / 1.150779
     if u in ("m", "meter", "meters"):
         return float(length) / 1852.0
-    # Assume km if unknown (searoute default)
     return float(length) / 1.852
 
 def _compute_route(from_lon, from_lat, to_lon, to_lat, speed_knots, restrictions: Optional[List[str]] = None):
-    """
-    Commercial-style routing similar to Netpas / sea-distances.org:
-    - Distance in nautical miles along maritime network
-    - Allow Suez/Panama by default (only avoid Arctic NW passage)
-    - Voyage days = distance_nm / speed_knots / 24
-    """
     import searoute as sr
-    # searoute restriction names: babalmandab, bosporus, gibraltar, suez, panama,
-    # ormuz, northwest, malacca, sunda, chili, south_africa
-    # Default: only avoid Northwest Passage (not used commercially for dry bulk)
     restrictions = restrictions if restrictions is not None else ["northwest"]
     feature = sr.searoute(
         [from_lon, from_lat],
         [to_lon, to_lat],
-        units="naut",  # correct unit code for nautical miles
+        units="naut",
         speed_knot=speed_knots,
         append_orig_dest=True,
         restrictions=restrictions,
@@ -125,7 +114,6 @@ def _compute_route(from_lon, from_lat, to_lon, to_lat, speed_knots, restrictions
     length = float(props.get("length", 0))
     units = str(props.get("units", "naut"))
     distance_nm = _length_to_nm(length, units)
-    # Always recompute duration the Netpas way: hours = NM / kn ; days = hours / 24
     duration_hours = distance_nm / speed_knots if speed_knots > 0 else 0.0
     duration_days = duration_hours / 24.0
     passages = props.get("passages") or []
@@ -151,7 +139,6 @@ class RouteRequest(BaseModel):
     speed_knots: float = 12.0
     from_name: Optional[str] = None
     to_name: Optional[str] = None
-    # Optional: avoid canals (e.g. ["suez"] for Cape routing)
     avoid: Optional[List[str]] = None
 
 @app.get("/api/trackers")
@@ -293,23 +280,12 @@ async def list_ports(q: Optional[str] = None, limit: int = Query(5000, le=10000)
 
 @app.post("/api/route")
 async def sea_route(req: RouteRequest):
-    """
-    Port-to-port distance in the style of Netpas / sea-distances.org:
-    - Shortest maritime network path in nautical miles
-    - Suez & Panama allowed by default
-    - Days at sea = distance_nm / speed_knots / 24
-    """
     try:
         speed = req.speed_knots if req.speed_knots and req.speed_knots > 0 else 12.0
-        # User can avoid specific passages; always keep northwest off commercial routes
         avoid = list(req.avoid or [])
         if "northwest" not in avoid:
             avoid.append("northwest")
-
-        # Prefer commercial canal routes: try default, then compare with Cape if Suez is forced avoid
         primary = _compute_route(req.from_lon, req.from_lat, req.to_lon, req.to_lat, speed, avoid)
-
-        # Also compute an alternate via Cape (avoid Suez) when primary goes Suez — for transparency
         alt = None
         via_suez = primary.get("via") and "Suez" in str(primary.get("via"))
         if via_suez and "suez" not in avoid:
@@ -317,19 +293,82 @@ async def sea_route(req: RouteRequest):
                 alt = _compute_route(req.from_lon, req.from_lat, req.to_lon, req.to_lat, speed, avoid + ["suez"])
             except Exception:
                 alt = None
-
-        result = {
-            **primary,
-            "from_name": req.from_name,
-            "to_name": req.to_name,
-            "method": "maritime network (searoute) · NM / kn / 24",
-        }
+        result = {**primary, "from_name": req.from_name, "to_name": req.to_name, "method": "maritime network (searoute) · NM / kn / 24"}
         if alt and alt["distance_nm"] > primary["distance_nm"]:
             result["alternate_cape_nm"] = alt["distance_nm"]
             result["alternate_cape_days"] = alt["duration_days"]
         return result
     except Exception as e:
         raise HTTPException(400, f"Route error: {e}")
+
+@app.websocket("/ws/ais")
+async def ais_proxy(ws: WebSocket):
+    """Proxy AISStream because browser CORS is blocked by aisstream.io."""
+    await ws.accept()
+    upstream = None
+    try:
+        init = await asyncio.wait_for(ws.receive_text(), timeout=15.0)
+        cfg = json.loads(init)
+        api_key = (cfg.get("APIKey") or cfg.get("apiKey") or "").strip()
+        if not api_key:
+            await ws.send_text(json.dumps({"error": "APIKey required"}))
+            await ws.close()
+            return
+        mmsis = cfg.get("FiltersShipMMSI") or []
+        sub = {
+            "APIKey": api_key,
+            "BoundingBoxes": [[[-90, -180], [90, 180]]],
+            "FilterMessageTypes": ["PositionReport", "ShipStaticData", "StandardClassBPositionReport", "ExtendedClassBPositionReport"],
+        }
+        if mmsis:
+            sub["FiltersShipMMSI"] = [str(m) for m in mmsis][:50]
+
+        import websockets as wslib
+        upstream = await wslib.connect("wss://stream.aisstream.io/v0/stream", open_timeout=15)
+        await upstream.send(json.dumps(sub))
+        await ws.send_text(json.dumps({"status": "connected"}))
+
+        async def client_to_upstream():
+            try:
+                while True:
+                    msg = await ws.receive_text()
+                    # allow client to update subscription
+                    try:
+                        data = json.loads(msg)
+                        if "APIKey" in data or "BoundingBoxes" in data:
+                            await upstream.send(msg)
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+
+        async def upstream_to_client():
+            try:
+                async for message in upstream:
+                    if isinstance(message, bytes):
+                        message = message.decode("utf-8", errors="ignore")
+                    await ws.send_text(message)
+            except Exception:
+                pass
+
+        await asyncio.gather(client_to_upstream(), upstream_to_client())
+    except WebSocketDisconnect:
+        pass
+    except Exception as e:
+        try:
+            await ws.send_text(json.dumps({"error": str(e)}))
+        except Exception:
+            pass
+    finally:
+        if upstream is not None:
+            try:
+                await upstream.close()
+            except Exception:
+                pass
+        try:
+            await ws.close()
+        except Exception:
+            pass
 
 @app.post("/api/upload")
 async def upload_file(file: UploadFile = File(...)):
@@ -398,7 +437,7 @@ async def chat(req: ChatRequest):
                 if r.status_code == 200:
                     reply = r.json()["choices"][0]["message"]["content"]
         except Exception as e:
-            reply = f"(G API error: {e})"
+            reply = f"(Grok API error: {e})"
     if not reply:
         tracker = "coal_plants"
         msg = message.lower()
