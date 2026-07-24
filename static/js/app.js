@@ -1,4 +1,4 @@
-/* GEM Dashboard v3.4 — AIS via backend proxy (CORS fix) */
+/* GEM Dashboard v3.5 — AIS proxy with detailed status */
 const state={tracker:"coal_plants",offset:0,limit:100,total:0,map:null,markers:null,vesselLayer:null,routeLayer:null,seaLabels:null,ports:[],portByName:{},routeClicks:[],aisSocket:null,imoFilter:new Set(),shipMeta:{},vesselMarkers:new Map(),vesselTrails:new Map()};
 const ENERGY=["coal_plants","coal_terminals","solar","wind","hydro","nuclear"];
 const STATUS_COLORS={operating:"#65BD8B",construction:"#FE4F2D",announced:"#4A57A8","pre-permit":"#4A57A8",permitted:"#4A57A8",proposed:"#4A57A8",shelved:"#7F142A",cancelled:"#7F142A",mothballed:"#8a9aa3",retired:"#8a9aa3"};
@@ -204,14 +204,15 @@ function aisWsUrl(){
   const proto=location.protocol==="https:"?"wss:":"ws:";
   return proto+"//"+location.host+"/ws/ais";
 }
+function setAisStatus(t){const el=document.getElementById("ais-status");if(el)el.textContent=t;}
 function connectAIS(){
   const key=document.getElementById("ais-key").value.trim()||localStorage.getItem("ais_key")||"";
-  if(!key){document.getElementById("ais-status").textContent="Enter AISStream API key first";return;}
+  if(!key){setAisStatus("Enter AISStream API key first (aisstream.io/apikeys)");return;}
   localStorage.setItem("ais_key",key);
   if(state.aisSocket)try{state.aisSocket.close();}catch(_){}
   state.vesselLayer.clearLayers();
   state.vesselMarkers.clear();state.vesselTrails.clear();
-  document.getElementById("ais-status").textContent="Connecting via server proxy…";
+  setAisStatus("Connecting via server proxy…");
   const ids=parseImoList();
   const ws=new WebSocket(aisWsUrl());state.aisSocket=ws;
   ws.onopen=()=>{
@@ -219,12 +220,18 @@ function connectAIS(){
     const mmsis=ids.filter(x=>x.length===9);
     if(mmsis.length)sub.FiltersShipMMSI=mmsis;
     ws.send(JSON.stringify(sub));
-    document.getElementById("ais-status").textContent=ids.length?"Connecting — tracking "+ids.length+" ship(s)…":"Connecting — all vessels…";
+    setAisStatus("Proxy open — sending key to AISStream…");
   };
   ws.onmessage=ev=>{try{
     const msg=JSON.parse(ev.data);
-    if(msg.error){document.getElementById("ais-status").textContent="AIS error: "+msg.error;return;}
-    if(msg.status==="connected"){document.getElementById("ais-status").textContent=ids.length?"Live — tracking "+ids.length+" ship(s)":"Live — all vessels";return;}
+    if(msg.error){setAisStatus("AIS error: "+msg.error);console.error("AIS",msg);return;}
+    if(msg.status==="connecting_upstream"){setAisStatus("Connecting to AISStream…");return;}
+    if(msg.status==="connected"){setAisStatus("Subscribed — waiting for vessels…");return;}
+    if(msg.status==="first_message"){setAisStatus("Receiving AIS data…");return;}
+    if(msg.status==="heartbeat"){
+      if(state.vesselMarkers.size===0)setAisStatus("Linked — 0 vessels yet (msgs: "+(msg.messages_received||0)+")");
+      return;
+    }
     const meta=msg.MetaData||msg.Metadata||{};
     const mmsi=String(meta.MMSI||meta.mmsi||"");if(!mmsi)return;
     const pr=msg.Message?.PositionReport||msg.Message?.StandardClassBPositionReport||msg.Message?.ExtendedClassBPositionReport||{};
@@ -233,10 +240,9 @@ function connectAIS(){
       state.shipMeta[mmsi]={name:(sd.Name||meta.ShipName||"").trim(),type:sd.Type||sd.ShipType||0,length:(dim.A||0)+(dim.B||0),imo:String(sd.ImoNumber||sd.IMO||"")};
       return;
     }
-    // AISStream MetaData uses Latitude / Longitude (capital)
     const lat=meta.Latitude!=null?meta.Latitude:(meta.latitude!=null?meta.latitude:pr.Latitude);
     const lon=meta.Longitude!=null?meta.Longitude:(meta.longitude!=null?meta.longitude:pr.Longitude);
-    if(lat==null||lon==null||isNaN(lat)||isNaN(lon))return;
+    if(lat==null||lon==null||isNaN(+lat)||isNaN(+lon))return;
     const cog=pr.Cog!=null?pr.Cog:pr.cog;
     const sog=pr.Sog!=null?pr.Sog:pr.sog;
     const heading=pr.TrueHeading!=null?pr.TrueHeading:pr.trueHeading;
@@ -247,15 +253,15 @@ function connectAIS(){
     }
     const sm=state.shipMeta[mmsi]||{};
     const name=sm.name||meta.ShipName||meta.shipName||("MMSI "+mmsi);
-    const trail=updateVesselTrail(mmsi,lat,lon);
+    const trail=updateVesselTrail(mmsi,+lat,+lon);
     const existing=state.vesselMarkers.get(mmsi);
     if(existing){
-      existing.marker.setLatLng([lat,lon]);
+      existing.marker.setLatLng([+lat,+lon]);
       existing.marker.setIcon(vesselIcon(course,sog));
       if(existing.trailLine){existing.trailLine.setLatLngs(trail);}
       else if(trail.length>1){existing.trailLine=L.polyline(trail,{color:"#6B4C9A",weight:1.5,opacity:0.35}).addTo(state.vesselLayer);}
     }else{
-      const marker=L.marker([lat,lon],{icon:vesselIcon(course,sog),interactive:true});
+      const marker=L.marker([+lat,+lon],{icon:vesselIcon(course,sog),interactive:true});
       marker.bindPopup(`<strong>${name}</strong><br/>MMSI ${mmsi}`+(sm.imo?"<br/>IMO "+sm.imo:"")+(sm.length?"<br/>LOA "+sm.length+" m":"")+(sog!=null?"<br/>SOG "+Number(sog).toFixed(1)+" kn":"")+(course!=null?"<br/>COG "+Math.round(course)+"°":""));
       state.vesselLayer.addLayer(marker);
       let trailLine=null;
@@ -268,10 +274,10 @@ function connectAIS(){
         state.vesselMarkers.delete(first);state.vesselTrails.delete(first);
       }
     }
-    document.getElementById("ais-status").textContent=`Live — ${state.vesselMarkers.size} vessels`+(state.imoFilter.size?" (filtered)":" (all)");
-  }catch(_){}};
-  ws.onerror=()=>{document.getElementById("ais-status").textContent="AIS proxy error — redeploy / check key";};
-  ws.onclose=()=>{document.getElementById("ais-status").textContent="AIS disconnected";};
+    setAisStatus(`Live — ${state.vesselMarkers.size} vessels`+(state.imoFilter.size?" (filtered)":" (all)"));
+  }catch(e){console.warn("AIS parse",e);}};
+  ws.onerror=()=>setAisStatus("AIS proxy error — redeploy / check key");
+  ws.onclose=()=>setAisStatus("AIS disconnected");
 }
 function bindUI(){
   document.querySelectorAll(".tab").forEach(tab=>{tab.onclick=()=>{document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));tab.classList.add("active");switchView(tab.dataset.view);};});
