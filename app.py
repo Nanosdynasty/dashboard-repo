@@ -2,7 +2,7 @@
 from __future__ import annotations
 import os, json, io, uuid
 from pathlib import Path
-from typing import Optional, Dict
+from typing import Optional, Dict, List, Any
 from datetime import datetime
 import pandas as pd
 import duckdb
@@ -40,7 +40,7 @@ def register_all():
         con.execute(f"CREATE OR REPLACE TABLE user_{safe} AS SELECT * FROM read_csv_auto('{upath}')")
 
 register_all()
-app = FastAPI(title="GEM Dashboard", version="3.0.0")
+app = FastAPI(title="GEM Dashboard", version="3.1.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
@@ -75,12 +75,73 @@ def _infer_passage(coords):
             tags.append("Cape Horn")
         elif 35.5 < lat < 36.5 and -6 < lon < -5:
             tags.append("Strait of Gibraltar")
+        elif 40.5 < lat < 41.5 and 28.5 < lon < 29.5:
+            tags.append("Bosporus")
     seen, out = set(), []
     for t in tags:
         if t not in seen:
             seen.add(t)
             out.append(t)
     return ", ".join(out) if out else None
+
+def _length_to_nm(length: float, units: str) -> float:
+    """Normalize searoute length to nautical miles (industry standard)."""
+    u = (units or "").lower().strip()
+    if u in ("naut", "nm", "nmi", "nautical", "nauticals"):
+        return float(length)
+    if u in ("km", "kilometer", "kilometers"):
+        return float(length) / 1.852
+    if u in ("mi", "mile", "miles"):
+        return float(length) / 1.150779
+    if u in ("m", "meter", "meters"):
+        return float(length) / 1852.0
+    # Assume km if unknown (searoute default)
+    return float(length) / 1.852
+
+def _compute_route(from_lon, from_lat, to_lon, to_lat, speed_knots, restrictions: Optional[List[str]] = None):
+    """
+    Commercial-style routing similar to Netpas / sea-distances.org:
+    - Distance in nautical miles along maritime network
+    - Allow Suez/Panama by default (only avoid Arctic NW passage)
+    - Voyage days = distance_nm / speed_knots / 24
+    """
+    import searoute as sr
+    # searoute restriction names: babalmandab, bosporus, gibraltar, suez, panama,
+    # ormuz, northwest, malacca, sunda, chili, south_africa
+    # Default: only avoid Northwest Passage (not used commercially for dry bulk)
+    restrictions = restrictions if restrictions is not None else ["northwest"]
+    feature = sr.searoute(
+        [from_lon, from_lat],
+        [to_lon, to_lat],
+        units="naut",  # correct unit code for nautical miles
+        speed_knot=speed_knots,
+        append_orig_dest=True,
+        restrictions=restrictions,
+        return_passages=True,
+    )
+    props = feature.get("properties", {}) if isinstance(feature, dict) else feature.properties
+    geom = feature.get("geometry", {}) if isinstance(feature, dict) else feature.geometry
+    coords = geom.get("coordinates", []) if isinstance(geom, dict) else getattr(geom, "coordinates", [])
+    length = float(props.get("length", 0))
+    units = str(props.get("units", "naut"))
+    distance_nm = _length_to_nm(length, units)
+    # Always recompute duration the Netpas way: hours = NM / kn ; days = hours / 24
+    duration_hours = distance_nm / speed_knots if speed_knots > 0 else 0.0
+    duration_days = duration_hours / 24.0
+    passages = props.get("passages") or []
+    via = ", ".join(passages) if passages else _infer_passage(coords)
+    return {
+        "distance_nm": round(distance_nm, 1),
+        "distance_miles": round(distance_nm * 1.150779, 1),
+        "distance_km": round(distance_nm * 1.852, 1),
+        "duration_hours": round(duration_hours, 2),
+        "duration_days": round(duration_days, 2),
+        "speed_knots": speed_knots,
+        "coordinates": coords,
+        "units": "nm",
+        "via": via,
+        "restrictions": restrictions,
+    }
 
 class RouteRequest(BaseModel):
     from_lon: float
@@ -90,6 +151,8 @@ class RouteRequest(BaseModel):
     speed_knots: float = 12.0
     from_name: Optional[str] = None
     to_name: Optional[str] = None
+    # Optional: avoid canals (e.g. ["suez"] for Cape routing)
+    avoid: Optional[List[str]] = None
 
 @app.get("/api/trackers")
 async def list_trackers():
@@ -230,36 +293,41 @@ async def list_ports(q: Optional[str] = None, limit: int = Query(5000, le=10000)
 
 @app.post("/api/route")
 async def sea_route(req: RouteRequest):
+    """
+    Port-to-port distance in the style of Netpas / sea-distances.org:
+    - Shortest maritime network path in nautical miles
+    - Suez & Panama allowed by default
+    - Days at sea = distance_nm / speed_knots / 24
+    """
     try:
-        import searoute as sr
-        feature = sr.searoute(
-            [req.from_lon, req.from_lat],
-            [req.to_lon, req.to_lat],
-            units="nm",
-            speed_knot=req.speed_knots,
-            append_orig_dest=True,
-        )
-        props = feature.get("properties", {})
-        coords = feature.get("geometry", {}).get("coordinates", [])
-        distance_nm = float(props.get("length", 0))
-        if props.get("units") == "km":
-            distance_nm = distance_nm / 1.852
-        distance_km = distance_nm * 1.852
-        distance_mi = distance_nm * 1.15078
-        duration_hours = float(props.get("duration_hours", 0))
-        via = _infer_passage(coords)
-        return {
-            "distance_nm": round(distance_nm, 1),
-            "distance_miles": round(distance_mi, 1),
-            "distance_km": round(distance_km, 1),
-            "duration_hours": round(duration_hours, 2),
-            "speed_knots": req.speed_knots,
-            "coordinates": coords,
-            "units": "nm",
-            "via": via,
+        speed = req.speed_knots if req.speed_knots and req.speed_knots > 0 else 12.0
+        # User can avoid specific passages; always keep northwest off commercial routes
+        avoid = list(req.avoid or [])
+        if "northwest" not in avoid:
+            avoid.append("northwest")
+
+        # Prefer commercial canal routes: try default, then compare with Cape if Suez is forced avoid
+        primary = _compute_route(req.from_lon, req.from_lat, req.to_lon, req.to_lat, speed, avoid)
+
+        # Also compute an alternate via Cape (avoid Suez) when primary goes Suez — for transparency
+        alt = None
+        via_suez = primary.get("via") and "Suez" in str(primary.get("via"))
+        if via_suez and "suez" not in avoid:
+            try:
+                alt = _compute_route(req.from_lon, req.from_lat, req.to_lon, req.to_lat, speed, avoid + ["suez"])
+            except Exception:
+                alt = None
+
+        result = {
+            **primary,
             "from_name": req.from_name,
             "to_name": req.to_name,
+            "method": "maritime network (searoute) · NM / kn / 24",
         }
+        if alt and alt["distance_nm"] > primary["distance_nm"]:
+            result["alternate_cape_nm"] = alt["distance_nm"]
+            result["alternate_cape_days"] = alt["duration_days"]
+        return result
     except Exception as e:
         raise HTTPException(400, f"Route error: {e}")
 
@@ -330,7 +398,7 @@ async def chat(req: ChatRequest):
                 if r.status_code == 200:
                     reply = r.json()["choices"][0]["message"]["content"]
         except Exception as e:
-            reply = f"(Grok API error: {e})"
+            reply = f"(G API error: {e})"
     if not reply:
         tracker = "coal_plants"
         msg = message.lower()
