@@ -1,1 +1,9 @@
-temp
+{
+  "coal_plants": {"rows": 14509, "operating_capacity_mw": 2202528.1, "operating_units": 6580, "countries": 109, "status_counts": {"operating": 6580, "retired": 3168, "cancelled": 3070}},
+  "coal_terminals": {"rows": 521, "operating_capacity_mw": 6228.57, "operating_units": 369, "countries": 46, "status_counts": {"Operating": 369, "Cancelled": 54, "Proposed": 40}},
+  "world_ports": {"rows": 3669, "operating_capacity_mw": 3669.0, "operating_units": 3669, "countries": 191, "status_counts": {"operating": 3669}},
+  "solar": {"rows": 103940, "operating_capacity_mw": 1267798.9, "operating_units": 81377, "countries": 214},
+  "wind": {"rows": 33248, "operating_capacity_mw": 1128424.5, "operating_units": 0, "countries": 0},
+  "hydro": {"rows": 6772, "operating_capacity_mw": 1275000.0, "operating_units": 4746, "countries": 0},
+  "nuclear": {"rows": 1749, "operating_capacity_mw": 401341.0, "operating_units": 421, "countries": 61}
+}
