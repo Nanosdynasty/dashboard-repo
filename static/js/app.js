@@ -1,4 +1,4 @@
-/* GEM Dashboard v3.2 — All vessels by default; IMO filter only when searching */
+/* GEM Dashboard v3.3 — All vessels default; Netpas-style distance days */
 const state={tracker:"coal_plants",offset:0,limit:100,total:0,map:null,markers:null,vesselLayer:null,routeLayer:null,seaLabels:null,ports:[],portByName:{},routeClicks:[],aisSocket:null,imoFilter:new Set(),shipMeta:{},vesselMarkers:new Map(),vesselTrails:new Map()};
 const ENERGY=["coal_plants","coal_terminals","solar","wind","hydro","nuclear"];
 const STATUS_COLORS={operating:"#65BD8B",construction:"#FE4F2D",announced:"#4A57A8","pre-permit":"#4A57A8",permitted:"#4A57A8",proposed:"#4A57A8",shelved:"#7F142A",cancelled:"#7F142A",mothballed:"#8a9aa3",retired:"#8a9aa3"};
@@ -173,9 +173,13 @@ async function calcRoute(){
       state.map.fitBounds(ll,{padding:[40,40]});
     }
     const nm=j.distance_nm!=null?j.distance_nm:(j.distance_km/1.852);
-    const mi=j.distance_miles!=null?j.distance_miles:(j.distance_km/1.609344);
+    const mi=j.distance_miles!=null?j.distance_miles:(nm*1.150779);
+    const days=j.duration_days!=null?j.duration_days:(nm/speed/24);
+    const hours=j.duration_hours!=null?j.duration_hours:(nm/speed);
     const via=j.via?(" via "+j.via):"";
-    document.getElementById("route-result").textContent=fromName+" → "+toName+via+" · "+nm.toLocaleString(undefined,{maximumFractionDigits:1})+" nm ("+mi.toLocaleString(undefined,{maximumFractionDigits:1})+" mi) · "+(j.speed_knots||speed)+" kn · ~"+j.duration_hours.toFixed(1)+" h";
+    let txt=fromName+" → "+toName+via+" · "+Number(nm).toLocaleString(undefined,{maximumFractionDigits:0})+" nm ("+Number(mi).toLocaleString(undefined,{maximumFractionDigits:0})+" mi) · "+(j.speed_knots||speed)+" kn · "+Number(days).toFixed(1)+" days ("+Number(hours).toFixed(0)+" h)";
+    if(j.alternate_cape_nm)txt+=" · Cape alt: "+j.alternate_cape_nm+" nm / "+j.alternate_cape_days+" d";
+    document.getElementById("route-result").textContent=txt;
   }catch(e){document.getElementById("route-result").textContent="Error: "+e.message;}
 }
 function parseImoList(){
@@ -183,7 +187,6 @@ function parseImoList(){
   const ids=raw.split(/[\s,;]+/).map(s=>s.trim()).filter(s=>/^\d{7,9}$/.test(s));
   state.imoFilter=new Set(ids);return ids;
 }
-/** Small oriented dash like dense AIS maps (green/purple by speed) */
 function vesselIcon(cog,sog){
   const rot=(cog!=null&&cog<360)?cog:0;
   const moving=sog!=null&&sog>0.5;
@@ -208,7 +211,6 @@ function connectAIS(){
   document.getElementById("ais-status").textContent="Connecting…";
   const ids=parseImoList();
   const sub={APIKey:key,BoundingBoxes:[[[-90,-180],[90,180]]],FilterMessageTypes:["PositionReport","ShipStaticData"]};
-  // Only restrict stream by MMSI when user is tracking specific ships
   const mmsis=ids.filter(x=>x.length===9);if(mmsis.length)sub.FiltersShipMMSI=mmsis;
   ws.onopen=()=>{ws.send(JSON.stringify(sub));document.getElementById("ais-status").textContent=ids.length?"Live — tracking "+ids.length+" ship(s)":"Live — all vessels";};
   ws.onmessage=ev=>{try{
@@ -226,13 +228,10 @@ function connectAIS(){
     const sog=pr.Sog!=null?pr.Sog:pr.sog;
     const heading=pr.TrueHeading!=null?pr.TrueHeading:pr.trueHeading;
     const course=(heading!=null&&heading<360)?heading:(cog!=null&&cog<360)?cog:null;
-
-    // Filter ONLY when user searched for specific ships
     if(state.imoFilter.size){
       const sm=state.shipMeta[mmsi]||{};
       if(!(state.imoFilter.has(mmsi)||(sm.imo&&state.imoFilter.has(sm.imo))))return;
     }
-
     const sm=state.shipMeta[mmsi]||{};
     const name=sm.name||meta.ShipName||meta.shipName||("MMSI "+mmsi);
     const trail=updateVesselTrail(mmsi,lat,lon);
@@ -249,7 +248,6 @@ function connectAIS(){
       let trailLine=null;
       if(trail.length>1){trailLine=L.polyline(trail,{color:"#6B4C9A",weight:1.5,opacity:0.35}).addTo(state.vesselLayer);}
       state.vesselMarkers.set(mmsi,{marker,trailLine});
-      // Keep denser map — allow more vessels than before
       if(state.vesselMarkers.size>2500){
         const first=state.vesselMarkers.keys().next().value;
         const old=state.vesselMarkers.get(first);
