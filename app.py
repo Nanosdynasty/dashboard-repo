@@ -21,7 +21,6 @@ DATA_DIR = BASE_DIR / "data"
 UPLOAD_DIR = BASE_DIR / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
 
-# AISStream key: env AISSTREAM_API_KEY overrides; default embedded for this deploy
 AISSTREAM_API_KEY = (
     os.getenv("AISSTREAM_API_KEY")
     or "b692b9b39eeebee0716442f7afc26e7963d7b695"
@@ -49,7 +48,7 @@ def register_all():
         con.execute(f"CREATE OR REPLACE TABLE user_{safe} AS SELECT * FROM read_csv_auto('{upath}')")
 
 register_all()
-app = FastAPI(title="GEM Dashboard", version="3.3.1")
+app = FastAPI(title="GEM Dashboard", version="3.4.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
@@ -63,59 +62,45 @@ class ChatRequest(BaseModel):
     local_llm_url: Optional[str] = None
     local_model: Optional[str] = "local-model"
 
+class VesselTrackRequest(BaseModel):
+    ids: List[str] = []
+    timeout_sec: float = 25.0
+
 def _infer_passage(coords):
     if not coords:
         return None
     tags = []
     for lon, lat in coords:
-        if 29 < lat < 32 and 32 < lon < 33:
-            tags.append("Suez Canal")
-        elif 8.5 < lat < 9.5 and -80 < lon < -79:
-            tags.append("Panama Canal")
-        elif 25.5 < lat < 27 and 56 < lon < 57.5:
-            tags.append("Strait of Hormuz")
-        elif 1 < lat < 4 and 100 < lon < 104:
-            tags.append("Malacca Strait")
-        elif 12 < lat < 14 and 42 < lon < 44:
-            tags.append("Bab el-Mandeb")
-        elif lat < -33 and 15 < lon < 22:
-            tags.append("Cape of Good Hope")
-        elif lat < -54 and -70 < lon < -65:
-            tags.append("Cape Horn")
-        elif 35.5 < lat < 36.5 and -6 < lon < -5:
-            tags.append("Strait of Gibraltar")
-        elif 40.5 < lat < 41.5 and 28.5 < lon < 29.5:
-            tags.append("Bosporus")
+        if 29 < lat < 32 and 32 < lon < 33: tags.append("Suez Canal")
+        elif 8.5 < lat < 9.5 and -80 < lon < -79: tags.append("Panama Canal")
+        elif 25.5 < lat < 27 and 56 < lon < 57.5: tags.append("Strait of Hormuz")
+        elif 1 < lat < 4 and 100 < lon < 104: tags.append("Malacca Strait")
+        elif 12 < lat < 14 and 42 < lon < 44: tags.append("Bab el-Mandeb")
+        elif lat < -33 and 15 < lon < 22: tags.append("Cape of Good Hope")
+        elif lat < -54 and -70 < lon < -65: tags.append("Cape Horn")
+        elif 35.5 < lat < 36.5 and -6 < lon < -5: tags.append("Strait of Gibraltar")
+        elif 40.5 < lat < 41.5 and 28.5 < lon < 29.5: tags.append("Bosporus")
     seen, out = set(), []
     for t in tags:
         if t not in seen:
-            seen.add(t)
-            out.append(t)
+            seen.add(t); out.append(t)
     return ", ".join(out) if out else None
 
 def _length_to_nm(length: float, units: str) -> float:
     u = (units or "").lower().strip()
-    if u in ("naut", "nm", "nmi", "nautical", "nauticals"):
-        return float(length)
-    if u in ("km", "kilometer", "kilometers"):
-        return float(length) / 1.852
-    if u in ("mi", "mile", "miles"):
-        return float(length) / 1.150779
-    if u in ("m", "meter", "meters"):
-        return float(length) / 1852.0
+    if u in ("naut", "nm", "nmi", "nautical", "nauticals"): return float(length)
+    if u in ("km", "kilometer", "kilometers"): return float(length) / 1.852
+    if u in ("mi", "mile", "miles"): return float(length) / 1.150779
+    if u in ("m", "meter", "meters"): return float(length) / 1852.0
     return float(length) / 1.852
 
 def _compute_route(from_lon, from_lat, to_lon, to_lat, speed_knots, restrictions: Optional[List[str]] = None):
     import searoute as sr
     restrictions = restrictions if restrictions is not None else ["northwest"]
     feature = sr.searoute(
-        [from_lon, from_lat],
-        [to_lon, to_lat],
-        units="naut",
-        speed_knot=speed_knots,
-        append_orig_dest=True,
-        restrictions=restrictions,
-        return_passages=True,
+        [from_lon, from_lat], [to_lon, to_lat],
+        units="naut", speed_knot=speed_knots, append_orig_dest=True,
+        restrictions=restrictions, return_passages=True,
     )
     props = feature.get("properties", {}) if isinstance(feature, dict) else feature.properties
     geom = feature.get("geometry", {}) if isinstance(feature, dict) else feature.geometry
@@ -124,7 +109,6 @@ def _compute_route(from_lon, from_lat, to_lon, to_lat, speed_knots, restrictions
     units = str(props.get("units", "naut"))
     distance_nm = _length_to_nm(length, units)
     duration_hours = distance_nm / speed_knots if speed_knots > 0 else 0.0
-    duration_days = duration_hours / 24.0
     passages = props.get("passages") or []
     via = ", ".join(passages) if passages else _infer_passage(coords)
     return {
@@ -132,7 +116,7 @@ def _compute_route(from_lon, from_lat, to_lon, to_lat, speed_knots, restrictions
         "distance_miles": round(distance_nm * 1.150779, 1),
         "distance_km": round(distance_nm * 1.852, 1),
         "duration_hours": round(duration_hours, 2),
-        "duration_days": round(duration_days, 2),
+        "duration_days": round(duration_hours / 24.0, 2),
         "speed_knots": speed_knots,
         "coordinates": coords,
         "units": "nm",
@@ -179,12 +163,10 @@ def _filters(status, country, region, min_mw, max_mw, search):
     if country:
         countries = [c.strip() for c in country.split(",") if c.strip()]
         if len(countries) == 1:
-            clauses.append('"Country/Area" ILIKE ?')
-            params.append(f"%{countries[0]}%")
+            clauses.append('"Country/Area" ILIKE ?'); params.append(f"%{countries[0]}%")
         elif countries:
             placeholders = ",".join(["?"] * len(countries))
-            clauses.append(f'"Country/Area" IN ({placeholders})')
-            params.extend(countries)
+            clauses.append(f'"Country/Area" IN ({placeholders})'); params.extend(countries)
     if region:
         clauses.append("Region ILIKE ?"); params.append(f"%{region}%")
     if min_mw is not None:
@@ -217,10 +199,7 @@ async def get_map_points(tracker_id: str, status: Optional[str] = None, country:
         raise HTTPException(404)
     where, params = _filters(status, country, None, None, None, None)
     extra = ['"Latitude" IS NOT NULL', '"Longitude" IS NOT NULL']
-    if where:
-        where = where + " AND " + " AND ".join(extra)
-    else:
-        where = " WHERE " + " AND ".join(extra)
+    where = (where + " AND " + " AND ".join(extra)) if where else (" WHERE " + " AND ".join(extra))
     sql = ('SELECT "Plant name" as name, "Unit name" as unit, Status as status, '
            'TRY_CAST("Capacity (MW)" AS DOUBLE) as capacity, '
            'TRY_CAST(Latitude AS DOUBLE) as lat, TRY_CAST(Longitude AS DOUBLE) as lon, '
@@ -237,13 +216,11 @@ async def get_kpis(tracker_id: str):
         raise HTTPException(404)
     op = "operating"
     try:
-        q = (
-            "SELECT COUNT(*) as total_units, "
-            "SUM(CASE WHEN LOWER(CAST(Status AS VARCHAR)) = ? THEN 1 ELSE 0 END) as operating_units, "
-            "SUM(CASE WHEN LOWER(CAST(Status AS VARCHAR)) = ? THEN TRY_CAST(\"Capacity (MW)\" AS DOUBLE) ELSE 0 END) as operating_mw, "
-            "SUM(TRY_CAST(\"Capacity (MW)\" AS DOUBLE)) as total_mw, "
-            "COUNT(DISTINCT \"Country/Area\") as countries FROM " + tracker_id
-        )
+        q = ("SELECT COUNT(*) as total_units, "
+             "SUM(CASE WHEN LOWER(CAST(Status AS VARCHAR)) = ? THEN 1 ELSE 0 END) as operating_units, "
+             "SUM(CASE WHEN LOWER(CAST(Status AS VARCHAR)) = ? THEN TRY_CAST(\"Capacity (MW)\" AS DOUBLE) ELSE 0 END) as operating_mw, "
+             "SUM(TRY_CAST(\"Capacity (MW)\" AS DOUBLE)) as total_mw, "
+             "COUNT(DISTINCT \"Country/Area\") as countries FROM " + tracker_id)
         df = con.execute(q, [op, op]).fetchdf()
         row = df.iloc[0].to_dict()
         status_df = con.execute(
@@ -261,13 +238,11 @@ async def countries_by_capacity(tracker_id: str):
         raise HTTPException(404)
     op = "operating"
     try:
-        q = (
-            "SELECT \"Country/Area\" as country, "
-            "COALESCE(SUM(CASE WHEN LOWER(CAST(Status AS VARCHAR)) = ? THEN TRY_CAST(\"Capacity (MW)\" AS DOUBLE) ELSE 0 END), 0) as capacity, "
-            "COUNT(*) as units FROM " + tracker_id + " "
-            "WHERE \"Country/Area\" IS NOT NULL AND CAST(\"Country/Area\" AS VARCHAR) != '' "
-            "GROUP BY \"Country/Area\" ORDER BY capacity DESC, units DESC"
-        )
+        q = ("SELECT \"Country/Area\" as country, "
+             "COALESCE(SUM(CASE WHEN LOWER(CAST(Status AS VARCHAR)) = ? THEN TRY_CAST(\"Capacity (MW)\" AS DOUBLE) ELSE 0 END), 0) as capacity, "
+             "COUNT(*) as units FROM " + tracker_id + " "
+             "WHERE \"Country/Area\" IS NOT NULL AND CAST(\"Country/Area\" AS VARCHAR) != '' "
+             "GROUP BY \"Country/Area\" ORDER BY capacity DESC, units DESC")
         df = con.execute(q, [op]).fetchdf()
         return json.loads(df.to_json(orient="records"))
     except Exception as e:
@@ -310,161 +285,157 @@ async def sea_route(req: RouteRequest):
     except Exception as e:
         raise HTTPException(400, f"Route error: {e}")
 
-@app.get("/api/ais/config")
-async def ais_config():
-    return {"server_key_configured": bool(AISSTREAM_API_KEY), "auto_connect": bool(AISSTREAM_API_KEY)}
-
-@app.websocket("/ws/ais")
-async def ais_proxy(ws: WebSocket):
-    """Proxy AISStream. Must send subscription within 3 seconds of upstream open."""
-    await ws.accept()
-    upstream = None
+async def _sample_ais_for_ships(mmsis: List[str], imos: List[str], timeout_sec: float = 25.0) -> Dict[str, Any]:
+    """Short AISStream sample for specific MMSIs (and optional IMO match via static data)."""
+    if not AISSTREAM_API_KEY:
+        return {"error": "No AISStream API key configured", "vessels": []}
     try:
-        # Always use server key first — never wait for client before connecting upstream
-        api_key = AISSTREAM_API_KEY
-        if not api_key:
-            await ws.send_text(json.dumps({"error": "No AISStream API key on server"}))
-            await ws.close()
-            return
+        import websockets as wslib
+    except ImportError:
+        return {"error": "Server missing websockets package", "vessels": []}
 
-        await ws.send_text(json.dumps({"status": "connecting_upstream"}))
+    vessels: Dict[str, dict] = {}
+    mmsi_set = set(str(m) for m in mmsis)
+    imo_set = set(str(i) for i in imos)
 
-        try:
-            import websockets as wslib
-        except ImportError:
-            await ws.send_text(json.dumps({"error": "Server missing websockets package — redeploy"}))
-            await ws.close()
-            return
+    sub = {
+        "APIKey": AISSTREAM_API_KEY,
+        "BoundingBoxes": [[[-90.0, -180.0], [90.0, 180.0]]],
+        "FilterMessageTypes": ["PositionReport", "ShipStaticData", "StandardClassBPositionReport"],
+    }
+    # Prefer MMSI filter when we have them (light, reliable)
+    if mmsi_set:
+        sub["FiltersShipMMSI"] = list(mmsi_set)[:50]
 
-        # Connect + subscribe ASAP (AISStream closes if no sub within 3s)
-        try:
-            upstream = await asyncio.wait_for(
-                wslib.connect(
-                    "wss://stream.aisstream.io/v0/stream",
-                    open_timeout=15,
-                    ping_interval=None,  # let AISStream manage; avoid double-ping issues
-                    max_size=2**22,
-                    close_timeout=5,
-                ),
-                timeout=20,
-            )
-        except Exception as e:
-            await ws.send_text(json.dumps({
-                "error": f"Cannot reach AISStream: {e}. Check Render outbound network."
-            }))
-            await ws.close()
-            return
-
-        # Official format: APIKey + BoundingBoxes (required). Subscribe immediately.
-        sub = {
-            "APIKey": api_key,
-            "BoundingBoxes": [[[-90.0, -180.0], [90.0, 180.0]]],
-            "FilterMessageTypes": ["PositionReport"],
-        }
-        await upstream.send(json.dumps(sub))
-        await ws.send_text(json.dumps({
-            "status": "connected",
-            "note": "Subscribed worldwide PositionReport with server key",
-        }))
-
-        msg_count = 0
-
-        async def upstream_to_client():
-            nonlocal msg_count
-            try:
-                async for message in upstream:
-                    if isinstance(message, bytes):
-                        message = message.decode("utf-8", errors="ignore")
-                    msg_count += 1
-                    if msg_count == 1:
-                        try:
-                            await ws.send_text(json.dumps({"status": "first_message", "count": 1}))
-                        except Exception:
-                            pass
-                    await ws.send_text(message)
-            except Exception as e:
-                err = str(e)
-                hint = ""
-                if "close frame" in err.lower() or "1006" in err or "connection closed" in err.lower():
-                    if msg_count == 0:
-                        hint = (
-                            " — usually INVALID or REVOKED API key. "
-                            "Create a new key at https://aisstream.io/apikeys and set "
-                            "AISSTREAM_API_KEY on Render (or update app.py)."
-                        )
+    try:
+        async with wslib.connect(
+            "wss://stream.aisstream.io/v0/stream",
+            open_timeout=15,
+            ping_interval=None,
+            max_size=2**22,
+            close_timeout=5,
+        ) as upstream:
+            await upstream.send(json.dumps(sub))
+            deadline = asyncio.get_event_loop().time() + max(8.0, min(timeout_sec, 40.0))
+            while asyncio.get_event_loop().time() < deadline:
+                remaining = deadline - asyncio.get_event_loop().time()
                 try:
-                    await ws.send_text(json.dumps({
-                        "error": f"Upstream closed: {err}{hint}",
-                        "messages_received": msg_count,
-                    }))
+                    raw = await asyncio.wait_for(upstream.recv(), timeout=max(0.5, remaining))
+                except asyncio.TimeoutError:
+                    break
                 except Exception:
-                    pass
+                    break
+                if isinstance(raw, bytes):
+                    raw = raw.decode("utf-8", errors="ignore")
+                try:
+                    msg = json.loads(raw)
+                except Exception:
+                    continue
+                meta = msg.get("MetaData") or {}
+                mmsi = str(meta.get("MMSI") or "")
+                pr = (msg.get("Message") or {}).get("PositionReport") or \
+                     (msg.get("Message") or {}).get("StandardClassBPositionReport") or {}
+                sd = (msg.get("Message") or {}).get("ShipStaticData") or {}
 
-        async def client_watch():
-            """Accept optional MMSI filter / key override AFTER stream is live."""
-            nonlocal api_key
-            try:
-                while True:
-                    raw = await ws.receive_text()
-                    try:
-                        cfg = json.loads(raw)
-                    except Exception:
+                if sd:
+                    imo = str(sd.get("ImoNumber") or sd.get("IMO") or "")
+                    name = (sd.get("Name") or meta.get("ShipName") or "").strip()
+                    dim = sd.get("Dimension") or {}
+                    length = (dim.get("A") or 0) + (dim.get("B") or 0)
+                    key = mmsi or imo
+                    if not key:
                         continue
-                    client_key = (cfg.get("APIKey") or cfg.get("apiKey") or "").strip()
-                    mmsis = cfg.get("FiltersShipMMSI") or []
-                    new_sub = {
-                        "APIKey": client_key if client_key else AISSTREAM_API_KEY,
-                        "BoundingBoxes": [[[-90.0, -180.0], [90.0, 180.0]]],
-                        "FilterMessageTypes": ["PositionReport"],
-                    }
-                    if mmsis:
-                        new_sub["FiltersShipMMSI"] = [str(m) for m in mmsis][:50]
-                    if upstream and upstream.open:
-                        await upstream.send(json.dumps(new_sub))
-                        await ws.send_text(json.dumps({"status": "resubscribed", "mmsis": len(mmsis)}))
-            except Exception:
-                pass
+                    # Keep if MMSI requested or IMO requested
+                    if mmsi_set and mmsi not in mmsi_set and (not imo or imo not in imo_set):
+                        if not imo_set:
+                            continue
+                        if imo not in imo_set:
+                            continue
+                    if imo_set and not mmsi_set and imo not in imo_set:
+                        continue
+                    rec = vessels.setdefault(key, {"mmsi": mmsi, "imo": imo})
+                    if name: rec["name"] = name
+                    if imo: rec["imo"] = imo
+                    if length: rec["length_m"] = length
+                    if sd.get("Type") is not None: rec["ship_type"] = sd.get("Type")
+                    continue
 
-        async def heartbeat():
-            try:
-                while True:
-                    await asyncio.sleep(12)
-                    await ws.send_text(json.dumps({
-                        "status": "heartbeat",
-                        "messages_received": msg_count,
-                    }))
-            except Exception:
-                pass
+                lat = meta.get("Latitude")
+                lon = meta.get("Longitude")
+                if lat is None: lat = pr.get("Latitude")
+                if lon is None: lon = pr.get("Longitude")
+                if lat is None or lon is None or not mmsi:
+                    continue
+                if mmsi_set and mmsi not in mmsi_set:
+                    # If only IMOs requested, wait for static match to link
+                    if not imo_set:
+                        continue
+                    if mmsi not in vessels:
+                        continue
+                rec = vessels.setdefault(mmsi, {"mmsi": mmsi})
+                rec["lat"] = float(lat)
+                rec["lon"] = float(lon)
+                if pr.get("Sog") is not None: rec["sog_kn"] = pr.get("Sog")
+                if pr.get("Cog") is not None: rec["cog"] = pr.get("Cog")
+                if pr.get("TrueHeading") is not None: rec["heading"] = pr.get("TrueHeading")
+                if meta.get("ShipName"): rec["name"] = str(meta.get("ShipName")).strip()
+                rec["updated"] = datetime.utcnow().isoformat() + "Z"
 
-        done, pending = await asyncio.wait(
-            [
-                asyncio.create_task(upstream_to_client()),
-                asyncio.create_task(client_watch()),
-                asyncio.create_task(heartbeat()),
-            ],
-            return_when=asyncio.FIRST_COMPLETED,
-        )
-        for t in pending:
-            t.cancel()
-
-    except WebSocketDisconnect:
-        pass
+                # Early exit if all MMSIs found with positions
+                if mmsi_set and all(
+                    any(v.get("mmsi") == m and v.get("lat") is not None for v in vessels.values())
+                    for m in mmsi_set
+                ):
+                    break
     except Exception as e:
-        log.exception("AIS proxy error")
-        try:
-            await ws.send_text(json.dumps({"error": str(e)}))
-        except Exception:
-            pass
-    finally:
-        if upstream is not None:
-            try:
-                await upstream.close()
-            except Exception:
-                pass
-        try:
-            await ws.close()
-        except Exception:
-            pass
+        return {"error": f"AIS sample failed: {e}", "vessels": list(vessels.values())}
+
+    # Filter to requested IDs
+    out = []
+    for v in vessels.values():
+        if mmsi_set and v.get("mmsi") in mmsi_set:
+            out.append(v)
+        elif imo_set and str(v.get("imo") or "") in imo_set:
+            out.append(v)
+        elif not mmsi_set and not imo_set:
+            out.append(v)
+    return {"vessels": out, "queried_mmsi": list(mmsi_set), "queried_imo": list(imo_set)}
+
+@app.post("/api/vessel/track")
+async def track_vessels(req: VesselTrackRequest):
+    """On-demand vessel lookup by MMSI (preferred) or IMO. Samples AIS ~25s — no continuous stream."""
+    raw_ids = []
+    for x in req.ids or []:
+        for part in str(x).replace(";", ",").split(","):
+            p = part.strip()
+            if p:
+                raw_ids.append(p)
+    mmsis, imos = [], []
+    for p in raw_ids:
+        digits = "".join(c for c in p if c.isdigit())
+        if len(digits) == 9:
+            mmsis.append(digits)
+        elif len(digits) == 7:
+            imos.append(digits)
+        elif len(digits) >= 7:
+            # treat long ids carefully
+            if len(digits) == 9:
+                mmsis.append(digits)
+            else:
+                imos.append(digits[:7])
+    if not mmsis and not imos:
+        raise HTTPException(400, "Provide at least one 9-digit MMSI or 7-digit IMO")
+
+    result = await _sample_ais_for_ships(mmsis, imos, req.timeout_sec or 25.0)
+    if result.get("error") and not result.get("vessels"):
+        raise HTTPException(502, result["error"])
+    return {
+        "vessels": result.get("vessels", []),
+        "queried_mmsi": result.get("queried_mmsi", []),
+        "queried_imo": result.get("queried_imo", []),
+        "note": "MMSI (9 digits) is most reliable. IMO needs a static AIS report during the sample window.",
+        "error": result.get("error"),
+    }
 
 @app.post("/api/upload")
 async def upload_file(file: UploadFile = File(...)):
@@ -540,8 +511,7 @@ async def chat(req: ChatRequest):
         for key, words in [("solar", ["solar"]), ("wind", ["wind"]), ("hydro", ["hydro"]),
                            ("nuclear", ["nuclear"]), ("coal_terminals", ["terminal"]), ("world_ports", ["port"])]:
             if any(w in msg for w in words):
-                tracker = key
-                break
+                tracker = key; break
         try:
             kpis = con.execute(
                 "SELECT COUNT(*) as total, SUM(CASE WHEN LOWER(CAST(Status AS VARCHAR)) = ? THEN 1 ELSE 0 END) as op_units, "
