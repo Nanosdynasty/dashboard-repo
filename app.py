@@ -135,7 +135,7 @@ async def get_map_points(tracker_id: str, status: Optional[str] = None, country:
     sql = ('SELECT "Plant name" as name, "Unit name" as unit, Status as status, '
            'TRY_CAST("Capacity (MW)" AS DOUBLE) as capacity, '
            'TRY_CAST(Latitude AS DOUBLE) as lat, TRY_CAST(Longitude AS DOUBLE) as lon, '
-           '"Country/Area" as country FROM ' + tracker_id + where + f' LIMIT {limit}')
+           '"Country/Area" as country FROM ' + tracker_id + where + ' LIMIT ' + str(limit))
     try:
         df = con.execute(sql, params).fetchdf()
         return json.loads(df.to_json(orient="records"))
@@ -146,15 +146,21 @@ async def get_map_points(tracker_id: str, status: Optional[str] = None, country:
 async def get_kpis(tracker_id: str):
     if tracker_id not in TRACKERS:
         raise HTTPException(404)
+    op = "operating"
     try:
-        df = con.execute(f'''SELECT COUNT(*) as total_units,
-            SUM(CASE WHEN LOWER(CAST(Status AS VARCHAR)) = \'operating\' THEN 1 ELSE 0 END) as operating_units,
-            SUM(CASE WHEN LOWER(CAST(Status AS VARCHAR)) = \'operating\' THEN TRY_CAST("Capacity (MW)" AS DOUBLE) ELSE 0 END) as operating_mw,
-            SUM(TRY_CAST("Capacity (MW)" AS DOUBLE)) as total_mw,
-            COUNT(DISTINCT "Country/Area") as countries FROM {tracker_id}''').fetchdf()
+        q = (
+            "SELECT COUNT(*) as total_units, "
+            "SUM(CASE WHEN LOWER(CAST(Status AS VARCHAR)) = ? THEN 1 ELSE 0 END) as operating_units, "
+            "SUM(CASE WHEN LOWER(CAST(Status AS VARCHAR)) = ? THEN TRY_CAST(\"Capacity (MW)\" AS DOUBLE) ELSE 0 END) as operating_mw, "
+            "SUM(TRY_CAST(\"Capacity (MW)\" AS DOUBLE)) as total_mw, "
+            "COUNT(DISTINCT \"Country/Area\") as countries FROM " + tracker_id
+        )
+        df = con.execute(q, [op, op]).fetchdf()
         row = df.iloc[0].to_dict()
-        status_df = con.execute(f'''SELECT Status, COUNT(*) as cnt, SUM(TRY_CAST("Capacity (MW)" AS DOUBLE)) as mw
-            FROM {tracker_id} GROUP BY Status ORDER BY cnt DESC''').fetchdf()
+        status_df = con.execute(
+            "SELECT Status, COUNT(*) as cnt, SUM(TRY_CAST(\"Capacity (MW)\" AS DOUBLE)) as mw FROM "
+            + tracker_id + " GROUP BY Status ORDER BY cnt DESC"
+        ).fetchdf()
         row["by_status"] = json.loads(status_df.to_json(orient="records"))
         return row
     except Exception as e:
@@ -164,17 +170,16 @@ async def get_kpis(tracker_id: str):
 async def countries_by_capacity(tracker_id: str):
     if tracker_id not in TRACKERS and not tracker_id.startswith("user_"):
         raise HTTPException(404)
+    op = "operating"
     try:
-        df = con.execute(f'''
-            SELECT "Country/Area" as country,
-                   COALESCE(SUM(CASE WHEN LOWER(CAST(Status AS VARCHAR)) = \'operating\'
-                        THEN TRY_CAST("Capacity (MW)" AS DOUBLE) ELSE 0 END), 0) as capacity,
-                   COUNT(*) as units
-            FROM {tracker_id}
-            WHERE "Country/Area" IS NOT NULL AND CAST("Country/Area" AS VARCHAR) != \'\'\
-            GROUP BY "Country/Area"
-            ORDER BY capacity DESC, units DESC
-        ''').fetchdf()
+        q = (
+            "SELECT \"Country/Area\" as country, "
+            "COALESCE(SUM(CASE WHEN LOWER(CAST(Status AS VARCHAR)) = ? THEN TRY_CAST(\"Capacity (MW)\" AS DOUBLE) ELSE 0 END), 0) as capacity, "
+            "COUNT(*) as units FROM " + tracker_id + " "
+            "WHERE \"Country/Area\" IS NOT NULL AND CAST(\"Country/Area\" AS VARCHAR) != '' "
+            "GROUP BY \"Country/Area\" ORDER BY capacity DESC, units DESC"
+        )
+        df = con.execute(q, [op]).fetchdf()
         return json.loads(df.to_json(orient="records"))
     except Exception as e:
         raise HTTPException(400, str(e))
@@ -274,10 +279,11 @@ async def chat(req: ChatRequest):
                 tracker = key
                 break
         try:
-            kpis = con.execute(f'''SELECT COUNT(*) as total,
-                SUM(CASE WHEN LOWER(CAST(Status AS VARCHAR)) = \'operating\' THEN 1 ELSE 0 END) as op_units,
-                ROUND(SUM(CASE WHEN LOWER(CAST(Status AS VARCHAR)) = \'operating\' THEN TRY_CAST("Capacity (MW)" AS DOUBLE) ELSE 0 END)/1000, 1) as op_gw
-                FROM {tracker}''').fetchone()
+            kpis = con.execute(
+                "SELECT COUNT(*) as total, SUM(CASE WHEN LOWER(CAST(Status AS VARCHAR)) = ? THEN 1 ELSE 0 END) as op_units, "
+                "ROUND(SUM(CASE WHEN LOWER(CAST(Status AS VARCHAR)) = ? THEN TRY_CAST(\"Capacity (MW)\" AS DOUBLE) ELSE 0 END)/1000, 1) as op_gw FROM " + tracker,
+                ["operating", "operating"]
+            ).fetchone()
             reply = f"**{TRACKERS.get(tracker, {}).get('label', tracker)}**: {kpis[0]:,} units, {kpis[1]:,} operating ({kpis[2]} GW/Mt)."
         except Exception:
             reply = "Ask about coal plants, terminals, ports, solar, wind, hydro or nuclear."
