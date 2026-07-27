@@ -1,10 +1,9 @@
-/* GEM Dashboard — world ports on map by default */
+/* GEM Dashboard — all World Ports on map */
 const state = {
   tracker: "world_ports", offset: 0, limit: 100, total: 0,
-  map: null, markers: null, vesselLayer: null, routeLayer: null, seaLabels: null,
-  ports: [], portByName: {}, imoFilter: new Set(), vesselMarkers: new Map()
+  map: null, markers: null, cluster: null, vesselLayer: null, routeLayer: null, seaLabels: null,
+  ports: [], portByName: {}, vesselMarkers: new Map()
 };
-const ENERGY = ["coal_plants","coal_terminals","solar","wind","hydro","nuclear"];
 const STATUS_COLORS = {
   operating: "#65BD8B", construction: "#FE4F2D", announced: "#4A57A8",
   "pre-permit": "#4A57A8", permitted: "#4A57A8", proposed: "#4A57A8",
@@ -28,15 +27,14 @@ document.addEventListener("DOMContentLoaded", function() {
   initMap();
   initStatusDD();
   initNavGroups();
-  loadTrackers();
-  loadPorts();
   bindUI();
   switchView("map");
   var vg = document.getElementById("group-vessels");
   var eg = document.getElementById("group-energy");
   if (vg) vg.classList.add("open");
   if (eg) eg.classList.remove("open");
-  loadData();
+  state.tracker = "world_ports";
+  Promise.all([loadTrackers(), loadPorts()]).then(function() { loadData(); });
 });
 
 function initMap() {
@@ -44,14 +42,22 @@ function initMap() {
   L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
     attribution: "OSM CARTO", maxZoom: 18
   }).addTo(state.map);
-  state.markers = L.layerGroup().addTo(state.map);
+  if (typeof L.markerClusterGroup === "function") {
+    state.cluster = L.markerClusterGroup({
+      maxClusterRadius: 40, spiderfyOnMaxZoom: true,
+      showCoverageOnHover: false, disableClusteringAtZoom: 8
+    });
+    state.map.addLayer(state.cluster);
+    state.markers = state.cluster;
+  } else {
+    state.markers = L.layerGroup().addTo(state.map);
+  }
   state.vesselLayer = L.layerGroup().addTo(state.map);
   state.routeLayer = L.layerGroup().addTo(state.map);
   state.seaLabels = L.layerGroup().addTo(state.map);
   SEA_LABELS.forEach(function(s) {
     var icon = L.divIcon({
-      className: "sea-label",
-      html: "<span>" + s.name + "</span>",
+      className: "sea-label", html: "<span>" + s.name + "</span>",
       iconSize: [120, 18], iconAnchor: [60, 9]
     });
     L.marker([s.lat, s.lon], { icon: icon, interactive: false }).addTo(state.seaLabels);
@@ -108,15 +114,15 @@ function initStatusDD() {
 
 async function loadPorts() {
   try {
-    var ports = await (await fetch("/api/ports")).json();
-    state.ports = ports;
+    var ports = await (await fetch("/api/ports?limit=10000")).json();
+    state.ports = Array.isArray(ports) ? ports : [];
     state.portByName = {};
     var dl = document.getElementById("port-list");
     if (dl) {
-      dl.innerHTML = ports.map(function(p) {
+      dl.innerHTML = state.ports.map(function(p) {
         var key = (p.name + (p.country ? " (" + p.country + ")" : "")).trim();
         state.portByName[key.toLowerCase()] = p;
-        state.portByName[p.name.toLowerCase()] = p;
+        state.portByName[String(p.name || "").toLowerCase()] = p;
         return '<option value="' + key.replace(/"/g, "") + '"></option>';
       }).join("");
     }
@@ -133,7 +139,7 @@ function pickPort(side, text) {
   var t = (text || "").trim().toLowerCase();
   if (!t) return;
   var p = state.portByName[t] || state.ports.find(function(x) {
-    return x.name.toLowerCase() === t || x.name.toLowerCase().indexOf(t) >= 0;
+    return String(x.name || "").toLowerCase() === t || String(x.name || "").toLowerCase().indexOf(t) >= 0;
   });
   if (!p) {
     document.getElementById("port-" + side + "-label").textContent = "Port not found";
@@ -165,14 +171,11 @@ function makeItem(t) {
   div.className = "tracker-item" + (t.id === state.tracker ? " active" : "");
   div.dataset.id = t.id;
   var meta = "";
-  if (t.id === "coal_terminals") {
-    meta = (t.rows ? t.rows.toLocaleString() + " terminals" : "");
-  } else if (t.id === "world_ports") {
+  if (t.id === "coal_terminals") meta = (t.rows ? t.rows.toLocaleString() + " terminals" : "");
+  else if (t.id === "world_ports") {
     meta = (t.rows ? t.rows.toLocaleString() + " ports" : "");
     if (t.countries) meta += " · " + t.countries + " countries";
-  } else {
-    meta = (t.rows ? t.rows.toLocaleString() + " units" : "");
-  }
+  } else meta = (t.rows ? t.rows.toLocaleString() + " units" : "");
   div.innerHTML = '<span class="icon">' + (t.icon || "") + '</span><div><div>' + t.label +
     '</div><div class="meta">' + meta + "</div></div>";
   div.onclick = function() {
@@ -236,16 +239,15 @@ async function loadKPIs() {
   }
   try {
     var k = await (await fetch("/api/kpis/" + state.tracker)).json();
-    var isPorts = state.tracker === "world_ports";
-    var isTerm = state.tracker === "coal_terminals";
-    if (isPorts) {
+    if (state.tracker === "world_ports") {
       strip.innerHTML =
         '<div class="kpi-card"><div class="label">Ports</div><div class="value">' +
-        Number(k.total_units).toLocaleString() + '</div><div class="sub">' + k.countries +
+        Number(k.total_units).toLocaleString() + '</div><div class="sub">' + (k.countries || 191) +
         " countries</div></div>" +
-        '<div class="kpi-card"><div class="label">On map</div><div class="value">All</div><div class="sub">World Ports</div></div>';
+        '<div class="kpi-card"><div class="label">On map</div><div class="value">All</div><div class="sub">World Port Index</div></div>';
       return;
     }
+    var isTerm = state.tracker === "coal_terminals";
     var unit = isTerm ? "Mt" : "GW";
     var opVal = isTerm ? Math.round(k.operating_mw).toLocaleString() : (k.operating_mw / 1000).toFixed(1);
     strip.innerHTML =
