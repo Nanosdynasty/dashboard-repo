@@ -22,10 +22,9 @@
       <button id="btn-export" class="btn btn-teal">⬇ Export Excel</button>
     </div>
   </header>
-
   <div class="layout">
     <aside class="sidebar">
-      <div class="nav-group open" id="group-energy">
+      <div class="nav-group" id="group-energy">
         <button type="button" class="nav-group-header" data-group="energy">
           <span>⚡ Energy</span><span class="chev">▾</span>
         </button>
@@ -61,14 +60,12 @@
           <button id="btn-reset" class="btn btn-ghost full">Reset</button>
         </div>
       </div>
-
-      <div class="nav-group" id="group-vessels">
+      <div class="nav-group open" id="group-vessels">
         <button type="button" class="nav-group-header" data-group="vessels">
           <span>🚢 Vessels</span><span class="chev">▾</span>
         </button>
         <div class="nav-group-body">
           <div id="vessel-tracker-list" class="tracker-list"></div>
-
           <div class="tools-box">
             <h3>Distance calculator</h3>
             <label class="hint">From port</label>
@@ -89,12 +86,10 @@
             <button id="btn-route" class="btn btn-orange full">Calculate route</button>
             <p class="hint" id="route-result">Select two ports by name</p>
           </div>
-
           <div class="tools-box">
             <h3>Track vessel by IMO / MMSI</h3>
-            <p class="hint">No continuous live map. Paste ship IDs to fetch current position (uses AIS for ~25s).</p>
-            <p class="hint"><strong>Best:</strong> 9-digit <strong>MMSI</strong>. 7-digit <strong>IMO</strong> is matched if the ship broadcasts static data during the sample.</p>
-            <textarea id="imo-list" rows="4" placeholder="Example:&#10;636018288&#10;9234662&#10;or comma-separated"></textarea>
+            <p class="hint">Paste ship IDs to fetch current position (AIS ~25s).</p>
+            <textarea id="imo-list" rows="4" placeholder="MMSI or IMO, one per line"></textarea>
             <button id="btn-track-imo" class="btn btn-orange full">Find these vessels</button>
             <button id="btn-clear-imo" class="btn btn-ghost full">Clear vessels from map</button>
             <p class="hint" id="imo-status">Paste IDs then click Find</p>
@@ -103,7 +98,6 @@
         </div>
       </div>
     </aside>
-
     <main class="main">
       <section id="kpi-strip" class="kpi-strip"></section>
       <div class="view-tabs">
@@ -133,7 +127,6 @@
       </div>
     </main>
   </div>
-
   <div id="upload-modal" class="modal hidden">
     <div class="modal-card">
       <h2>Upload data</h2>
@@ -146,8 +139,8 @@
       </div>
     </div>
   </div>
-
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="/static/js/app.js"></script>
+  <script src="/static/js/app-map.js"></script>
 </body>
 </html>
