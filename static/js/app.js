@@ -2,14 +2,25 @@
 const state = {
   tracker: "world_ports", offset: 0, limit: 100, total: 0,
   map: null, markers: null, cluster: null, vesselLayer: null, routeLayer: null, seaLabels: null,
-  ports: [], portByName: {}, vesselMarkers: new Map()
+  ports: [], portByName: {}, vesselMarkers: new Map(),
+  portFacets: {}, portSummary: {}, selectedPort: null
 };
 const STATUS_COLORS = {
   operating: "#65BD8B", construction: "#FE4F2D", announced: "#4A57A8",
   "pre-permit": "#4A57A8", permitted: "#4A57A8", proposed: "#4A57A8",
   shelved: "#7F142A", cancelled: "#7F142A", mothballed: "#8a9aa3", retired: "#8a9aa3"
 };
-const PORT_COLOR = "#16a34a";
+const PORT_CATEGORIES = {
+  dry_bulk: { label: "Dry bulk", color: "#18b7a0" },
+  coal: { label: "Coal terminal", color: "#f4a340" },
+  container: { label: "Container", color: "#4aa8d8" },
+  breakbulk: { label: "Breakbulk", color: "#8bd3c7" },
+  liquid_bulk: { label: "Liquid bulk", color: "#d97845" },
+  oil: { label: "Oil terminal", color: "#e06a4d" },
+  lng: { label: "LNG", color: "#9278d2" },
+  roro: { label: "Ro-Ro", color: "#e7c65b" },
+  anchorage: { label: "Anchorage", color: "#8ca0ad" }
+};
 const ALL_STATUSES = ["operating","construction","announced","pre-permit","permitted","proposed","shelved","cancelled","mothballed","retired"];
 const SEA_LABELS = [
   {name:"Mediterranean Sea",lat:35,lon:18},{name:"Red Sea",lat:20,lon:38},
@@ -34,7 +45,7 @@ document.addEventListener("DOMContentLoaded", function() {
   if (vg) vg.classList.add("open");
   if (eg) eg.classList.remove("open");
   state.tracker = "world_ports";
-  Promise.all([loadTrackers(), loadPorts()]).then(function() { loadData(); });
+  Promise.all([loadTrackers(), loadPorts(), loadPortFacets()]).then(function() { loadData(); });
 });
 
 function initMap() {
@@ -114,8 +125,8 @@ function initStatusDD() {
 
 async function loadPorts() {
   try {
-    var ports = await (await fetch("/api/ports?limit=10000")).json();
-    state.ports = Array.isArray(ports) ? ports : [];
+    var response = await (await fetch("/api/ports?limit=10000")).json();
+    state.ports = Array.isArray(response) ? response : (response.data || []);
     state.portByName = {};
     var dl = document.getElementById("port-list");
     if (dl) {
@@ -133,6 +144,49 @@ async function loadPorts() {
       inp.addEventListener("blur", function() { pickPort(side, inp.value); });
     });
   } catch (e) { console.error("ports", e); }
+}
+
+async function loadPortFacets() {
+  try {
+    var json = await (await fetch("/api/ports/facets")).json();
+    state.portFacets = json.facets || {};
+    state.portSummary = json.summary || {};
+    var countries = state.portFacets.countries || [];
+    var country = document.getElementById("port-country-filter");
+    if (country) {
+      country.innerHTML = '<option value="">All countries</option>' + countries.map(function(row) {
+        var value = typeof row === "string" ? row : row.id;
+        var count = typeof row === "string" ? "" : " (" + Number(row.count || 0).toLocaleString() + ")";
+        return '<option value="' + escAttr(value) + '">' + esc(value) + count + "</option>";
+      }).join("");
+    }
+    var counts = {};
+    (state.portFacets.categories || []).forEach(function(row) { counts[row.id] = row.count; });
+    var categoryBox = document.getElementById("port-category-options");
+    if (categoryBox) {
+      categoryBox.innerHTML = Object.keys(PORT_CATEGORIES).map(function(key) {
+        var count = Number(counts[key] || 0);
+        return '<label class="category-option' + (count ? "" : " is-empty") + '">' +
+          '<input type="checkbox" value="' + key + '"' + (count ? "" : " disabled") + "/>" +
+          '<span class="category-dot" style="background:' + PORT_CATEGORIES[key].color + '"></span>' +
+          "<span>" + PORT_CATEGORIES[key].label + "</span><small>" + count.toLocaleString() + "</small></label>";
+      }).join("");
+    }
+    updatePortCoverageNote();
+  } catch (e) { console.error("port facets", e); }
+}
+
+function updatePortCoverageNote(filteredTotal) {
+  var note = document.getElementById("port-coverage-note");
+  if (!note) return;
+  var summary = state.portSummary || {};
+  var total = Number(summary.total || 0);
+  var dry = Number(summary.dry_bulk || 0);
+  var channel = Number(summary.with_channel_depth || 0);
+  var shown = filteredTotal == null ? dry : Number(filteredTotal);
+  note.textContent = shown.toLocaleString() + " ports match · " + dry.toLocaleString() +
+    " dry-bulk/coal classified · " + channel.toLocaleString() +
+    " have channel-depth data. Unknown values are not treated as zero.";
 }
 
 function pickPort(side, text) {
@@ -224,6 +278,32 @@ function getFilterParams() {
   return p;
 }
 
+function getPortFilterParams(includePaging) {
+  var p = new URLSearchParams();
+  var categories = Array.from(document.querySelectorAll("#port-category-options input:checked"))
+    .map(function(input) { return input.value; });
+  var focus = document.getElementById("dry-bulk-focus");
+  if (focus && focus.checked && categories.indexOf("dry_bulk") < 0) categories.push("dry_bulk");
+  if (categories.length) p.set("categories", categories.join(","));
+  var country = document.getElementById("port-country-filter");
+  var search = document.getElementById("port-filter-search");
+  if (country && country.value) p.set("countries", country.value);
+  if (search && search.value.trim()) p.set("q", search.value.trim());
+  [
+    ["port-min-channel", "min_channel_m"],
+    ["port-min-cargo", "min_cargo_m"],
+    ["port-min-anchorage", "min_anchorage_m"]
+  ].forEach(function(pair) {
+    var input = document.getElementById(pair[0]);
+    if (input && input.value !== "") p.set(pair[1], input.value);
+  });
+  if (includePaging !== false) {
+    p.set("limit", state.limit);
+    p.set("offset", state.offset);
+  }
+  return p;
+}
+
 async function loadData() {
   var cp = document.getElementById("dd-country-panel");
   if (cp && !cp.children.length) await loadCountries();
@@ -238,15 +318,27 @@ async function loadKPIs() {
     return;
   }
   try {
-    var k = await (await fetch("/api/kpis/" + state.tracker)).json();
     if (state.tracker === "world_ports") {
+      var params = getPortFilterParams(false);
+      params.set("limit", "1");
+      var portJson = await (await fetch("/api/ports?" + params)).json();
+      var summary = portJson.summary || state.portSummary || {};
+      var matched = Number(portJson.total || 0);
+      var total = Number(summary.total || 0);
+      var dry = Number(summary.dry_bulk || 0);
+      var channel = Number(summary.with_channel_depth || 0);
+      updatePortCoverageNote(matched);
       strip.innerHTML =
-        '<div class="kpi-card"><div class="label">Ports</div><div class="value">' +
-        Number(k.total_units).toLocaleString() + '</div><div class="sub">' + (k.countries || 191) +
-        " countries</div></div>" +
-        '<div class="kpi-card"><div class="label">On map</div><div class="value">All</div><div class="sub">World Port Index</div></div>';
+        '<div class="kpi-card"><div class="label">Ports shown</div><div class="value">' +
+        matched.toLocaleString() + '</div><div class="sub">of ' + total.toLocaleString() + " mapped ports</div></div>" +
+        '<div class="kpi-card"><div class="label">Dry-bulk / coal</div><div class="value">' +
+        dry.toLocaleString() + '</div><div class="sub">source-backed classification</div></div>' +
+        '<div class="kpi-card"><div class="label">Channel depth</div><div class="value">' +
+        (total ? Math.round(channel / total * 100) : 0) + '%</div><div class="sub">' +
+        channel.toLocaleString() + " ports with data</div></div>";
       return;
     }
+    var k = await (await fetch("/api/kpis/" + state.tracker)).json();
     var isTerm = state.tracker === "coal_terminals";
     var unit = isTerm ? "Mt" : "GW";
     var opVal = isTerm ? Math.round(k.operating_mw).toLocaleString() : (k.operating_mw / 1000).toFixed(1);
@@ -260,7 +352,10 @@ async function loadKPIs() {
 
 async function loadTable() {
   try {
-    var json = await (await fetch("/api/data/" + state.tracker + "?" + getFilterParams())).json();
+    var url = state.tracker === "world_ports"
+      ? "/api/ports?" + getPortFilterParams()
+      : "/api/data/" + state.tracker + "?" + getFilterParams();
+    var json = await (await fetch(url)).json();
     state.total = json.total;
     var thead = document.querySelector("#data-table thead");
     var tbody = document.querySelector("#data-table tbody");
@@ -269,14 +364,32 @@ async function loadTable() {
       tbody.innerHTML = "<tr><td>No rows</td></tr>";
       return;
     }
-    var cols = Object.keys(json.data[0]).slice(0, 8);
+    var cols = state.tracker === "world_ports"
+      ? ["name", "country", "unlocode", "categories", "channel_depth", "cargo_depth", "anchorage_depth", "max_vessel"]
+      : Object.keys(json.data[0]).slice(0, 8);
     thead.innerHTML = "<tr>" + cols.map(function(c) { return "<th>" + c + "</th>"; }).join("") + "</tr>";
     tbody.innerHTML = json.data.map(function(row) {
-      return "<tr>" + cols.map(function(c) {
-        return "<td>" + (row[c] != null ? row[c] : "") + "</td>";
+      return '<tr' + (state.tracker === "world_ports" ? ' class="clickable-row" data-port-id="' + escAttr(row.id) + '"' : "") + ">" +
+        cols.map(function(c) {
+        var value = row[c];
+        if (Array.isArray(value)) value = value.map(categoryLabel).join(", ");
+        return "<td>" + esc(value != null && value !== "" ? value : "—") + "</td>";
       }).join("") + "</tr>";
     }).join("");
+    if (state.tracker === "world_ports") {
+      tbody.querySelectorAll("[data-port-id]").forEach(function(row) {
+        row.onclick = function() { openPortDetail(row.dataset.portId); };
+      });
+    }
     var info = document.getElementById("table-info");
     if (info) info.textContent = json.data.length + " of " + json.total.toLocaleString();
   } catch (e) { console.error("table", e); }
+}
+
+function categoryLabel(key) {
+  return PORT_CATEGORIES[key] ? PORT_CATEGORIES[key].label : String(key || "").replace(/_/g, " ");
+}
+
+function escAttr(value) {
+  return esc(value == null ? "" : value).replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }

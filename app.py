@@ -1,6 +1,6 @@
 """Global Energy Transition Dashboard"""
 from __future__ import annotations
-import os, json, io, uuid, asyncio, logging
+import os, json, io, uuid, asyncio, logging, re, zipfile
 from pathlib import Path
 from typing import Optional, Dict, List, Any
 from datetime import datetime
@@ -17,6 +17,7 @@ from maritime_extras import (
     load_zones, enrich_port_fields, analyze_route_zones,
     fetch_weather, fetch_bunker_prices, estimate_fuel_cost,
 )
+from port_catalog import PortCatalog
 
 log = logging.getLogger("ais")
 logging.basicConfig(level=logging.INFO)
@@ -25,11 +26,10 @@ BASE_DIR = Path(__file__).parent
 DATA_DIR = BASE_DIR / "data"
 UPLOAD_DIR = BASE_DIR / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
+BUNDLED_DATA_DIR = UPLOAD_DIR / "_bundled_data"
+BUNDLED_DATA_DIR.mkdir(exist_ok=True)
 
-AISSTREAM_API_KEY = (
-    os.getenv("AISSTREAM_API_KEY")
-    or "b692b9b39eeebee0716442f7afc26e7963d7b695"
-).strip()
+AISSTREAM_API_KEY = os.getenv("AISSTREAM_API_KEY", "").strip()
 
 TRACKERS = {
     "coal_plants": {"label": "Coal Plants", "file": "coal_plants.csv.gz", "icon": "🔥"},
@@ -43,22 +43,87 @@ TRACKERS = {
 user_datasets: Dict[str, Path] = {}
 con = duckdb.connect(database=":memory:")
 
+def _ensure_bundled_trackers() -> None:
+    """Extract optional prototype datasets into the ignored runtime directory."""
+    bundle = BASE_DIR / "gem-dashboard (1).zip"
+    if not bundle.exists():
+        return
+    wanted = {
+        "coal_terminals.csv",
+        "coal_terminals.csv.gz",
+        "world_ports.csv",
+        "world_ports.csv.gz",
+        "summaries.json",
+    }
+    try:
+        with zipfile.ZipFile(bundle) as archive:
+            members = {
+                Path(name).name: name
+                for name in archive.namelist()
+                if "/data/" in name.replace("\\", "/")
+                and Path(name).name in wanted
+            }
+            for filename, member in members.items():
+                destination = BUNDLED_DATA_DIR / filename
+                if destination.exists():
+                    continue
+                destination.write_bytes(archive.read(member))
+    except (OSError, zipfile.BadZipFile) as exc:
+        log.warning("Could not extract bundled tracker data: %s", exc)
+
+
+def _tracker_path(name: str, meta: Dict[str, str]) -> Path:
+    candidates = [meta["file"]]
+    if name == "world_ports":
+        candidates.extend(["world_ports.csv", "world_ports.csv.gz"])
+    if name == "coal_terminals":
+        candidates.extend(["coal_terminals.csv", "coal_terminals.csv.gz"])
+    for directory in (DATA_DIR, BUNDLED_DATA_DIR):
+        for filename in dict.fromkeys(candidates):
+            path = directory / filename
+            if path.exists():
+                return path
+    return DATA_DIR / meta["file"]
+
+
+def _summary_path() -> Path:
+    for directory in (DATA_DIR, BUNDLED_DATA_DIR):
+        path = directory / "summaries.json"
+        if path.exists():
+            return path
+    return DATA_DIR / "summaries.json"
+
+
 def register_all():
     for name, meta in TRACKERS.items():
-        path = DATA_DIR / meta["file"]
-        if not path.exists() and name == "world_ports":
-            alt = DATA_DIR / "world_ports.csv"
-            if alt.exists():
-                path = alt
+        path = _tracker_path(name, meta)
         if path.exists():
             con.execute(f"CREATE OR REPLACE TABLE {name} AS SELECT * FROM read_csv_auto('{path}')")
     for uname, upath in user_datasets.items():
         safe = uname.replace("-", "_").replace(" ", "_")
         con.execute(f"CREATE OR REPLACE TABLE user_{safe} AS SELECT * FROM read_csv_auto('{upath}')")
 
+_ensure_bundled_trackers()
 register_all()
-app = FastAPI(title="GEM Dashboard", version="3.5.0")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+ports = PortCatalog(con)
+ports.refresh()
+
+app = FastAPI(title="Global Energy & Maritime Intelligence", version="4.0.0")
+cors_origins = [
+    value.strip()
+    for value in os.getenv(
+        "ALLOWED_ORIGINS",
+        "http://localhost:8000,http://127.0.0.1:8000",
+    ).split(",")
+    if value.strip()
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type", "Authorization"],
+)
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
 @app.get("/")
@@ -146,7 +211,7 @@ def _compute_route(from_lon, from_lat, to_lon, to_lat, speed_knots, restrictions
 
 @app.get("/api/trackers")
 async def list_trackers():
-    summaries_path = DATA_DIR / "summaries.json"
+    summaries_path = _summary_path()
     summaries = json.loads(summaries_path.read_text()) if summaries_path.exists() else {}
     result = []
     for key, meta in TRACKERS.items():
@@ -204,34 +269,45 @@ async def get_data(tracker_id: str, status: Optional[str] = None, country: Optio
     return {"data": json.loads(df.to_json(orient="records", date_format="iso")), "total": total, "limit": limit, "offset": offset}
 
 @app.get("/api/map/{tracker_id}")
-async def get_map_points(tracker_id: str, status: Optional[str] = None, country: Optional[str] = None, limit: int = Query(5000, le=10000)):
+async def get_map_points(
+    tracker_id: str,
+    status: Optional[str] = None,
+    country: Optional[str] = None,
+    categories: Optional[str] = None,
+    countries: Optional[str] = None,
+    harbor_sizes: Optional[str] = None,
+    q: Optional[str] = None,
+    min_channel_m: Optional[float] = None,
+    min_cargo_m: Optional[float] = None,
+    min_anchorage_m: Optional[float] = None,
+    limit: int = Query(5000, le=10000),
+):
     if tracker_id not in TRACKERS and not tracker_id.startswith("user_"):
         raise HTTPException(404)
+    if tracker_id == "world_ports":
+        selected_countries = _csv_values(countries or country)
+        filtered = ports.filtered(
+            q=q,
+            categories=_csv_values(categories),
+            countries=selected_countries,
+            harbor_sizes=_csv_values(harbor_sizes),
+            min_channel_m=min_channel_m,
+            min_cargo_m=min_cargo_m,
+            min_anchorage_m=min_anchorage_m,
+        )
+        return [ports.compact(item) for item in filtered[:limit]]
     where, params = _filters(status, country, None, None, None, None)
     extra = ['"Latitude" IS NOT NULL', '"Longitude" IS NOT NULL']
     where = (where + " AND " + " AND ".join(extra)) if where else (" WHERE " + " AND ".join(extra))
-    if tracker_id == "world_ports":
-        sql = (
-            'SELECT "Plant name" as name, "Unit name" as unit, Status as status, '
-            'TRY_CAST("Capacity (MW)" AS DOUBLE) as capacity, '
-            'TRY_CAST(Latitude AS DOUBLE) as lat, TRY_CAST(Longitude AS DOUBLE) as lon, '
-            '"Country/Area" as country, '
-            'CHAN_DEPTH, CARGODEPTH, HARBORSIZE, HARBORTYPE, MAX_VESSEL '
-            'FROM ' + tracker_id + where + ' LIMIT ' + str(limit)
-        )
-    else:
-        sql = (
-            'SELECT "Plant name" as name, "Unit name" as unit, Status as status, '
-            'TRY_CAST("Capacity (MW)" AS DOUBLE) as capacity, '
-            'TRY_CAST(Latitude AS DOUBLE) as lat, TRY_CAST(Longitude AS DOUBLE) as lon, '
-            '"Country/Area" as country FROM ' + tracker_id + where + ' LIMIT ' + str(limit)
-        )
+    sql = (
+        'SELECT "Plant name" as name, "Unit name" as unit, Status as status, '
+        'TRY_CAST("Capacity (MW)" AS DOUBLE) as capacity, '
+        'TRY_CAST(Latitude AS DOUBLE) as lat, TRY_CAST(Longitude AS DOUBLE) as lon, '
+        '"Country/Area" as country FROM ' + tracker_id + where + ' LIMIT ' + str(limit)
+    )
     try:
         df = con.execute(sql, params).fetchdf()
-        rows = json.loads(df.to_json(orient="records"))
-        if tracker_id == "world_ports":
-            rows = [enrich_port_fields(r) for r in rows]
-        return rows
+        return json.loads(df.to_json(orient="records"))
     except Exception as e:
         # Fallback without depth columns if schema missing
         try:
@@ -250,6 +326,18 @@ async def get_map_points(tracker_id: str, status: Optional[str] = None, country:
 async def get_kpis(tracker_id: str):
     if tracker_id not in TRACKERS:
         raise HTTPException(404)
+    if tracker_id == "world_ports":
+        return {
+            "total_units": ports.summary.get("total", 0),
+            "operating_units": ports.summary.get("total", 0),
+            "operating_mw": 0,
+            "total_mw": 0,
+            "countries": len(ports.facets.get("countries", [])),
+            "dry_bulk": ports.summary.get("dry_bulk", 0),
+            "coal": ports.summary.get("coal", 0),
+            "classified": ports.summary.get("classified", 0),
+            "with_channel_depth": ports.summary.get("with_channel_depth", 0),
+        }
     op = "operating"
     try:
         q = ("SELECT COUNT(*) as total_units, "
@@ -272,6 +360,15 @@ async def get_kpis(tracker_id: str):
 async def countries_by_capacity(tracker_id: str):
     if tracker_id not in TRACKERS and not tracker_id.startswith("user_"):
         raise HTTPException(404)
+    if tracker_id == "world_ports":
+        return [
+            {
+                "country": item["id"],
+                "capacity": 0,
+                "units": item["count"],
+            }
+            for item in ports.facets.get("countries", [])
+        ]
     op = "operating"
     try:
         q = ("SELECT \"Country/Area\" as country, "
@@ -284,32 +381,52 @@ async def countries_by_capacity(tracker_id: str):
     except Exception as e:
         raise HTTPException(400, str(e))
 
+def _csv_values(value: Optional[str]) -> List[str]:
+    return [part.strip() for part in (value or "").split(",") if part.strip()]
+
+
 @app.get("/api/ports")
-async def list_ports(q: Optional[str] = None, limit: int = Query(5000, le=10000)):
-    try:
-        sql = (
-            'SELECT "Plant name" as name, "Country/Area" as country, '
-            'TRY_CAST(Latitude AS DOUBLE) as lat, TRY_CAST(Longitude AS DOUBLE) as lon, '
-            'CHAN_DEPTH, CARGODEPTH, HARBORSIZE, HARBORTYPE, MAX_VESSEL '
-            'FROM world_ports WHERE Latitude IS NOT NULL AND Longitude IS NOT NULL'
-        )
-        params = []
-        if q:
-            sql += ' AND ("Plant name" ILIKE ? OR "Country/Area" ILIKE ?)'
-            params.extend([f"%{q}%", f"%{q}%"])
-        sql += f" ORDER BY name LIMIT {limit}"
-        try:
-            df = con.execute(sql, params).fetchdf()
-        except Exception:
-            sql = 'SELECT "Plant name" as name, "Country/Area" as country, TRY_CAST(Latitude AS DOUBLE) as lat, TRY_CAST(Longitude AS DOUBLE) as lon FROM world_ports WHERE Latitude IS NOT NULL AND Longitude IS NOT NULL'
-            if q:
-                sql += ' AND ("Plant name" ILIKE ? OR "Country/Area" ILIKE ?)'
-            sql += f" ORDER BY name LIMIT {limit}"
-            df = con.execute(sql, params).fetchdf()
-        rows = json.loads(df.to_json(orient="records"))
-        return [enrich_port_fields(r) for r in rows]
-    except Exception as e:
-        raise HTTPException(400, str(e))
+async def list_ports(
+    q: Optional[str] = None,
+    categories: Optional[str] = None,
+    countries: Optional[str] = None,
+    harbor_sizes: Optional[str] = None,
+    min_channel_m: Optional[float] = None,
+    min_cargo_m: Optional[float] = None,
+    min_anchorage_m: Optional[float] = None,
+    limit: int = Query(5000, ge=1, le=10000),
+    offset: int = Query(0, ge=0),
+):
+    filtered = ports.filtered(
+        q=q,
+        categories=_csv_values(categories),
+        countries=_csv_values(countries),
+        harbor_sizes=_csv_values(harbor_sizes),
+        min_channel_m=min_channel_m,
+        min_cargo_m=min_cargo_m,
+        min_anchorage_m=min_anchorage_m,
+    )
+    return {
+        "data": [ports.compact(item) for item in filtered[offset : offset + limit]],
+        "total": len(filtered),
+        "limit": limit,
+        "offset": offset,
+        "facets": ports.facets,
+        "summary": ports.summary,
+    }
+
+
+@app.get("/api/ports/facets")
+async def port_facets():
+    return {"facets": ports.facets, "summary": ports.summary}
+
+
+@app.get("/api/ports/{port_id}")
+async def port_detail(port_id: str):
+    port = ports.by_id.get(port_id)
+    if not port:
+        raise HTTPException(404, "Unknown port")
+    return port
 
 @app.get("/api/zones")
 async def get_zones():
@@ -473,14 +590,16 @@ async def track_vessels(req: VesselTrackRequest):
 
 @app.post("/api/upload")
 async def upload_file(file: UploadFile = File(...)):
-    ext = Path(file.filename).suffix.lower()
+    original_name = Path(file.filename or "upload")
+    ext = original_name.suffix.lower()
     if ext not in {".xlsx", ".xls", ".csv", ".json"}:
         raise HTTPException(400, "Supported: Excel, CSV, JSON")
     content = await file.read()
     if len(content) > 50 * 1024 * 1024:
         raise HTTPException(400, "File too large (max 50 MB)")
     uid = uuid.uuid4().hex[:8]
-    safe_name = f"{Path(file.filename).stem}_{uid}"
+    safe_stem = re.sub(r"[^A-Za-z0-9_-]+", "_", original_name.stem).strip("_")
+    safe_name = f"{safe_stem or 'upload'}_{uid}"
     out_path = UPLOAD_DIR / f"{safe_name}.csv"
     try:
         if ext in {".xlsx", ".xls"}:
@@ -499,6 +618,8 @@ async def upload_file(file: UploadFile = File(...)):
 
 @app.get("/api/export/{tracker_id}")
 async def export_excel(tracker_id: str, status: Optional[str] = None, country: Optional[str] = None):
+    if tracker_id not in TRACKERS and not tracker_id.startswith("user_"):
+        raise HTTPException(404, "Unknown tracker")
     where, params = _filters(status, country, None, None, None, None)
     try:
         df = con.execute(f"SELECT * FROM {tracker_id}{where}", params).fetchdf()
@@ -545,7 +666,14 @@ async def chat(req: ChatRequest):
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok", "trackers": list(TRACKERS.keys()), "version": "3.5.0", "time": datetime.utcnow().isoformat()}
+    return {
+        "status": "ok",
+        "trackers": list(TRACKERS.keys()),
+        "ports": ports.summary,
+        "ais_configured": bool(AISSTREAM_API_KEY),
+        "version": "4.0.0",
+        "time": datetime.utcnow().isoformat(),
+    }
 
 if __name__ == "__main__":
     import uvicorn

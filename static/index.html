@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Global Energy Transition Dashboard · GEM Style</title>
+  <title>Global Energy & Maritime Intelligence</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
@@ -13,15 +13,16 @@
 <body>
   <header class="header">
     <div class="brand">
-      <div class="logo">GEM</div>
+      <div class="logo">HRP</div>
       <div>
-        <h1>Global Energy Transition Dashboard</h1>
-        <p class="subtitle">Energy · Vessels · Ports · Sea routes</p>
+        <h1>Global Energy & Maritime Intelligence</h1>
+        <p class="subtitle">Dry bulk assets · Ports · Voyage planning</p>
       </div>
     </div>
     <div class="header-actions">
-      <button id="btn-upload" class="btn btn-orange">⬆ Upload</button>
-      <button id="btn-export" class="btn btn-teal">⬇ Export Excel</button>
+      <span class="source-pill">GEM + NGA WPI</span>
+      <button id="btn-upload" class="btn btn-ghost-light">Upload data</button>
+      <button id="btn-export" class="btn btn-teal">Export Excel</button>
     </div>
   </header>
   <div class="layout">
@@ -64,12 +65,58 @@
       </div>
       <div class="nav-group open" id="group-vessels">
         <button type="button" class="nav-group-header" data-group="vessels">
-          <span>🚢 Vessels</span><span class="chev">▾</span>
+          <span>Ports &amp; Voyages</span><span class="chev">▾</span>
         </button>
         <div class="nav-group-body">
           <div id="vessel-tracker-list" class="tracker-list"></div>
+          <div class="maritime-filters">
+            <div class="filter-title-row">
+              <div>
+                <h3>Port layers</h3>
+                <p class="hint">Filter the map by sourced capabilities.</p>
+              </div>
+              <label class="switch-label">
+                <input type="checkbox" id="dry-bulk-focus" checked />
+                <span class="switch"></span>
+                <span>Dry bulk</span>
+              </label>
+            </div>
+            <div class="filter-group">
+              <label for="port-filter-search">Port or UN/LOCODE</label>
+              <input type="text" id="port-filter-search" placeholder="Search mapped ports…" />
+            </div>
+            <div class="filter-group">
+              <label for="port-country-filter">Country</label>
+              <select id="port-country-filter">
+                <option value="">All countries</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label>Port category</label>
+              <div id="port-category-options" class="category-grid"></div>
+            </div>
+            <div class="filter-group">
+              <label>Minimum charted depth</label>
+              <div class="depth-grid">
+                <label><span>Channel</span><input type="number" id="port-min-channel" min="0" step="0.5" placeholder="m" /></label>
+                <label><span>Cargo pier</span><input type="number" id="port-min-cargo" min="0" step="0.5" placeholder="m" /></label>
+                <label><span>Anchorage</span><input type="number" id="port-min-anchorage" min="0" step="0.5" placeholder="m" /></label>
+              </div>
+            </div>
+            <div class="filter-actions">
+              <button id="btn-port-apply" class="btn btn-teal">Apply</button>
+              <button id="btn-port-reset" class="btn btn-ghost">Reset</button>
+            </div>
+            <p class="coverage-note" id="port-coverage-note">Loading port classification coverage…</p>
+          </div>
           <div class="tools-box">
-            <h3>Distance calculator</h3>
+            <div class="tool-heading">
+              <div>
+                <h3>Voyage calculator</h3>
+                <p class="hint">Analytical sea-route estimate</p>
+              </div>
+              <button id="btn-route-swap" class="icon-button" title="Swap origin and destination">⇄</button>
+            </div>
             <label class="hint">From port</label>
             <input type="text" id="port-from-search" list="port-list" placeholder="Search port name…" autocomplete="off" />
             <input type="hidden" id="route-from-lat" />
@@ -85,8 +132,8 @@
               <input type="number" id="route-speed" value="12" step="0.5" min="5" max="25" title="Speed knots" />
               <span class="hint" style="align-self:center">kn</span>
             </div>
-            <button id="btn-route" class="btn btn-orange full">Calculate route</button>
-            <p class="hint" id="route-result">Select two ports by name</p>
+            <button id="btn-route" class="btn btn-route full">Calculate voyage</button>
+            <div id="route-result" class="route-result">Select two ports by name or from the map.</div>
           </div>
           <div class="tools-box">
             <h3>Track vessel by IMO / MMSI</h3>
@@ -103,11 +150,29 @@
     <main class="main">
       <section id="kpi-strip" class="kpi-strip"></section>
       <div class="view-tabs">
-        <button class="tab active" data-view="map">🗺 Map</button>
-        <button class="tab" data-view="table">📋 Table</button>
-        <button class="tab" data-view="chat">💬 Ask Grok</button>
+        <button class="tab active" data-view="map">Map</button>
+        <button class="tab" data-view="table">Data table</button>
+        <button class="tab" data-view="chat">Ask assistant</button>
       </div>
-      <div id="view-map" class="view active"><div id="map"></div></div>
+      <div id="view-map" class="view active">
+        <div class="map-shell">
+          <div id="map"></div>
+          <div class="map-status-card">
+            <span class="status-dot"></span>
+            <span id="map-status">Loading map layer…</span>
+          </div>
+          <aside id="port-drawer" class="port-drawer" aria-hidden="true">
+            <div class="drawer-topbar">
+              <div>
+                <p class="drawer-eyebrow">Port intelligence</p>
+                <h2 id="port-drawer-title">Select a port</h2>
+              </div>
+              <button id="btn-close-port-drawer" class="drawer-close" aria-label="Close port details">×</button>
+            </div>
+            <div id="port-drawer-content" class="drawer-content"></div>
+          </aside>
+        </div>
+      </div>
       <div id="view-table" class="view">
         <div class="table-wrap"><table id="data-table"><thead></thead><tbody></tbody></table></div>
         <div class="table-footer">

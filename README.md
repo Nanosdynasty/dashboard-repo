@@ -1,15 +1,22 @@
-# Global Energy Transition Dashboard
+# Global Energy & Maritime Intelligence Dashboard
 
-**GEM-style multi-tracker web app** powered by Global Energy Monitor data (Coal Plants, Solar, Wind, Hydro, Nuclear).
+An interactive FastAPI dashboard combining Global Energy Monitor assets with a
+normalized port catalog and an analytical voyage-distance tool.
 
-Clean interactive UI · Map + filters · Excel export · Upload extra data · Natural-language analysis (Grok or local LLM via LM Studio / Ollama).
+The current foundation prioritizes dry-bulk workflows and uses an HRP-inspired
+navy, teal, cyan, and route-orange interface.
 
 ---
 
 ## Features
 
 - **Official GEM trackers** pre-loaded (Jan–Mar 2026 releases)
-- Interactive Leaflet map with status-colored markers
+- 3,669 normalized World Port Index records with country, harbor, depth, vessel,
+  navigation, service, and facility fields where present
+- Dry-bulk-first port map with category, country, search, and minimum-depth filters
+- Source-aware hover cards and persistent click-through port detail drawer
+- Geographically guarded enrichment from the GEM Global Coal Terminals Tracker
+- Voyage distance, duration, route polyline, port swap, and map-to-route selection
 - Filterable data tables (status, country, capacity, search)
 - KPI cards (operating GW, units, countries)
 - **Upload** Excel / CSV / JSON → becomes a new queryable tracker
@@ -55,12 +62,17 @@ uvicorn app:app --reload --port 8000
 
 Open http://localhost:8000
 
-### Optional: real Grok
+### Environment variables
 
-```bash
-export XAI_API_KEY=your_xai_key          # macOS/Linux
-set XAI_API_KEY=your_xai_key             # Windows (cmd)
-```
+Copy `.env.example` values into your deployment environment. Important variables:
+
+- `AISSTREAM_API_KEY`: optional live AIS vessel tracking. Never commit this value.
+- `ALLOWED_ORIGINS`: comma-separated trusted browser origins.
+- `XAI_API_KEY`: optional Grok chat integration.
+- `LOCAL_LLM_URL`: optional local OpenAI-compatible model endpoint.
+
+If an AIS credential was previously committed, revoke it at the provider and
+replace it with a newly issued environment-only key.
 
 ### Optional: local LLM
 
@@ -102,6 +114,21 @@ The free tier sleeps after inactivity; first request may take ~30 s.
 | Nuclear       | 1 749  | ~401 GW                     |
 
 Source: Global Energy Monitor trackers (January–March 2026 releases). Attribution required under CC BY 4.0.
+
+The port layer uses the repository's bundled World Port Index extract and GEM
+coal-terminal data. The normalizer accepts richer official WPI column aliases,
+so a future official refresh can add fields without changing the front-end API.
+Unknown values—including berth count—remain unknown and are never converted to
+zero. Port-to-terminal links are enrichment candidates based on name and
+distance, expose match confidence, and are not authoritative facility joins.
+
+## Verification
+
+```bash
+python -m unittest discover -s tests -v
+node --check static/js/app.js
+node --check static/js/app-map.js
+```
 
 ---
 

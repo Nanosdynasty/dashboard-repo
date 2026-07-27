@@ -2,7 +2,9 @@ async function loadMap() {
   if (state.cluster) state.cluster.clearLayers();
   else if (state.markers) state.markers.clearLayers();
   var url = state.tracker === "world_ports"
-    ? "/api/map/world_ports?limit=10000"
+    ? "/api/map/world_ports?" + (function() {
+        var p = getPortFilterParams(false); p.set("limit", "10000"); return p;
+      })()
     : "/api/map/" + state.tracker + "?" + (function() {
         var p = getFilterParams(); p.set("limit","5000"); p.delete("offset"); return p;
       })();
@@ -17,37 +19,53 @@ async function loadMap() {
       var lat = +p.lat, lon = +p.lon;
       if (isNaN(lat) || isNaN(lon)) return;
       var color = state.tracker === "world_ports"
-        ? PORT_COLOR
+        ? portMarkerColor(p.categories)
         : (STATUS_COLORS[String(p.status || "").toLowerCase()] || "#016B83");
       var m = L.circleMarker([lat, lon], {
         radius: state.tracker === "world_ports" ? 5 : Math.max(4, Math.min(12, Math.sqrt(p.capacity || 10) / 3)),
         fillColor: color, color: "#fff", weight: 1, fillOpacity: 0.85
       });
       var title = p.name || "—";
-      var extra = "";
-      if (p.harbor_size) extra += "<br/>Harbor: " + p.harbor_size;
-      if (p.max_vessel) extra += " · Max vessel: " + p.max_vessel;
-      if (p.channel_depth) extra += "<br/>Channel depth: " + p.channel_depth;
-      m.bindPopup(
-        "<strong>" + title + "</strong><br/>" + (p.country || "") +
-        (p.status ? " · " + p.status : "") + extra +
-        '<br/><button type="button" onclick="usePort(\'' +
-        String(title).replace(/'/g, "") + "'," + lat + "," + lon +
-        ')">Use in distance calc</button>'
-      );
+      if (state.tracker === "world_ports") {
+        var categories = (p.categories || []).map(categoryLabel).join(" · ") || "Unclassified";
+        m.bindTooltip(
+          '<div class="port-hover"><div class="meta">' + esc(categories) + "</div>" +
+          "<h4>" + esc(title) + "</h4><div class=\"meta\">" + esc(p.country || "Country unknown") +
+          (p.unlocode ? " · " + esc(p.unlocode) : "") + "</div>" +
+          '<div class="mini-grid"><div><span>Channel</span><strong>' + esc(p.channel_depth || "Unknown") +
+          "</strong></div><div><span>Cargo pier</span><strong>" + esc(p.cargo_depth || "Unknown") +
+          "</strong></div><div><span>Anchorage</span><strong>" + esc(p.anchorage_depth || "Unknown") +
+          "</strong></div><div><span>Max vessel</span><strong>" + esc(p.max_vessel || "Unknown") + "</strong></div></div>" +
+          '<small>Click for specifications and source details</small></div>',
+          { sticky: true, direction: "top", opacity: 1, className: "port-hover-card" }
+        );
+        m.on("click", function() { openPortDetail(p.id); });
+      } else {
+        m.bindPopup("<strong>" + esc(title) + "</strong><br/>" + esc(p.country || "") +
+          (p.status ? " · " + esc(p.status) : ""));
+      }
       if (state.cluster) batch.push(m); else state.markers.addLayer(m);
       n++;
     });
     if (state.cluster && batch.length) state.cluster.addLayers(batch);
-    console.log("World ports drawn:", n, "of", points.length);
+    var mapStatus = document.getElementById("map-status");
+    if (mapStatus) mapStatus.textContent = n.toLocaleString() +
+      (state.tracker === "world_ports" ? " ports mapped" : " assets mapped");
   } catch (e) { console.error("loadMap", e); }
 }
 
-window.usePort = function(name, lat, lon) {
+function portMarkerColor(categories) {
+  var cats = categories || [];
+  var priority = ["coal", "dry_bulk", "oil", "lng", "liquid_bulk", "container", "breakbulk", "roro", "anchorage"];
+  var match = priority.find(function(key) { return cats.indexOf(key) >= 0; });
+  return match && PORT_CATEGORIES[match] ? PORT_CATEGORIES[match].color : "#738691";
+}
+
+window.usePort = function(name, lat, lon, requestedSide) {
   document.getElementById("group-vessels").classList.add("open");
   document.getElementById("group-energy").classList.remove("open");
   var fromEmpty = !document.getElementById("route-from-lat").value;
-  var side = fromEmpty ? "from" : "to";
+  var side = requestedSide || (fromEmpty ? "from" : "to");
   document.getElementById("port-" + side + "-search").value = name;
   document.getElementById("route-" + side + "-lat").value = lat;
   document.getElementById("route-" + side + "-lon").value = lon;
@@ -56,6 +74,100 @@ window.usePort = function(name, lat, lon) {
   if (!fromEmpty) calcRoute();
 };
 
+async function openPortDetail(portId) {
+  var drawer = document.getElementById("port-drawer");
+  var content = document.getElementById("port-drawer-content");
+  var title = document.getElementById("port-drawer-title");
+  if (!drawer || !content || !title) return;
+  drawer.classList.add("open");
+  drawer.setAttribute("aria-hidden", "false");
+  title.textContent = "Loading port…";
+  content.innerHTML = '<div class="drawer-loading">Loading source-backed specifications…</div>';
+  try {
+    var res = await fetch("/api/ports/" + encodeURIComponent(portId));
+    if (!res.ok) throw new Error("Port details unavailable");
+    var p = await res.json();
+    state.selectedPort = p;
+    title.textContent = p.name || "Port";
+    var categories = (p.categories || []).map(function(key) {
+      var color = PORT_CATEGORIES[key] ? PORT_CATEGORIES[key].color : "#738691";
+      return '<span class="port-tag"><i style="background:' + color + '"></i>' + esc(categoryLabel(key)) + "</span>";
+    }).join("") || '<span class="port-tag">Unclassified</span>';
+    var terminals = (p.coal_terminals || []).map(function(t) {
+      return '<article class="terminal-card"><div><strong>' + esc(t.name || "Coal terminal") +
+        '</strong><span>' + esc(t.status || "Status unknown") + " · " +
+        esc(t.capacity_mtpa != null ? t.capacity_mtpa + " Mtpa" : "Capacity unknown") + "</span></div>" +
+        '<small>' + esc(t.match_confidence || "unknown") + " match · " +
+        esc(t.distance_km != null ? t.distance_km + " km from port" : "distance unknown") + "</small>" +
+        (t.wiki_url ? '<a href="' + escAttr(t.wiki_url) + '" target="_blank" rel="noopener">GEM profile ↗</a>' : "") +
+        "</article>";
+    }).join("") || '<p class="empty-detail">No matched GEM coal terminal in the guarded search radius.</p>';
+    var sources = (p.sources || []).map(function(source) {
+      return '<a class="source-link" href="' + escAttr(source.url || "#") +
+        '" target="_blank" rel="noopener"><span>' + esc(source.name || "Source") +
+        "</span><small>" + esc(source.role || "") + " ↗</small></a>";
+    }).join("");
+    content.innerHTML =
+      '<div class="port-tags">' + categories + "</div>" +
+      '<p class="port-location">' + esc(p.country || "Country unknown") +
+      (p.unlocode ? " · " + esc(p.unlocode) : "") + " · " +
+      Number(p.lat).toFixed(4) + ", " + Number(p.lon).toFixed(4) + "</p>" +
+      '<div class="drawer-actions"><button id="detail-use-from" class="btn btn-teal">Set as origin</button>' +
+      '<button id="detail-use-to" class="btn btn-ghost">Set as destination</button></div>' +
+      '<section class="detail-section"><h3>Navigation envelope</h3><div class="spec-grid">' +
+      specItem("Channel depth", p.channel_depth) + specItem("Cargo pier", p.cargo_depth) +
+      specItem("Anchorage", p.anchorage_depth) + specItem("Oil terminal", p.oil_depth) +
+      specItem("LNG terminal", p.lng_depth) + specItem("Max vessel", p.max_vessel) +
+      specItem("Max draft", metric(p.max_vessel_draft_m, "m")) +
+      specItem("Tidal range", metric(p.tidal_range_m, "m")) + "</div></section>" +
+      '<section class="detail-section"><h3>Port profile</h3><div class="spec-grid">' +
+      specItem("Harbor size", p.harbor_size) + specItem("Harbor type", p.harbor_type) +
+      specItem("Harbor use", p.harbor_use) + specItem("Shelter", p.shelter) + "</div></section>" +
+      '<section class="detail-section"><h3>Facilities</h3><div class="facility-list">' +
+      objectFlags(p.facilities) + "</div>" +
+      '<div class="data-warning"><strong>Berth count: unknown</strong><span>The current source does not report a defensible berth count. The dashboard will not infer zero.</span></div></section>' +
+      '<section class="detail-section"><h3>Matched dry-bulk terminals</h3>' + terminals + "</section>" +
+      '<section class="detail-section"><h3>Data quality</h3><div class="quality-row"><span>Core field completeness</span><b>' +
+      Number(p.data_completeness_pct || 0) + '%</b></div><div class="quality-bar"><i style="width:' +
+      Number(p.data_completeness_pct || 0) + '%"></i></div></section>' +
+      '<section class="detail-section"><h3>Sources</h3>' + sources + "</section>";
+    document.getElementById("detail-use-from").onclick = function() {
+      usePort(p.name, p.lat, p.lon, "from");
+    };
+    document.getElementById("detail-use-to").onclick = function() {
+      usePort(p.name, p.lat, p.lon, "to");
+    };
+  } catch (e) {
+    title.textContent = "Port unavailable";
+    content.innerHTML = '<div class="data-warning">' + esc(e.message) + "</div>";
+  }
+}
+window.openPortDetail = openPortDetail;
+
+function closePortDetail() {
+  var drawer = document.getElementById("port-drawer");
+  if (!drawer) return;
+  drawer.classList.remove("open");
+  drawer.setAttribute("aria-hidden", "true");
+}
+
+function specItem(label, value) {
+  return "<div><span>" + esc(label) + "</span><b>" + esc(value || "Unknown") + "</b></div>";
+}
+
+function metric(value, unit) {
+  return value == null ? "Unknown" : Number(value).toLocaleString() + " " + unit;
+}
+
+function objectFlags(flags) {
+  flags = flags || {};
+  var rows = Object.keys(flags).filter(function(key) { return flags[key] === true; });
+  if (!rows.length) return '<span class="empty-detail">No affirmative facility flags in source.</span>';
+  return rows.map(function(key) {
+    return '<span class="facility-chip">✓ ' + esc(key.replace(/_/g, " ")) + "</span>";
+  }).join("");
+}
+
 async function calcRoute() {
   var fla = +document.getElementById("route-from-lat").value;
   var flo = +document.getElementById("route-from-lon").value;
@@ -63,7 +175,8 @@ async function calcRoute() {
   var tlo = +document.getElementById("route-to-lon").value;
   var speed = +document.getElementById("route-speed").value || 12;
   var resultEl = document.getElementById("route-result");
-  if ([fla, flo, tla, tlo].some(isNaN) || !fla) {
+  if (![fla, flo, tla, tlo].every(Number.isFinite) ||
+      Math.abs(fla) > 90 || Math.abs(tla) > 90 || Math.abs(flo) > 180 || Math.abs(tlo) > 180) {
     resultEl.textContent = "Select two ports by name first";
     return;
   }
@@ -94,9 +207,11 @@ async function calcRoute() {
     var nm = j.distance_nm != null ? j.distance_nm : (j.distance_km / 1.852);
     var days = j.duration_days != null ? j.duration_days : (nm / speed / 24);
     var via = j.via ? (" via " + j.via) : "";
-    resultEl.textContent = fromName + " → " + toName + via + " · " +
-      Number(nm).toLocaleString(undefined, { maximumFractionDigits: 0 }) + " nm · " +
-      speed + " kn · " + Number(days).toFixed(1) + " days";
+    resultEl.innerHTML = '<div class="route-summary"><span>' + esc(fromName) + " → " + esc(toName) +
+      esc(via) + '</span><strong>' +
+      Number(nm).toLocaleString(undefined, { maximumFractionDigits: 0 }) + " nm</strong>" +
+      '<div><b>' + esc(speed) + " kn</b><b>" + Number(days).toFixed(1) +
+      ' days</b></div><small>Analytical estimate only; not for navigation.</small></div>';
   } catch (e) {
     resultEl.textContent = "Error: " + e.message;
   }
@@ -204,6 +319,18 @@ function bindUI() {
   };
   var broute = document.getElementById("btn-route");
   if (broute) broute.onclick = calcRoute;
+  var bswap = document.getElementById("btn-route-swap");
+  if (bswap) bswap.onclick = swapRoutePorts;
+  var bpa = document.getElementById("btn-port-apply");
+  if (bpa) bpa.onclick = function() { state.offset = 0; loadData(); };
+  var bpr = document.getElementById("btn-port-reset");
+  if (bpr) bpr.onclick = resetPortFilters;
+  var portSearch = document.getElementById("port-filter-search");
+  if (portSearch) portSearch.onkeydown = function(e) {
+    if (e.key === "Enter") { state.offset = 0; loadData(); }
+  };
+  var closeDrawer = document.getElementById("btn-close-port-drawer");
+  if (closeDrawer) closeDrawer.onclick = closePortDetail;
   var bt = document.getElementById("btn-track-imo");
   if (bt) bt.onclick = trackVessels;
   var bcl = document.getElementById("btn-clear-imo");
@@ -216,6 +343,41 @@ function bindUI() {
   if (bs) bs.onclick = sendChat;
   var ci = document.getElementById("chat-input");
   if (ci) ci.onkeydown = function(e) { if (e.key === "Enter") sendChat(); };
+}
+
+function resetPortFilters() {
+  var focus = document.getElementById("dry-bulk-focus");
+  var country = document.getElementById("port-country-filter");
+  var search = document.getElementById("port-filter-search");
+  if (focus) focus.checked = true;
+  if (country) country.value = "";
+  if (search) search.value = "";
+  document.querySelectorAll("#port-category-options input").forEach(function(input) { input.checked = false; });
+  ["port-min-channel", "port-min-cargo", "port-min-anchorage"].forEach(function(id) {
+    var input = document.getElementById(id); if (input) input.value = "";
+  });
+  state.offset = 0;
+  loadData();
+}
+
+function swapRoutePorts() {
+  ["search", "label"].forEach(function(suffix) {
+    var from = document.getElementById("port-from-" + suffix);
+    var to = document.getElementById("port-to-" + suffix);
+    if (!from || !to) return;
+    var value = suffix === "search" ? from.value : from.textContent;
+    if (suffix === "search") {
+      from.value = to.value; to.value = value;
+    } else {
+      from.textContent = to.textContent; to.textContent = value;
+    }
+  });
+  ["lat", "lon"].forEach(function(axis) {
+    var from = document.getElementById("route-from-" + axis);
+    var to = document.getElementById("route-to-" + axis);
+    var value = from.value; from.value = to.value; to.value = value;
+  });
+  if (document.getElementById("route-from-lat").value && document.getElementById("route-to-lat").value) calcRoute();
 }
 
 function switchView(name) {
