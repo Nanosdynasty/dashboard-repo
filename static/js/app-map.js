@@ -1,41 +1,45 @@
 async function loadMap() {
-  if (state.markers) state.markers.clearLayers();
-  var params = getFilterParams();
-  params.set("limit", "5000");
-  params.delete("offset");
-  if (state.tracker === "world_ports") {
-    params.delete("status");
-    params.delete("min_mw");
-    params.delete("max_mw");
-  }
+  if (state.cluster) state.cluster.clearLayers();
+  else if (state.markers) state.markers.clearLayers();
+  var url = state.tracker === "world_ports"
+    ? "/api/map/world_ports?limit=10000"
+    : "/api/map/" + state.tracker + "?" + (function() {
+        var p = getFilterParams(); p.set("limit","5000"); p.delete("offset"); return p;
+      })();
   try {
-    var res = await fetch("/api/map/" + state.tracker + "?" + params);
+    var res = await fetch(url);
     if (!res.ok) throw new Error("map " + res.status);
     var points = await res.json();
-    if (!Array.isArray(points)) {
-      console.error("map not array", points);
-      return;
-    }
-    var n = 0;
+    if (!Array.isArray(points)) { console.error("map not array", points); return; }
+    var n = 0, batch = [];
     points.forEach(function(p) {
       if (p.lat == null || p.lon == null) return;
+      var lat = +p.lat, lon = +p.lon;
+      if (isNaN(lat) || isNaN(lon)) return;
       var color = state.tracker === "world_ports"
         ? PORT_COLOR
-        : (STATUS_COLORS[(p.status || "").toLowerCase()] || "#016B83");
-      var m = L.circleMarker([p.lat, p.lon], {
+        : (STATUS_COLORS[String(p.status || "").toLowerCase()] || "#016B83");
+      var m = L.circleMarker([lat, lon], {
         radius: state.tracker === "world_ports" ? 5 : Math.max(4, Math.min(12, Math.sqrt(p.capacity || 10) / 3)),
-        fillColor: color, color: "#fff", weight: 1.2, fillOpacity: 0.85
+        fillColor: color, color: "#fff", weight: 1, fillOpacity: 0.85
       });
       var title = p.name || "—";
-      m.bindPopup("<strong>" + title + "</strong><br/>" + (p.country || "") +
-        (p.status ? " · " + p.status : "") +
+      var extra = "";
+      if (p.harbor_size) extra += "<br/>Harbor: " + p.harbor_size;
+      if (p.max_vessel) extra += " · Max vessel: " + p.max_vessel;
+      if (p.channel_depth) extra += "<br/>Channel depth: " + p.channel_depth;
+      m.bindPopup(
+        "<strong>" + title + "</strong><br/>" + (p.country || "") +
+        (p.status ? " · " + p.status : "") + extra +
         '<br/><button type="button" onclick="usePort(\'' +
-        String(title).replace(/'/g, "") + "'," + p.lat + "," + p.lon +
-        ')">Use in distance calc</button>');
-      state.markers.addLayer(m);
+        String(title).replace(/'/g, "") + "'," + lat + "," + lon +
+        ')">Use in distance calc</button>'
+      );
+      if (state.cluster) batch.push(m); else state.markers.addLayer(m);
       n++;
     });
-    console.log("markers drawn", n, "of", points.length, "tracker", state.tracker);
+    if (state.cluster && batch.length) state.cluster.addLayers(batch);
+    console.log("World ports drawn:", n, "of", points.length);
   } catch (e) { console.error("loadMap", e); }
 }
 
@@ -175,38 +179,23 @@ function bindUI() {
   if (ba) ba.onclick = function() { state.offset = 0; loadData(); };
   var br = document.getElementById("btn-reset");
   if (br) br.onclick = function() {
-    document.querySelectorAll("#dd-status-panel input, #dd-country-panel input").forEach(function(i) {
-      i.checked = false;
-    });
+    document.querySelectorAll("#dd-status-panel input, #dd-country-panel input").forEach(function(i) { i.checked = false; });
     var min = document.getElementById("filter-min-mw");
     var max = document.getElementById("filter-max-mw");
     var se = document.getElementById("filter-search");
-    if (min) min.value = "";
-    if (max) max.value = "";
-    if (se) se.value = "";
-    state.offset = 0;
-    loadData();
+    if (min) min.value = ""; if (max) max.value = ""; if (se) se.value = "";
+    state.offset = 0; loadData();
   };
   var bp = document.getElementById("btn-prev");
-  if (bp) bp.onclick = function() {
-    state.offset = Math.max(0, state.offset - state.limit);
-    loadTable();
-  };
+  if (bp) bp.onclick = function() { state.offset = Math.max(0, state.offset - state.limit); loadTable(); };
   var bn = document.getElementById("btn-next");
   if (bn) bn.onclick = function() {
-    if (state.offset + state.limit < state.total) {
-      state.offset += state.limit;
-      loadTable();
-    }
+    if (state.offset + state.limit < state.total) { state.offset += state.limit; loadTable(); }
   };
   var bu = document.getElementById("btn-upload");
-  if (bu) bu.onclick = function() {
-    document.getElementById("upload-modal").classList.remove("hidden");
-  };
+  if (bu) bu.onclick = function() { document.getElementById("upload-modal").classList.remove("hidden"); };
   var bc = document.getElementById("btn-cancel-upload");
-  if (bc) bc.onclick = function() {
-    document.getElementById("upload-modal").classList.add("hidden");
-  };
+  if (bc) bc.onclick = function() { document.getElementById("upload-modal").classList.add("hidden"); };
   var bd = document.getElementById("btn-do-upload");
   if (bd) bd.onclick = doUpload;
   var be = document.getElementById("btn-export");
