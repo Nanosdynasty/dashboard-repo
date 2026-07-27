@@ -2,10 +2,11 @@
 const state = {
   tracker: "world_ports", offset: 0, total: 0, limit: 100,
   map: null, markers: null, vesselLayer: null, routeLayer: null,
-  seaLabels: null, ecaLayer: null, piracyLayer: null,
+  seaLabels: null, baseLayer: null,
   page: "map", _view: "map",
   ports: [], portByName: {},
-  congestion: { ports: [] }, congestionLevel: "", congestionOnly: false, congLegendCtrl: null,
+  congestion: { ports: [] }, congestionLevel: "", congestionOnly: false,
+  theme: localStorage.getItem("hrp-theme") || "dark",
 };
 const ENERGY = ["coal_plants","coal_terminals","solar","wind","hydro","nuclear"];
 const CONG_COLORS = { low: "#22c55e", medium: "#eab308", high: "#f97316", severe: "#ef4444" };
@@ -13,6 +14,7 @@ const STATUS_COLORS = {
   operating: "#22c55e", construction: "#f97316", announced: "#3b82f6",
   shelved: "#ef4444", cancelled: "#ef4444", retired: "#64748b"
 };
+const PORT_COLOR = "#16a34a";
 const WEATHER_HUBS = [
   { name: "Singapore", lat: 1.26, lon: 103.85 },
   { name: "Rotterdam", lat: 51.95, lon: 4.14 },
@@ -22,11 +24,11 @@ const WEATHER_HUBS = [
   { name: "Port Hedland", lat: -20.31, lon: 118.57 },
 ];
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", function() {
+  applyTheme(state.theme);
   initMap();
   loadTrackers();
   loadPorts();
-  loadZones();
   loadCongestion();
   loadWeatherHubs();
   bindUI();
@@ -34,11 +36,34 @@ document.addEventListener("DOMContentLoaded", () => {
   loadData();
 });
 
+function applyTheme(theme) {
+  state.theme = theme;
+  document.documentElement.setAttribute("data-theme", theme);
+  localStorage.setItem("hrp-theme", theme);
+  var btn = document.getElementById("btn-theme");
+  if (btn) {
+    btn.innerHTML = theme === "dark"
+      ? '<span class="material-icons-outlined">light_mode</span><span>Light</span>'
+      : '<span class="material-icons-outlined">dark_mode</span><span>Dark</span>';
+  }
+  if (state.map && state.baseLayer) {
+    state.map.removeLayer(state.baseLayer);
+    state.baseLayer = makeBaseLayer();
+    state.baseLayer.addTo(state.map);
+  }
+}
+
+function makeBaseLayer() {
+  var url = state.theme === "dark"
+    ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+    : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+  return L.tileLayer(url, { attribution: "OSM · CARTO", maxZoom: 18 });
+}
+
 function initMap() {
   state.map = L.map("map", { worldCopyJump: true }).setView([20, 10], 2);
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-    attribution: "OSM · CARTO", maxZoom: 18
-  }).addTo(state.map);
+  state.baseLayer = makeBaseLayer();
+  state.baseLayer.addTo(state.map);
   if (typeof L.markerClusterGroup === "function") {
     state.markers = L.markerClusterGroup({ maxClusterRadius: 45, disableClusteringAtZoom: 9 });
   } else {
@@ -48,64 +73,49 @@ function initMap() {
   state.vesselLayer = L.layerGroup().addTo(state.map);
   state.routeLayer = L.layerGroup().addTo(state.map);
   state.seaLabels = L.layerGroup().addTo(state.map);
-  state.ecaLayer = L.layerGroup().addTo(state.map);
-  state.piracyLayer = L.layerGroup().addTo(state.map);
-}
-
-async function loadZones() {
-  try {
-    const geo = await (await fetch("/api/zones")).json();
-    (geo.features || []).forEach(f => {
-      const p = f.properties || {};
-      const isEca = p.zone_type === "ECA";
-      const layer = L.geoJSON(f, {
-        style: isEca
-          ? { color: "#38bdf8", weight: 1.5, dashArray: "6 4", fillColor: "#0ea5e9", fillOpacity: 0.12 }
-          : { color: "#f87171", weight: 1.5, dashArray: "4 3", fillColor: "#ef4444", fillOpacity: 0.12 }
-      });
-      if (isEca) layer.addTo(state.ecaLayer);
-      else layer.addTo(state.piracyLayer);
-    });
-  } catch (e) { console.warn("zones", e); }
 }
 
 function setPage(name) {
   state.page = name;
-  document.querySelectorAll(".rail-item[data-page]").forEach(b => {
+  document.querySelectorAll(".rail-item[data-page]").forEach(function(b) {
     b.classList.toggle("active", b.dataset.page === name);
   });
-  const panelMap = { map: "ports", ports: "ports", vessels: "vessels", route: "route", energy: "energy", ask: "ask" };
-  const pid = panelMap[name] || "ports";
-  document.querySelectorAll(".panel-page").forEach(pg => {
+  var panelMap = { map: "ports", ports: "ports", vessels: "vessels", route: "route", energy: "energy", ask: "ask" };
+  var pid = panelMap[name] || "ports";
+  document.querySelectorAll(".panel-page").forEach(function(pg) {
     pg.classList.toggle("active", pg.id === "page-" + pid);
   });
-  const titles = {
+  var titles = {
     map: "Map · World Ports", ports: "Ports", vessels: "Vessels",
     route: "Route", energy: "Energy", ask: "Ask"
   };
-  const st = document.getElementById("stage-title");
+  var st = document.getElementById("stage-title");
   if (st) st.textContent = titles[name] || "Map";
+
   if (name === "energy") {
-    const first = document.querySelector("#tracker-list .tracker-item");
-    if (first && (state.tracker === "world_ports" || !ENERGY.includes(state.tracker))) first.click();
-  } else if (["map", "ports", "route", "vessels"].includes(name) && state.tracker !== "world_ports") {
-    state.tracker = "world_ports";
-    state.offset = 0;
+    var first = document.querySelector("#tracker-list .tracker-item");
+    if (first && (state.tracker === "world_ports" || ENERGY.indexOf(state.tracker) < 0)) first.click();
+  } else if (["map", "ports", "route", "vessels"].indexOf(name) >= 0) {
+    if (state.tracker !== "world_ports") {
+      state.tracker = "world_ports";
+      state.offset = 0;
+    }
     loadData();
   }
   if (name !== "ask") switchView(state._view || "map");
-  setTimeout(() => { if (state.map) state.map.invalidateSize(); }, 80);
+  setTimeout(function() { if (state.map) state.map.invalidateSize(); }, 80);
 }
 
 async function loadWeatherHubs() {
-  const el = document.getElementById("weather-hubs");
+  var el = document.getElementById("weather-hubs");
   if (!el) return;
   el.innerHTML = "<div class='hint'>Loading weather…</div>";
-  const cards = [];
-  for (const h of WEATHER_HUBS) {
+  var cards = [];
+  for (var i = 0; i < WEATHER_HUBS.length; i++) {
+    var h = WEATHER_HUBS[i];
     try {
-      const w = await (await fetch("/api/weather?lat=" + h.lat + "&lon=" + h.lon)).json();
-      const parts = [];
+      var w = await (await fetch("/api/weather?lat=" + h.lat + "&lon=" + h.lon)).json();
+      var parts = [];
       if (w.wind_speed_kn != null) parts.push("Wind " + w.wind_speed_kn + " kn");
       if (w.wave_height_m != null) parts.push("Wave " + w.wave_height_m + " m");
       if (w.sst_c != null) parts.push("SST " + w.sst_c + "°C");
@@ -129,10 +139,10 @@ async function loadWeatherHubs() {
 
 async function loadPorts() {
   try {
-    const ports = await (await fetch("/api/ports")).json();
+    var ports = await (await fetch("/api/ports")).json();
     state.ports = ports;
     state.portByName = {};
-    const dl = document.getElementById("port-list");
+    var dl = document.getElementById("port-list");
     if (dl) {
       dl.innerHTML = ports.map(function(p) {
         var key = (p.name + (p.country ? " (" + p.country + ")" : "")).trim();
@@ -153,7 +163,7 @@ async function loadPorts() {
 function pickPort(side, text) {
   var t = (text || "").trim().toLowerCase();
   if (!t) return;
-  var p = state.portByName[t] || state.ports.find(function(x) { return x.name.toLowerCase().includes(t); });
+  var p = state.portByName[t] || state.ports.find(function(x) { return x.name.toLowerCase().indexOf(t) >= 0; });
   if (!p) {
     document.getElementById("port-" + side + "-label").textContent = "Not found";
     return;
@@ -166,8 +176,8 @@ function pickPort(side, text) {
 
 async function loadTrackers() {
   try {
-    const list = await (await fetch("/api/trackers")).json();
-    const energyEl = document.getElementById("tracker-list");
+    var list = await (await fetch("/api/trackers")).json();
+    var energyEl = document.getElementById("tracker-list");
     if (!energyEl) return;
     energyEl.innerHTML = "";
     list.forEach(function(t) {
