@@ -1,140 +1,109 @@
-/* HRP Dashboard — in dev */
+/* GEM Dashboard — world ports on map by default */
 const state = {
-  tracker: "world_ports", offset: 0, total: 0, limit: 100,
-  map: null, markers: null, vesselLayer: null, routeLayer: null,
-  seaLabels: null, baseLayer: null,
-  page: "map", _view: "map",
-  ports: [], portByName: {},
-  congestion: { ports: [] }, congestionLevel: "", congestionOnly: false,
-  theme: localStorage.getItem("hrp-theme") || "dark",
+  tracker: "world_ports", offset: 0, limit: 100, total: 0,
+  map: null, markers: null, vesselLayer: null, routeLayer: null, seaLabels: null,
+  ports: [], portByName: {}, imoFilter: new Set(), vesselMarkers: new Map()
 };
 const ENERGY = ["coal_plants","coal_terminals","solar","wind","hydro","nuclear"];
-const CONG_COLORS = { low: "#22c55e", medium: "#eab308", high: "#f97316", severe: "#ef4444" };
 const STATUS_COLORS = {
-  operating: "#22c55e", construction: "#f97316", announced: "#3b82f6",
-  shelved: "#ef4444", cancelled: "#ef4444", retired: "#64748b"
+  operating: "#65BD8B", construction: "#FE4F2D", announced: "#4A57A8",
+  "pre-permit": "#4A57A8", permitted: "#4A57A8", proposed: "#4A57A8",
+  shelved: "#7F142A", cancelled: "#7F142A", mothballed: "#8a9aa3", retired: "#8a9aa3"
 };
 const PORT_COLOR = "#16a34a";
-const WEATHER_HUBS = [
-  { name: "Singapore", lat: 1.26, lon: 103.85 },
-  { name: "Rotterdam", lat: 51.95, lon: 4.14 },
-  { name: "Shanghai", lat: 31.23, lon: 121.48 },
-  { name: "Houston", lat: 29.73, lon: -95.27 },
-  { name: "Richards Bay", lat: -28.8, lon: 32.08 },
-  { name: "Port Hedland", lat: -20.31, lon: 118.57 },
+const ALL_STATUSES = ["operating","construction","announced","pre-permit","permitted","proposed","shelved","cancelled","mothballed","retired"];
+const SEA_LABELS = [
+  {name:"Mediterranean Sea",lat:35,lon:18},{name:"Red Sea",lat:20,lon:38},
+  {name:"Persian Gulf",lat:26.5,lon:52},{name:"Arabian Sea",lat:15,lon:65},
+  {name:"Bay of Bengal",lat:15,lon:88},{name:"South China Sea",lat:12,lon:115},
+  {name:"East China Sea",lat:28,lon:125},{name:"North Sea",lat:56,lon:3},
+  {name:"Baltic Sea",lat:58,lon:20},{name:"Caribbean Sea",lat:15,lon:-75},
+  {name:"Gulf of Mexico",lat:25,lon:-90},{name:"Indian Ocean",lat:-20,lon:80},
+  {name:"Suez Canal",lat:30.5,lon:32.4},{name:"Strait of Hormuz",lat:26.5,lon:56.5},
+  {name:"Strait of Malacca",lat:2.5,lon:101.5},{name:"Bab el-Mandeb",lat:12.6,lon:43.3},
+  {name:"Cape of Good Hope",lat:-34.3,lon:18.4},{name:"Singapore Strait",lat:1.2,lon:103.8}
 ];
 
 document.addEventListener("DOMContentLoaded", function() {
-  applyTheme(state.theme);
   initMap();
+  initStatusDD();
+  initNavGroups();
   loadTrackers();
   loadPorts();
-  loadCongestion();
-  loadWeatherHubs();
   bindUI();
-  setPage("map");
+  switchView("map");
+  var vg = document.getElementById("group-vessels");
+  var eg = document.getElementById("group-energy");
+  if (vg) vg.classList.add("open");
+  if (eg) eg.classList.remove("open");
   loadData();
 });
 
-function applyTheme(theme) {
-  state.theme = theme;
-  document.documentElement.setAttribute("data-theme", theme);
-  localStorage.setItem("hrp-theme", theme);
-  var btn = document.getElementById("btn-theme");
-  if (btn) {
-    btn.innerHTML = theme === "dark"
-      ? '<span class="material-icons-outlined">light_mode</span><span>Light</span>'
-      : '<span class="material-icons-outlined">dark_mode</span><span>Dark</span>';
-  }
-  if (state.map && state.baseLayer) {
-    state.map.removeLayer(state.baseLayer);
-    state.baseLayer = makeBaseLayer();
-    state.baseLayer.addTo(state.map);
-  }
-}
-
-function makeBaseLayer() {
-  var url = state.theme === "dark"
-    ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-    : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
-  return L.tileLayer(url, { attribution: "OSM · CARTO", maxZoom: 18 });
-}
-
 function initMap() {
   state.map = L.map("map", { worldCopyJump: true }).setView([20, 10], 2);
-  state.baseLayer = makeBaseLayer();
-  state.baseLayer.addTo(state.map);
-  if (typeof L.markerClusterGroup === "function") {
-    state.markers = L.markerClusterGroup({ maxClusterRadius: 45, disableClusteringAtZoom: 9 });
-  } else {
-    state.markers = L.layerGroup();
-  }
-  state.map.addLayer(state.markers);
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+    attribution: "OSM CARTO", maxZoom: 18
+  }).addTo(state.map);
+  state.markers = L.layerGroup().addTo(state.map);
   state.vesselLayer = L.layerGroup().addTo(state.map);
   state.routeLayer = L.layerGroup().addTo(state.map);
   state.seaLabels = L.layerGroup().addTo(state.map);
+  SEA_LABELS.forEach(function(s) {
+    var icon = L.divIcon({
+      className: "sea-label",
+      html: "<span>" + s.name + "</span>",
+      iconSize: [120, 18], iconAnchor: [60, 9]
+    });
+    L.marker([s.lat, s.lon], { icon: icon, interactive: false }).addTo(state.seaLabels);
+  });
 }
 
-function setPage(name) {
-  state.page = name;
-  document.querySelectorAll(".rail-item[data-page]").forEach(function(b) {
-    b.classList.toggle("active", b.dataset.page === name);
-  });
-  var panelMap = { map: "ports", ports: "ports", vessels: "vessels", route: "route", energy: "energy", ask: "ask" };
-  var pid = panelMap[name] || "ports";
-  document.querySelectorAll(".panel-page").forEach(function(pg) {
-    pg.classList.toggle("active", pg.id === "page-" + pid);
-  });
-  var titles = {
-    map: "Map · World Ports", ports: "Ports", vessels: "Vessels",
-    route: "Route", energy: "Energy", ask: "Ask"
-  };
-  var st = document.getElementById("stage-title");
-  if (st) st.textContent = titles[name] || "Map";
-
-  if (name === "energy") {
-    var first = document.querySelector("#tracker-list .tracker-item");
-    if (first && (state.tracker === "world_ports" || ENERGY.indexOf(state.tracker) < 0)) first.click();
-  } else if (["map", "ports", "route", "vessels"].indexOf(name) >= 0) {
-    if (state.tracker !== "world_ports") {
-      state.tracker = "world_ports";
-      state.offset = 0;
-    }
-    loadData();
-  }
-  if (name !== "ask") switchView(state._view || "map");
-  setTimeout(function() { if (state.map) state.map.invalidateSize(); }, 80);
-}
-
-async function loadWeatherHubs() {
-  var el = document.getElementById("weather-hubs");
-  if (!el) return;
-  el.innerHTML = "<div class='hint'>Loading weather…</div>";
-  var cards = [];
-  for (var i = 0; i < WEATHER_HUBS.length; i++) {
-    var h = WEATHER_HUBS[i];
-    try {
-      var w = await (await fetch("/api/weather?lat=" + h.lat + "&lon=" + h.lon)).json();
-      var parts = [];
-      if (w.wind_speed_kn != null) parts.push("Wind " + w.wind_speed_kn + " kn");
-      if (w.wave_height_m != null) parts.push("Wave " + w.wave_height_m + " m");
-      if (w.sst_c != null) parts.push("SST " + w.sst_c + "°C");
-      cards.push(
-        '<div class="wx-card" data-lat="' + h.lat + '" data-lon="' + h.lon + '">' +
-        '<div class="wx-name">' + h.name + '</div>' +
-        '<div class="wx-vals">' + (parts.length ? parts.map(function(x){return "<span>"+x+"</span>";}).join("") : "<span>n/a</span>") + '</div></div>'
-      );
-    } catch (e) {
-      cards.push('<div class="wx-card"><div class="wx-name">' + h.name + '</div><div class="wx-vals"><span>unavailable</span></div></div>');
-    }
-  }
-  el.innerHTML = cards.join("") || "<div class='hint'>Unavailable</div>";
-  el.querySelectorAll(".wx-card[data-lat]").forEach(function(c) {
-    c.onclick = function() {
-      var lat = +c.dataset.lat, lon = +c.dataset.lon;
-      if (state.map) state.map.setView([lat, lon], 7);
+function initNavGroups() {
+  document.querySelectorAll(".nav-group-header").forEach(function(btn) {
+    btn.onclick = function() {
+      var g = btn.closest(".nav-group");
+      var wasOpen = g.classList.contains("open");
+      document.querySelectorAll(".nav-group").forEach(function(x) { x.classList.remove("open"); });
+      if (!wasOpen) g.classList.add("open");
+      if (g.id === "group-vessels" && !wasOpen) {
+        state.tracker = "world_ports";
+        state.offset = 0;
+        document.querySelectorAll(".tracker-item").forEach(function(x) {
+          x.classList.toggle("active", x.dataset.id === "world_ports");
+        });
+        loadData();
+      }
     };
   });
+}
+
+function initStatusDD() {
+  var panel = document.getElementById("dd-status-panel");
+  if (!panel) return;
+  panel.innerHTML = ALL_STATUSES.map(function(s) {
+    return '<label class="dd-item"><input type="checkbox" value="' + s + '"/> ' + s + "</label>";
+  }).join("");
+  var sb = document.getElementById("dd-status-btn");
+  var cb = document.getElementById("dd-country-btn");
+  if (sb) sb.onclick = function(e) {
+    e.stopPropagation();
+    document.getElementById("dd-status").classList.toggle("open");
+    document.getElementById("dd-country").classList.remove("open");
+  };
+  if (cb) cb.onclick = function(e) {
+    e.stopPropagation();
+    document.getElementById("dd-country").classList.toggle("open");
+    document.getElementById("dd-status").classList.remove("open");
+  };
+  document.addEventListener("click", function() {
+    var ds = document.getElementById("dd-status");
+    var dc = document.getElementById("dd-country");
+    if (ds) ds.classList.remove("open");
+    if (dc) dc.classList.remove("open");
+  });
+  if (panel) panel.onclick = function(e) { e.stopPropagation(); };
+  var cp = document.getElementById("dd-country-panel");
+  if (cp) cp.onclick = function(e) { e.stopPropagation(); };
 }
 
 async function loadPorts() {
@@ -163,70 +132,127 @@ async function loadPorts() {
 function pickPort(side, text) {
   var t = (text || "").trim().toLowerCase();
   if (!t) return;
-  var p = state.portByName[t] || state.ports.find(function(x) { return x.name.toLowerCase().indexOf(t) >= 0; });
+  var p = state.portByName[t] || state.ports.find(function(x) {
+    return x.name.toLowerCase() === t || x.name.toLowerCase().indexOf(t) >= 0;
+  });
   if (!p) {
-    document.getElementById("port-" + side + "-label").textContent = "Not found";
+    document.getElementById("port-" + side + "-label").textContent = "Port not found";
     return;
   }
   document.getElementById("route-" + side + "-lat").value = p.lat;
   document.getElementById("route-" + side + "-lon").value = p.lon;
   document.getElementById("port-" + side + "-label").textContent =
-    p.name + " (" + Number(p.lat).toFixed(2) + ", " + Number(p.lon).toFixed(2) + ")";
+    p.name + (p.country ? " · " + p.country : "") +
+    " (" + Number(p.lat).toFixed(2) + ", " + Number(p.lon).toFixed(2) + ")";
 }
 
 async function loadTrackers() {
   try {
     var list = await (await fetch("/api/trackers")).json();
     var energyEl = document.getElementById("tracker-list");
-    if (!energyEl) return;
-    energyEl.innerHTML = "";
+    var vesselEl = document.getElementById("vessel-tracker-list");
+    if (energyEl) energyEl.innerHTML = "";
+    if (vesselEl) vesselEl.innerHTML = "";
     list.forEach(function(t) {
-      if (t.id === "world_ports") return;
-      var div = document.createElement("div");
-      div.className = "tracker-item" + (t.id === state.tracker ? " active" : "");
-      div.dataset.id = t.id;
-      div.innerHTML = "<span>" + (t.icon || "") + "</span><div><div>" + t.label + "</div><div class='meta'>" +
-        (t.rows ? t.rows.toLocaleString() + " units" : "") + "</div></div>";
-      div.onclick = function() {
-        state.tracker = t.id;
-        state.offset = 0;
-        document.querySelectorAll(".tracker-item").forEach(function(x) { x.classList.remove("active"); });
-        div.classList.add("active");
-        loadData();
-      };
-      energyEl.appendChild(div);
+      var parent = t.id === "world_ports" ? vesselEl : energyEl;
+      if (parent) parent.appendChild(makeItem(t));
     });
   } catch (e) { console.error("trackers", e); }
 }
 
+function makeItem(t) {
+  var div = document.createElement("div");
+  div.className = "tracker-item" + (t.id === state.tracker ? " active" : "");
+  div.dataset.id = t.id;
+  var meta = "";
+  if (t.id === "coal_terminals") {
+    meta = (t.rows ? t.rows.toLocaleString() + " terminals" : "");
+  } else if (t.id === "world_ports") {
+    meta = (t.rows ? t.rows.toLocaleString() + " ports" : "");
+    if (t.countries) meta += " · " + t.countries + " countries";
+  } else {
+    meta = (t.rows ? t.rows.toLocaleString() + " units" : "");
+  }
+  div.innerHTML = '<span class="icon">' + (t.icon || "") + '</span><div><div>' + t.label +
+    '</div><div class="meta">' + meta + "</div></div>";
+  div.onclick = function() {
+    state.tracker = t.id;
+    state.offset = 0;
+    document.querySelectorAll(".tracker-item").forEach(function(x) { x.classList.remove("active"); });
+    div.classList.add("active");
+    document.querySelectorAll(".nav-group").forEach(function(g) { g.classList.remove("open"); });
+    document.getElementById(t.id === "world_ports" ? "group-vessels" : "group-energy").classList.add("open");
+    loadCountries();
+    loadData();
+  };
+  return div;
+}
+
+async function loadCountries() {
+  try {
+    var rows = await (await fetch("/api/countries/" + state.tracker)).json();
+    var panel = document.getElementById("dd-country-panel");
+    if (!panel) return;
+    panel.innerHTML = rows.map(function(r) {
+      return '<label class="dd-item"><input type="checkbox" value="' + r.country + '"/> ' +
+        r.country + ' <span class="hint">(' + Math.round(r.capacity).toLocaleString() + ")</span></label>";
+    }).join("") || "<div class='dd-item'>No countries</div>";
+  } catch (e) { console.error(e); }
+}
+
 function getFilterParams() {
+  var statuses = Array.from(document.querySelectorAll("#dd-status-panel input:checked")).map(function(i) { return i.value; });
+  var countries = Array.from(document.querySelectorAll("#dd-country-panel input:checked")).map(function(i) { return i.value; });
   var p = new URLSearchParams();
+  if (state.tracker !== "world_ports" && statuses.length) p.set("status", statuses.join(","));
+  if (countries.length) p.set("country", countries.join(","));
+  var minEl = document.getElementById("filter-min-mw");
+  var maxEl = document.getElementById("filter-max-mw");
+  if (minEl && minEl.value && state.tracker !== "world_ports") p.set("min_mw", minEl.value);
+  if (maxEl && maxEl.value && state.tracker !== "world_ports") p.set("max_mw", maxEl.value);
+  var searchEl = document.getElementById("filter-search");
+  if (searchEl && searchEl.value.trim()) p.set("search", searchEl.value.trim());
   p.set("limit", state.limit);
   p.set("offset", state.offset);
+  var sb = document.getElementById("dd-status-btn");
+  var cb = document.getElementById("dd-country-btn");
+  if (sb) sb.textContent = statuses.length ? statuses.length + " status selected" : "Select status…";
+  if (cb) cb.textContent = countries.length ? countries.length + " countries selected" : "Select countries…";
   return p;
 }
 
 async function loadData() {
+  var cp = document.getElementById("dd-country-panel");
+  if (cp && !cp.children.length) await loadCountries();
   await Promise.all([loadKPIs(), loadTable(), loadMap()]);
 }
 
 async function loadKPIs() {
   var strip = document.getElementById("kpi-strip");
   if (!strip) return;
+  if (state.tracker.indexOf("user_") === 0) {
+    strip.innerHTML = '<div class="kpi-card"><div class="label">User</div><div class="value">' + state.tracker + "</div></div>";
+    return;
+  }
   try {
     var k = await (await fetch("/api/kpis/" + state.tracker)).json();
-    if (state.tracker === "world_ports") {
+    var isPorts = state.tracker === "world_ports";
+    var isTerm = state.tracker === "coal_terminals";
+    if (isPorts) {
       strip.innerHTML =
         '<div class="kpi-card"><div class="label">Ports</div><div class="value">' +
         Number(k.total_units).toLocaleString() + '</div><div class="sub">' + k.countries +
-        ' countries</div></div>';
+        " countries</div></div>" +
+        '<div class="kpi-card"><div class="label">On map</div><div class="value">All</div><div class="sub">World Ports</div></div>';
       return;
     }
+    var unit = isTerm ? "Mt" : "GW";
+    var opVal = isTerm ? Math.round(k.operating_mw).toLocaleString() : (k.operating_mw / 1000).toFixed(1);
     strip.innerHTML =
-      '<div class="kpi-card"><div class="label">Units</div><div class="value">' +
-      Number(k.total_units).toLocaleString() + '</div></div>' +
-      '<div class="kpi-card"><div class="label">Countries</div><div class="value">' +
-      k.countries + '</div></div>';
+      '<div class="kpi-card"><div class="label">Operating</div><div class="value">' + opVal +
+      " <small>" + unit + "</small></div></div>" +
+      '<div class="kpi-card"><div class="label">Total Units</div><div class="value">' +
+      Number(k.total_units).toLocaleString() + "</div></div>";
   } catch (e) { console.error("kpis", e); }
 }
 
@@ -244,22 +270,11 @@ async function loadTable() {
     var cols = Object.keys(json.data[0]).slice(0, 8);
     thead.innerHTML = "<tr>" + cols.map(function(c) { return "<th>" + c + "</th>"; }).join("") + "</tr>";
     tbody.innerHTML = json.data.map(function(row) {
-      return "<tr>" + cols.map(function(c) { return "<td>" + (row[c] != null ? row[c] : "") + "</td>"; }).join("") + "</tr>";
+      return "<tr>" + cols.map(function(c) {
+        return "<td>" + (row[c] != null ? row[c] : "") + "</td>";
+      }).join("") + "</tr>";
     }).join("");
-    document.getElementById("table-info").textContent = json.data.length + " of " + json.total;
+    var info = document.getElementById("table-info");
+    if (info) info.textContent = json.data.length + " of " + json.total.toLocaleString();
   } catch (e) { console.error("table", e); }
-}
-
-function portPopupHtml(p) {
-  var cong = "";
-  if (p.congestion_level) {
-    cong = "<tr><td>Congestion</td><td>" + p.congestion_level + "</td></tr>" +
-      "<tr><td>Waiting</td><td>" + (p.waiting_vessels != null ? p.waiting_vessels : "—") + "</td></tr>";
-  }
-  var safeName = (p.name || "").replace(/'/g, "\\'");
-  return '<div class="port-popup"><h4>' + (p.name || "—") + '</h4><table>' +
-    "<tr><td>Country</td><td>" + (p.country || "—") + "</td></tr>" +
-    "<tr><td>Depth</td><td>" + (p.channel_depth || p.CHAN_DEPTH || "—") + "</td></tr>" + cong +
-    '</table><button type="button" onclick="usePort(\'' + safeName + '\',' + p.lat + ',' + p.lon +
-    ')">Use in route</button></div>';
 }
