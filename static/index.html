@@ -14,7 +14,7 @@
       <div class="logo">GEM</div>
       <div>
         <h1>Global Energy Transition Dashboard</h1>
-        <p class="subtitle">Energy · Vessels · Ports · Sea routes</p>
+        <p class="subtitle">Energy · Vessels · Ports · ECA · Weather · Bunker</p>
       </div>
     </div>
     <div class="header-actions">
@@ -70,6 +70,12 @@
           <div id="vessel-tracker-list" class="tracker-list"></div>
 
           <div class="tools-box">
+            <h3>Map layers</h3>
+            <label class="chk"><input type="checkbox" id="layer-eca" checked /> ECA / SECA zones</label>
+            <label class="chk"><input type="checkbox" id="layer-piracy" checked /> Piracy / HRA zones</label>
+          </div>
+
+          <div class="tools-box">
             <h3>Distance calculator</h3>
             <label class="hint">From port</label>
             <input type="text" id="port-from-search" list="port-list" placeholder="Search port name…" autocomplete="off" />
@@ -86,15 +92,18 @@
               <input type="number" id="route-speed" value="12" step="0.5" min="5" max="25" title="Speed knots" />
               <span class="hint" style="align-self:center">kn</span>
             </div>
+            <div class="range-row">
+              <input type="number" id="route-consumption" value="25" step="1" min="1" max="200" title="Fuel burn t/day" />
+              <span class="hint" style="align-self:center">t/day</span>
+            </div>
             <button id="btn-route" class="btn btn-orange full">Calculate route</button>
-            <p class="hint" id="route-result">Select two ports by name</p>
+            <div id="route-result" class="route-result hint">Select two ports by name</div>
           </div>
 
           <div class="tools-box">
             <h3>Track vessel by IMO / MMSI</h3>
-            <p class="hint">No continuous live map. Paste ship IDs to fetch current position (uses AIS for ~25s).</p>
-            <p class="hint"><strong>Best:</strong> 9-digit <strong>MMSI</strong>. 7-digit <strong>IMO</strong> is matched if the ship broadcasts static data during the sample.</p>
-            <textarea id="imo-list" rows="4" placeholder="Example:&#10;636018288&#10;9234662&#10;or comma-separated"></textarea>
+            <p class="hint">Paste ship IDs — 9-digit <strong>MMSI</strong> preferred.</p>
+            <textarea id="imo-list" rows="3" placeholder="636018288&#10;9234662"></textarea>
             <button id="btn-track-imo" class="btn btn-orange full">Find these vessels</button>
             <button id="btn-clear-imo" class="btn btn-ghost full">Clear vessels from map</button>
             <p class="hint" id="imo-status">Paste IDs then click Find</p>
