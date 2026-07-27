@@ -18,10 +18,10 @@ async function loadMap() {
         if (lvl && (p.congestion_level || "").toLowerCase() !== lvl) return;
       }
       var color = state.tracker === "world_ports"
-        ? (p.congestion_color || "#22d3ee")
-        : (STATUS_COLORS[(p.status || "").toLowerCase()] || "#22d3ee");
+        ? PORT_COLOR
+        : (STATUS_COLORS[(p.status || "").toLowerCase()] || PORT_COLOR);
       var m = L.circleMarker([p.lat, p.lon], {
-        radius: 5, fillColor: color, color: "#0f172a", weight: 1, fillOpacity: 0.9
+        radius: 5, fillColor: color, color: "#ffffff", weight: 1.2, fillOpacity: 0.92
       });
       m.bindTooltip(p.name || "Port", { direction: "top", className: "port-tip" });
       m.on("click", function() { showPortDetail(p); });
@@ -110,7 +110,7 @@ async function calcRoute() {
     state.routeLayer.clearLayers();
     if (j.coordinates && j.coordinates.length) {
       var ll = j.coordinates.map(function(c) { return [c[1], c[0]]; });
-      L.polyline(ll, { color: "#22d3ee", weight: 3 }).addTo(state.routeLayer);
+      L.polyline(ll, { color: "#2563eb", weight: 3 }).addTo(state.routeLayer);
       state.map.fitBounds(L.latLngBounds(ll).pad(0.15));
     }
     resultEl.innerHTML = "<strong>" + j.distance_nm + " nm · " +
@@ -132,6 +132,10 @@ function bindUI() {
       switchView(b.dataset.view);
     };
   });
+  var themeBtn = document.getElementById("btn-theme");
+  if (themeBtn) themeBtn.onclick = function() {
+    applyTheme(state.theme === "dark" ? "light" : "dark");
+  };
   var closeBtn = document.getElementById("btn-close-detail");
   if (closeBtn) closeBtn.onclick = function() {
     document.getElementById("map-detail").classList.add("hidden");
@@ -164,7 +168,7 @@ function bindUI() {
   if (gs) gs.addEventListener("keydown", function(e) {
     if (e.key !== "Enter") return;
     var q = gs.value.trim().toLowerCase();
-    var hit = state.ports.find(function(x) { return (x.name || "").toLowerCase().includes(q); });
+    var hit = state.ports.find(function(x) { return (x.name || "").toLowerCase().indexOf(q) >= 0; });
     if (hit && state.map) {
       state.map.setView([hit.lat, hit.lon], 8);
       showPortDetail(hit);
