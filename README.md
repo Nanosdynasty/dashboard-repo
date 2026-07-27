@@ -12,10 +12,14 @@ palette.
 
 ## Features
 
-- Simultaneous checkbox layers for coal, solar, wind, hydro, nuclear,
-  geothermal, and bioenergy power
-- Commodity layers for coal mines, coal terminals, iron ore mines, iron and
+- Separate Energy, Ports, and Commodities map workspaces, so unrelated layers
+  do not remain visible when the user changes section
+- Country and operating-status filters across energy and commodity assets
+- Renewable-energy grouping for solar, wind, hydro, geothermal, and bioenergy,
+  with fossil energy and nuclear kept separate
+- Commodity layers for coal mines, coal trade terminals, iron ore mines, iron and
   steel plants, and cement plants
+- Import, export, and domestic role filters for 519 GEM coal trade terminals
 - 3,669 normalized World Port Index records with country, harbor, depth, vessel,
   navigation, service, and facility fields where present
 - Every port is rendered as a small individual map dot—there are no numbered
@@ -26,8 +30,8 @@ palette.
 - Two-click port routing with nautical miles, vessel-speed input, sailing days,
   remaining hours, and a visible route polyline
 - Map-only extracts from the uploaded GEM workbook bundle:
-  5,382 coal mines, 949 iron ore mines, 1,293 steel plants, 3,513 cement
-  plants, 835 geothermal assets, and 4,537 bioenergy assets
+  5,382 coal mines, 519 coal trade terminals, 949 iron ore mines, 1,293 steel
+  plants, 3,513 cement plants, 835 geothermal assets, and 4,537 bioenergy assets
 
 ---
 
@@ -118,6 +122,10 @@ Unknown values—including berth count—remain unknown and are never converted 
 zero. Port-to-terminal links are enrichment candidates based on name and
 distance, expose match confidence, and are not authoritative facility joins.
 
+Bauxite and limestone are not yet presented as operational mine layers. The
+reviewed sources currently available do not safely distinguish active mines
+from deposits, prospects, occurrences, and historical records at global scale.
+
 ## Verification
 
 ```bash
@@ -146,11 +154,12 @@ gem-dashboard/
 
 ---
 
-## Color palette (official GEM)
+## Color palette
 
-- Midnight `#002430` · Navy `#004A63` · Teal `#016B83`
-- Orange `#FE4F2D` · Mint `#A5E9E4` · Warm White `#F2F2EB`
-- Status: Green (operating), Orange (construction), Indigo (announced), Deep Red (cancelled), Grey (retired)
+- Howe Robinson blue `#003671`
+- Howe Robinson navy `#1c294a`
+- Howe Robinson red `#db2f34`
+- Howe Robinson dark red `#b52a2a`
 
 ---
 

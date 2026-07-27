@@ -16,26 +16,47 @@
       </header>
 
       <div class="panel-scroll">
-        <details class="filter-section" open>
+        <details class="filter-section" data-mode="energy">
           <summary>
             <span><i class="section-icon energy-icon"></i>Energy</span>
             <span class="section-count" id="energy-active-count">0 active</span>
           </summary>
           <div class="section-body">
-            <p class="section-help">Select one or more generation layers.</p>
+            <div class="filter-grid">
+              <div class="field">
+                <label for="energy-country">Country</label>
+                <select id="energy-country"><option value="">All countries</option></select>
+              </div>
+              <div class="field">
+                <label for="energy-status">Status</label>
+                <select id="energy-status"><option value="">All statuses</option></select>
+              </div>
+            </div>
+            <button type="button" class="filter-button" id="energy-apply">Apply energy filters</button>
+            <label class="overlay-toggle">
+              <input type="checkbox" id="energy-show-ports" />
+              <span>Show ports with energy</span>
+            </label>
+            <p class="group-label">Fossil energy</p>
             <div class="layer-list" id="energy-layers">
               <label><input type="checkbox" value="coal_plants" /><i style="--dot:#6f7782"></i><span>Coal plants</span><small>14,509</small></label>
+            </div>
+            <p class="group-label">Renewable energy</p>
+            <div class="layer-list" id="renewable-layers">
               <label><input type="checkbox" value="solar" /><i style="--dot:#e9a823"></i><span>Solar power</span><small>103,940</small></label>
               <label><input type="checkbox" value="wind" /><i style="--dot:#55a6c8"></i><span>Wind power</span><small>33,248</small></label>
               <label><input type="checkbox" value="hydro" /><i style="--dot:#296fba"></i><span>Hydropower</span><small>6,772</small></label>
-              <label><input type="checkbox" value="nuclear" /><i style="--dot:#8b65b6"></i><span>Nuclear power</span><small>1,749</small></label>
               <label><input type="checkbox" value="geothermal" /><i style="--dot:#db5b45"></i><span>Geothermal</span><small>835</small></label>
               <label><input type="checkbox" value="bioenergy" /><i style="--dot:#629c4d"></i><span>Bioenergy</span><small>4,537</small></label>
+            </div>
+            <p class="group-label">Nuclear</p>
+            <div class="layer-list" id="nuclear-layers">
+              <label><input type="checkbox" value="nuclear" /><i style="--dot:#8b65b6"></i><span>Nuclear power</span><small>1,749</small></label>
             </div>
           </div>
         </details>
 
-        <details class="filter-section" open>
+        <details class="filter-section" data-mode="ports" open>
           <summary>
             <span><i class="section-icon ports-icon"></i>Ports</span>
             <span class="section-count" id="port-visible-count">3,669 shown</span>
@@ -70,26 +91,52 @@
           </div>
         </details>
 
-        <details class="filter-section">
+        <details class="filter-section" data-mode="commodities">
           <summary>
             <span><i class="section-icon commodity-icon"></i>Commodities</span>
             <span class="section-count" id="commodity-active-count">0 active</span>
           </summary>
           <div class="section-body">
+            <div class="filter-grid">
+              <div class="field">
+                <label for="commodity-country">Country</label>
+                <select id="commodity-country"><option value="">All countries</option></select>
+              </div>
+              <div class="field">
+                <label for="commodity-status">Status</label>
+                <select id="commodity-status"><option value="">All statuses</option></select>
+              </div>
+            </div>
+            <button type="button" class="filter-button" id="commodity-apply">Apply commodity filters</button>
+            <label class="overlay-toggle">
+              <input type="checkbox" id="commodity-show-ports" />
+              <span>Show ports with commodities</span>
+            </label>
             <p class="group-label">Coal</p>
             <div class="layer-list" id="coal-layers">
               <label><input type="checkbox" value="coal_mines" /><i style="--dot:#242b38"></i><span>Coal mines</span><small>5,382</small></label>
-              <label><input type="checkbox" value="coal_terminals" /><i style="--dot:#db2f34"></i><span>Coal terminals</span><small>519</small></label>
+              <label><input type="checkbox" value="coal_trade_terminals" /><i style="--dot:#db2f34"></i><span>Coal trade terminals</span><small>519</small></label>
+            </div>
+            <div class="field">
+              <label for="coal-terminal-role">Coal terminal role</label>
+              <select id="coal-terminal-role">
+                <option value="">All roles</option>
+                <option value="Exports">Export terminals</option>
+                <option value="Imports">Import terminals</option>
+                <option value="Domestic">Domestic terminals</option>
+              </select>
             </div>
             <p class="group-label">Iron ore &amp; steel</p>
             <div class="layer-list" id="iron-layers">
               <label><input type="checkbox" value="iron_ore_mines" /><i style="--dot:#a45332"></i><span>Iron ore mines</span><small>949</small></label>
               <label><input type="checkbox" value="steel_plants" /><i style="--dot:#536a7a"></i><span>Iron &amp; steel plants</span><small>1,293</small></label>
             </div>
+            <p class="source-note">Enable the port overlay to compare mines and plants with nearby ports. The current source does not classify ports as iron-ore loading or discharge facilities.</p>
             <p class="group-label">Cement</p>
             <div class="layer-list" id="cement-layers">
               <label><input type="checkbox" value="cement_plants" /><i style="--dot:#9a8a73"></i><span>Cement plants</span><small>3,513</small></label>
             </div>
+            <p class="data-gap"><strong>Bauxite &amp; limestone:</strong> awaiting a reviewed source of operational mines. Historical occurrences are intentionally not mapped as active assets.</p>
           </div>
         </details>
 

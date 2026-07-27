@@ -45,6 +45,11 @@ TRACKERS = {
     "iron_ore_mines": {"label": "Iron Ore Mines", "file": "iron_ore_mines.csv.gz", "icon": "◆"},
     "steel_plants": {"label": "Iron & Steel Plants", "file": "steel_plants.csv.gz", "icon": "●"},
     "cement_plants": {"label": "Cement Plants", "file": "cement_plants.csv.gz", "icon": "●"},
+    "coal_trade_terminals": {
+        "label": "Coal Trade Terminals",
+        "file": "coal_trade_terminals.csv.gz",
+        "icon": "◆",
+    },
 }
 NORMALIZED_MAP_TRACKERS = {
     "geothermal",
@@ -53,6 +58,7 @@ NORMALIZED_MAP_TRACKERS = {
     "iron_ore_mines",
     "steel_plants",
     "cement_plants",
+    "coal_trade_terminals",
 }
 user_datasets: Dict[str, Path] = {}
 con = duckdb.connect(database=":memory:")
@@ -242,6 +248,77 @@ async def list_trackers():
         result.append({"id": f"user_{uname}", "label": f"📤 {uname}", "icon": "📁", "rows": 0, "is_user": True})
     return result
 
+
+@app.get("/api/layer-facets")
+async def layer_facets(trackers: str = Query(...)):
+    """Return shared country/status/type filters for one or more map layers."""
+    selected = [
+        value for value in _csv_values(trackers)
+        if value in TRACKERS and value != "world_ports"
+    ]
+    if not selected:
+        raise HTTPException(400, "No valid map layers selected")
+    country_counts: Dict[str, int] = {}
+    status_counts: Dict[str, int] = {}
+    type_counts: Dict[str, int] = {}
+    for tracker_id in selected:
+        normalized = tracker_id in NORMALIZED_MAP_TRACKERS
+        columns = {row[0] for row in con.execute(f"DESCRIBE {tracker_id}").fetchall()}
+        country_name = "country" if normalized else (
+            "Country/Area" if "Country/Area" in columns else None
+        )
+        status_name = "status" if normalized else (
+            "Status" if "Status" in columns else None
+        )
+        countries = []
+        statuses = []
+        if country_name:
+            country_column = f'"{country_name}"'
+            countries = con.execute(
+                f"SELECT CAST({country_column} AS VARCHAR), COUNT(*) FROM {tracker_id} "
+                f"WHERE {country_column} IS NOT NULL "
+                f"AND TRIM(CAST({country_column} AS VARCHAR)) NOT IN ('', '-', 'unknown') "
+                f"GROUP BY 1"
+            ).fetchall()
+        if status_name:
+            status_column = f'"{status_name}"'
+            statuses = con.execute(
+                f"SELECT CAST({status_column} AS VARCHAR), COUNT(*) FROM {tracker_id} "
+                f"WHERE {status_column} IS NOT NULL "
+                f"AND TRIM(CAST({status_column} AS VARCHAR)) NOT IN ('', '-', 'unknown') "
+                f"GROUP BY 1"
+            ).fetchall()
+        for label, count in countries:
+            country_counts[str(label)] = country_counts.get(str(label), 0) + int(count)
+        for label, count in statuses:
+            canonical = str(label).strip().lower()
+            status_counts[canonical] = status_counts.get(canonical, 0) + int(count)
+        if normalized:
+            types = con.execute(
+                f"SELECT CAST(asset_type AS VARCHAR), COUNT(*) FROM {tracker_id} "
+                "WHERE asset_type IS NOT NULL "
+                "AND TRIM(CAST(asset_type AS VARCHAR)) NOT IN ('', '-', 'unknown') "
+                "GROUP BY 1"
+            ).fetchall()
+            for label, count in types:
+                type_counts[str(label)] = type_counts.get(str(label), 0) + int(count)
+    return {
+        "countries": [
+            {"id": label, "label": label, "count": count}
+            for label, count in sorted(country_counts.items())
+        ],
+        "statuses": [
+            {"id": label, "label": label.replace("_", " ").title(), "count": count}
+            for label, count in sorted(
+                status_counts.items(), key=lambda item: (-item[1], item[0])
+            )
+        ],
+        "asset_types": [
+            {"id": label, "label": label, "count": count}
+            for label, count in sorted(type_counts.items())
+        ],
+    }
+
 def _filters(status, country, region, min_mw, max_mw, search):
     clauses, params = [], []
     if status:
@@ -333,7 +410,8 @@ async def get_map_points(
                 params.extend(value.lower() for value in values)
         sql = (
             "SELECT asset_id AS id, name, unit, status, capacity, "
-            "capacity_unit, lat, lon, country, layer FROM "
+            "capacity_unit, lat, lon, country, layer, asset_type, parent_port, "
+            "product_type, source_text FROM "
             + tracker_id
             + " WHERE "
             + " AND ".join(clauses)
@@ -342,14 +420,47 @@ async def get_map_points(
         )
         frame = con.execute(sql, params).fetchdf()
         return json.loads(frame.to_json(orient="records"))
-    where, params = _filters(status, country, None, None, None, None)
-    extra = ['"Latitude" IS NOT NULL', '"Longitude" IS NOT NULL']
-    where = (where + " AND " + " AND ".join(extra)) if where else (" WHERE " + " AND ".join(extra))
+    columns = {row[0] for row in con.execute(f"DESCRIBE {tracker_id}").fetchall()}
+    clauses = ['"Latitude" IS NOT NULL', '"Longitude" IS NOT NULL']
+    params = []
+    if status and "Status" in columns:
+        values = _csv_values(status)
+        clauses.append(
+            'LOWER(CAST("Status" AS VARCHAR)) IN ('
+            + ",".join(["?"] * len(values))
+            + ")"
+        )
+        params.extend(value.lower() for value in values)
+    if country:
+        values = _csv_values(country)
+        if "Country/Area" not in columns:
+            return []
+        clauses.append(
+            'LOWER(CAST("Country/Area" AS VARCHAR)) IN ('
+            + ",".join(["?"] * len(values))
+            + ")"
+        )
+        params.extend(value.lower() for value in values)
+    name_expr = (
+        '"Plant name"' if "Plant name" in columns
+        else '"Project Name"' if "Project Name" in columns
+        else '"GEM location ID"'
+    )
+    unit_expr = '"Unit name"' if "Unit name" in columns else "NULL"
+    country_expr = '"Country/Area"' if "Country/Area" in columns else "NULL"
+    capacity_expr = (
+        'TRY_CAST("Capacity (MW)" AS DOUBLE)'
+        if "Capacity (MW)" in columns else "NULL"
+    )
     sql = (
-        'SELECT "Plant name" as name, "Unit name" as unit, Status as status, '
-        'TRY_CAST("Capacity (MW)" AS DOUBLE) as capacity, '
-        'TRY_CAST(Latitude AS DOUBLE) as lat, TRY_CAST(Longitude AS DOUBLE) as lon, '
-        '"Country/Area" as country FROM ' + tracker_id + where + ' LIMIT ' + str(limit)
+        f"SELECT {name_expr} as name, {unit_expr} as unit, "
+        f'"Status" as status, {capacity_expr} as capacity, '
+        'TRY_CAST("Latitude" AS DOUBLE) as lat, '
+        'TRY_CAST("Longitude" AS DOUBLE) as lon, '
+        f"{country_expr} as country FROM {tracker_id} WHERE "
+        + " AND ".join(clauses)
+        + " LIMIT "
+        + str(limit)
     )
     try:
         df = con.execute(sql, params).fetchdf()

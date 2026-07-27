@@ -63,6 +63,7 @@ class PortApiTests(unittest.TestCase):
             "cement_plants": 3_513,
             "geothermal": 835,
             "bioenergy": 4_537,
+            "coal_trade_terminals": 519,
         }
         for layer, count in expected.items():
             with self.subTest(layer=layer):
@@ -71,6 +72,43 @@ class PortApiTests(unittest.TestCase):
                 )
                 self.assertEqual(response.status_code, 200)
                 self.assertEqual(len(response.json()), count)
+
+    def test_layer_facets_support_country_status_and_terminal_role_filters(self):
+        energy = self.client.get(
+            "/api/layer-facets",
+            params={"trackers": "coal_plants,solar,wind,hydro,nuclear"},
+        )
+        self.assertEqual(energy.status_code, 200)
+        energy_payload = energy.json()
+        self.assertIn("India", {item["id"] for item in energy_payload["countries"]})
+        self.assertIn(
+            "operating", {item["id"] for item in energy_payload["statuses"]}
+        )
+
+        commodities = self.client.get(
+            "/api/layer-facets",
+            params={
+                "trackers": "coal_mines,coal_trade_terminals,iron_ore_mines,steel_plants"
+            },
+        )
+        self.assertEqual(commodities.status_code, 200)
+        commodity_payload = commodities.json()
+        countries = {item["id"] for item in commodity_payload["countries"]}
+        terminal_types = {item["id"] for item in commodity_payload["asset_types"]}
+        self.assertTrue({"Australia", "China", "India"}.issubset(countries))
+        self.assertIn("Exports", terminal_types)
+        self.assertIn("Imports", terminal_types)
+
+    def test_country_and_status_filters_are_applied_to_map_layers(self):
+        response = self.client.get(
+            "/api/map/coal_mines",
+            params={"country": "India", "status": "operating", "limit": 150_000},
+        )
+        self.assertEqual(response.status_code, 200)
+        rows = response.json()
+        self.assertTrue(rows)
+        self.assertTrue(all(row["country"] == "India" for row in rows))
+        self.assertTrue(all(row["status"].lower() == "operating" for row in rows))
 
 
 if __name__ == "__main__":

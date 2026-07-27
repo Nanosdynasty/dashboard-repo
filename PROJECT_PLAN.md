@@ -28,16 +28,26 @@ Status: implemented locally on `codex/dry-bulk-foundation`.
 
 ## Phase 2 — Complete ZIP ingestion
 
-Status: map-layer subset implemented; full detail modeling remains next.
+Status: filtered map workspaces implemented; full detail modeling remains next.
 
 - Create a manifest for all 23 uploaded workbooks and their reporting grains.
 - Map-ready layers are implemented for coal mines, iron ore mines, steel,
   cement, bioenergy, and geothermal alongside the existing power trackers.
+- Energy, Ports, and Commodities are isolated map modes, with optional port
+  overlays in the two asset modes.
+- Energy and commodity layers support shared country and operating-status
+  filters. Coal terminals additionally support import/export/domestic roles.
+- Renewable energy groups solar, wind, hydro, geothermal, and bioenergy;
+  nuclear remains a separate group.
+- Coal trade-terminal detail includes terminal role, parent port, product type,
+  capacity, and coal source where available in the GEM workbook.
 - Normalize the remaining workbook fields into full detail models rather than
   map-only extracts.
 - Preserve original row/source identifiers for audit and drill-through.
 - Add tracker-specific schemas, validation reports, filters, legends, and detail
   cards rather than forcing unlike datasets into one generic model.
+- Add bauxite and limestone only after a reviewed source distinguishes active
+  mines from deposits, prospects, occurrences, and historical sites.
 
 ## Phase 3 — Production map architecture
 

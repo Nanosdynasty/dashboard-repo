@@ -49,6 +49,10 @@ def normalize(
     lon_col: str | None = None,
     coordinates_col: str | None = None,
     id_col: str | None = None,
+    asset_type_col: str | None = None,
+    parent_port_col: str | None = None,
+    product_type_col: str | None = None,
+    source_text_col: str | None = None,
 ) -> pd.DataFrame:
     rows = []
     for index, row in frame.iterrows():
@@ -73,6 +77,10 @@ def normalize(
                 "lon": lon,
                 "country": clean(row.get(country_col)),
                 "layer": layer,
+                "asset_type": clean(row.get(asset_type_col)) if asset_type_col else None,
+                "parent_port": clean(row.get(parent_port_col)) if parent_port_col else None,
+                "product_type": clean(row.get(product_type_col)) if product_type_col else None,
+                "source_text": clean(row.get(source_text_col)) if source_text_col else None,
             }
         )
     return pd.DataFrame(rows)
@@ -157,6 +165,24 @@ SPECS = {
             "id_col": "GEM unit ID",
         },
     },
+    "coal_trade_terminals": {
+        "workbook": "Global-Coal-Terminals-Tracker-December-2024.xlsx",
+        "sheet": "Terminals",
+        "kwargs": {
+            "name_col": "Coal Terminal Name",
+            "country_col": "Country/Area",
+            "status_col": "Status",
+            "capacity_col": "Capacity (Mt)",
+            "capacity_unit": "Mtpa",
+            "lat_col": "Latitude",
+            "lon_col": "Longitude",
+            "id_col": "GEM Terminal ID",
+            "asset_type_col": "Terminal Type",
+            "parent_port_col": "Parent Port Name",
+            "product_type_col": "Product Type",
+            "source_text_col": "Coal Source",
+        },
+    },
 }
 
 
@@ -171,6 +197,39 @@ def main() -> None:
         for layer, spec in SPECS.items():
             raw = archive.read(spec["workbook"])
             frame = pd.read_excel(io.BytesIO(raw), sheet_name=spec["sheet"])
+            if layer == "steel_plants":
+                status_frame = pd.read_excel(
+                    io.BytesIO(raw), sheet_name="Plant capacities and status"
+                )
+                priority = {
+                    "operating": 0,
+                    "operating pre-retirement": 1,
+                    "construction": 2,
+                    "announced": 3,
+                    "mothballed": 4,
+                    "mothballed pre-retirement": 5,
+                    "retired": 6,
+                    "cancelled": 7,
+                }
+
+                def plant_status(values):
+                    cleaned = [clean(value) for value in values]
+                    cleaned = [value for value in cleaned if value]
+                    return min(
+                        cleaned,
+                        key=lambda value: priority.get(value.lower(), 99),
+                        default=None,
+                    )
+
+                statuses = (
+                    status_frame.groupby("GEM plant ID")["Status"]
+                    .agg(plant_status)
+                    .rename("Plant status")
+                )
+                frame = frame.merge(
+                    statuses, left_on="GEM plant ID", right_index=True, how="left"
+                )
+                spec["kwargs"]["status_col"] = "Plant status"
             normalized = normalize(frame, layer=layer, **spec["kwargs"])
             output = args.output / f"{layer}.csv.gz"
             normalized.to_csv(output, index=False, compression="gzip")
