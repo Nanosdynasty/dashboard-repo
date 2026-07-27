@@ -1,17 +1,162 @@
 {
-  "eca": [
-    {"type": "Feature", "properties": {"id": "BALTIC", "name": "Baltic Sea ECA", "type": "SOx", "fuel": "MGO/ULSFO \u22640.10%S", "color": "#2a9d8f"}, "geometry": {"type": "Polygon", "coordinates": [[[9.0, 54.0], [9.0, 57.5], [8.0, 57.5], [8.0, 58.0], [7.0, 58.0], [7.0, 59.0], [4.0, 59.0], [4.0, 62.0], [5.0, 62.0], [5.0, 65.0], [15.0, 65.0], [15.0, 66.0], [22.0, 66.0], [22.0, 65.5], [28.0, 65.5], [28.0, 64.0], [30.0, 64.0], [30.0, 60.0], [28.0, 60.0], [26.0, 58.5], [24.0, 57.8], [22.5, 57.5], [21.0, 57.3], [19.0, 57.3], [17.0, 56.5], [16.0, 56.0], [15.0, 55.5], [14.0, 55.0], [12.5, 55.0], [12.0, 54.5], [10.5, 54.5], [9.0, 54.0]]]}},
-    {"type": "Feature", "properties": {"id": "NORTH_SEA", "name": "North Sea ECA", "type": "SOx", "fuel": "MGO/ULSFO \u22640.10%S", "color": "#2a9d8f"}, "geometry": {"type": "Polygon", "coordinates": [[[5.0, 51.0], [-5.0, 48.5], [-5.5, 50.0], [-2.0, 51.5], [1.0, 52.5], [2.5, 53.5], [3.5, 54.5], [4.5, 55.5], [5.0, 57.0], [6.0, 58.0], [7.0, 58.5], [8.0, 58.0], [8.0, 57.0], [7.5, 55.0], [7.0, 53.5], [6.0, 52.0], [5.0, 51.0]]]}},
-    {"type": "Feature", "properties": {"id": "NORTH_AMERICA_ATL", "name": "North American ECA (Atlantic/Gulf)", "type": "SOx+NOx", "fuel": "MGO/ULSFO \u22640.10%S", "color": "#264653"}, "geometry": {"type": "Polygon", "coordinates": [[[-65.0, 45.0], [-80.0, 45.0], [-82.0, 30.0], [-97.0, 26.0], [-97.0, 18.0], [-80.0, 24.0], [-65.0, 25.0], [-60.0, 35.0], [-65.0, 45.0]]]}},
-    {"type": "Feature", "properties": {"id": "NORTH_AMERICA_PAC", "name": "North American ECA (Pacific)", "type": "SOx+NOx", "fuel": "MGO/ULSFO \u22640.10%S", "color": "#264653"}, "geometry": {"type": "Polygon", "coordinates": [[[-125.0, 48.0], [-130.0, 40.0], [-125.0, 32.0], [-117.0, 32.0], [-122.0, 37.0], [-124.0, 45.0], [-125.0, 48.0]]]}},
-    {"type": "Feature", "properties": {"id": "US_CARIBBEAN", "name": "US Caribbean ECA", "type": "SOx+NOx", "fuel": "MGO/ULSFO \u22640.10%S", "color": "#264653"}, "geometry": {"type": "Polygon", "coordinates": [[[-68.0, 20.0], [-65.0, 18.0], [-64.0, 17.5], [-67.0, 17.5], [-68.5, 18.5], [-68.0, 20.0]]]}},
-    {"type": "Feature", "properties": {"id": "MED", "name": "Mediterranean Sea ECA", "type": "SOx", "fuel": "MGO/ULSFO \u22640.10%S (from May 2025)", "color": "#e9c46a"}, "geometry": {"type": "Polygon", "coordinates": [[[-5.7, 36.0], [-4.0, 37.0], [-1.0, 37.5], [3.0, 43.5], [8.0, 44.5], [14.0, 46.0], [20.5, 41.5], [26.1, 41.5], [26.1, 40.0], [28.5, 37.5], [36.5, 37.0], [35.5, 33.5], [32.5, 31.0], [25.0, 30.5], [11.0, 30.5], [9.5, 37.0], [6.0, 37.5], [-0.5, 36.0], [-5.7, 36.0]]]}},
-    {"type": "Feature", "properties": {"id": "CHINA_DECA", "name": "China Domestic ECA (coastal)", "type": "SOx", "fuel": "\u22640.50%S coastal / \u22640.10%S key ports", "color": "#f4a261"}, "geometry": {"type": "Polygon", "coordinates": [[[118.0, 38.0], [122.0, 38.0], [122.0, 30.0], [120.0, 22.0], [113.0, 21.5], [110.0, 20.0], [108.0, 21.0], [110.0, 25.0], [116.0, 30.0], [118.0, 38.0]]]}}
-  ],
-  "piracy": [
-    {"type": "Feature", "properties": {"id": "GOG", "name": "Gulf of Guinea HRA / Piracy risk", "type": "piracy", "color": "#e63946"}, "geometry": {"type": "Polygon", "coordinates": [[[-5.0, 6.0], [10.0, 6.0], [10.0, -5.0], [-5.0, -5.0], [-5.0, 6.0]]]}},
-    {"type": "Feature", "properties": {"id": "BAB_RED", "name": "Red Sea / Bab el-Mandeb risk area", "type": "piracy", "color": "#e63946"}, "geometry": {"type": "Polygon", "coordinates": [[[32.0, 30.0], [44.0, 30.0], [52.0, 12.0], [42.0, 10.0], [32.0, 12.0], [32.0, 30.0]]]}},
-    {"type": "Feature", "properties": {"id": "MALACCA", "name": "Malacca / Singapore Strait risk", "type": "piracy", "color": "#d62828"}, "geometry": {"type": "Polygon", "coordinates": [[[98.0, 6.0], [105.0, 6.0], [105.0, 0.5], [98.0, 0.5], [98.0, 6.0]]]}},
-    {"type": "Feature", "properties": {"id": "NW_IO", "name": "NW Indian Ocean / Arabian Sea caution", "type": "piracy", "color": "#f77f00"}, "geometry": {"type": "Polygon", "coordinates": [[[45.0, 15.0], [75.0, 15.0], [75.0, 0.0], [45.0, 0.0], [45.0, 15.0]]]}}
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "North Sea & Baltic SECA",
+        "zone_type": "ECA",
+        "fuel": "MGO 0.1%S",
+        "description": "Sulphur Emission Control Area — only MGO / UL SFO ≤0.10% S allowed"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [5.0, 51.0], [4.0, 53.5], [8.0, 57.0], [12.0, 58.0], [16.0, 56.0],
+          [20.0, 55.0], [24.0, 59.0], [28.0, 60.0], [30.0, 65.0], [25.0, 68.0],
+          [15.0, 70.0], [5.0, 68.0], [-5.0, 62.0], [-5.0, 58.0], [0.0, 54.0],
+          [2.0, 51.5], [5.0, 51.0]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "North American ECA",
+        "zone_type": "ECA",
+        "fuel": "MGO 0.1%S",
+        "description": "US & Canadian coastal ECA (200 nm) — MGO required"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-70.0, 42.0], [-75.0, 35.0], [-80.0, 30.0], [-85.0, 28.0],
+          [-90.0, 28.0], [-95.0, 28.5], [-97.0, 26.0], [-95.0, 24.0],
+          [-90.0, 25.0], [-85.0, 24.0], [-80.0, 24.5], [-75.0, 26.0],
+          [-70.0, 30.0], [-65.0, 35.0], [-65.0, 42.0], [-70.0, 45.0],
+          [-70.0, 42.0]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "US Caribbean ECA",
+        "zone_type": "ECA",
+        "fuel": "MGO 0.1%S",
+        "description": "Puerto Rico / US Virgin Islands ECA"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-68.0, 17.5], [-65.0, 17.5], [-64.0, 18.0], [-64.5, 19.0],
+          [-66.0, 19.0], [-68.0, 18.5], [-68.0, 17.5]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Mediterranean SECA (2025+)",
+        "zone_type": "ECA",
+        "fuel": "MGO 0.1%S",
+        "description": "Mediterranean Emission Control Area (in force from 1 May 2025)"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-5.5, 36.0], [5.0, 36.0], [10.0, 37.0], [15.0, 36.5],
+          [20.0, 35.0], [25.0, 34.0], [30.0, 33.0], [35.0, 34.0],
+          [36.0, 36.0], [30.0, 40.0], [25.0, 41.0], [20.0, 42.0],
+          [15.0, 43.0], [10.0, 44.0], [5.0, 43.5], [0.0, 42.0],
+          [-5.0, 40.0], [-5.5, 36.0]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "China Domestic ECA",
+        "zone_type": "ECA",
+        "fuel": "MGO 0.1%S / LSFO",
+        "description": "China coastal and key port ECAs (Yangtze, Pearl River, Bohai)"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [118.0, 38.5], [122.0, 39.0], [123.0, 37.0], [122.0, 35.0],
+          [121.0, 32.0], [122.0, 30.0], [121.5, 28.0], [120.0, 26.0],
+          [118.0, 24.0], [116.0, 22.5], [114.0, 22.0], [112.0, 21.5],
+          [110.0, 20.0], [108.0, 21.0], [110.0, 23.0], [113.0, 25.0],
+          [116.0, 28.0], [118.0, 32.0], [118.0, 38.5]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Gulf of Guinea Piracy",
+        "zone_type": "piracy",
+        "fuel": null,
+        "description": "High risk of piracy / armed robbery — increased security recommended"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [0.0, 6.0], [3.0, 6.5], [6.0, 5.5], [8.5, 4.5], [9.5, 3.0],
+          [8.0, 1.5], [5.0, 1.0], [2.0, 2.0], [0.0, 3.5], [-1.0, 5.0],
+          [0.0, 6.0]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Bab el-Mandeb / Southern Red Sea",
+        "zone_type": "piracy",
+        "fuel": null,
+        "description": "Elevated risk of attacks / Houthi-related incidents"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [42.0, 12.0], [44.5, 12.5], [45.0, 14.0], [43.5, 15.5],
+          [42.0, 16.0], [41.0, 14.5], [41.5, 13.0], [42.0, 12.0]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Malacca Strait High Risk",
+        "zone_type": "piracy",
+        "fuel": null,
+        "description": "Armed robbery / piracy risk area — transit with caution"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [99.0, 1.0], [101.0, 1.5], [104.0, 2.5], [105.0, 1.5],
+          [104.0, 0.5], [102.0, 0.0], [100.0, 0.5], [99.0, 1.0]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "NW Indian Ocean / Horn of Africa",
+        "zone_type": "piracy",
+        "fuel": null,
+        "description": "Residual piracy risk (Somalia / Gulf of Aden approaches)"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [44.0, 10.0], [50.0, 12.0], [55.0, 10.0], [58.0, 5.0],
+          [55.0, 0.0], [50.0, -2.0], [45.0, 0.0], [42.0, 5.0],
+          [44.0, 10.0]
+        ]]
+      }
+    }
   ]
 }
