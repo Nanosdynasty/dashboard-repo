@@ -13,6 +13,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import httpx
 
+from maritime_extras import (
+    load_zones, enrich_port_fields, analyze_route_zones,
+    fetch_weather, fetch_bunker_prices, estimate_fuel_cost,
+)
+
 log = logging.getLogger("ais")
 logging.basicConfig(level=logging.INFO)
 
@@ -29,7 +34,7 @@ AISSTREAM_API_KEY = (
 TRACKERS = {
     "coal_plants": {"label": "Coal Plants", "file": "coal_plants.csv.gz", "icon": "🔥"},
     "coal_terminals": {"label": "Coal Terminals", "file": "coal_terminals.csv", "icon": "🚢"},
-    "world_ports": {"label": "World Ports", "file": "world_ports.csv", "icon": "⚓"},
+    "world_ports": {"label": "World Ports", "file": "world_ports.csv.gz", "icon": "⚓"},
     "solar": {"label": "Solar", "file": "solar.csv.gz", "icon": "☀️"},
     "wind": {"label": "Wind", "file": "wind.csv.gz", "icon": "💨"},
     "hydro": {"label": "Hydropower", "file": "hydro.csv.gz", "icon": "💧"},
@@ -41,6 +46,10 @@ con = duckdb.connect(database=":memory:")
 def register_all():
     for name, meta in TRACKERS.items():
         path = DATA_DIR / meta["file"]
+        if not path.exists() and name == "world_ports":
+            alt = DATA_DIR / "world_ports.csv"
+            if alt.exists():
+                path = alt
         if path.exists():
             con.execute(f"CREATE OR REPLACE TABLE {name} AS SELECT * FROM read_csv_auto('{path}')")
     for uname, upath in user_datasets.items():
@@ -48,7 +57,7 @@ def register_all():
         con.execute(f"CREATE OR REPLACE TABLE user_{safe} AS SELECT * FROM read_csv_auto('{upath}')")
 
 register_all()
-app = FastAPI(title="GEM Dashboard", version="3.4.0")
+app = FastAPI(title="GEM Dashboard", version="3.5.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
@@ -65,6 +74,17 @@ class ChatRequest(BaseModel):
 class VesselTrackRequest(BaseModel):
     ids: List[str] = []
     timeout_sec: float = 25.0
+
+class RouteRequest(BaseModel):
+    from_lon: float
+    from_lat: float
+    to_lon: float
+    to_lat: float
+    speed_knots: float = 12.0
+    from_name: Optional[str] = None
+    to_name: Optional[str] = None
+    avoid: Optional[List[str]] = None
+    consumption_tpd: float = 25.0  # tonnes per day fuel burn
 
 def _infer_passage(coords):
     if not coords:
@@ -123,16 +143,6 @@ def _compute_route(from_lon, from_lat, to_lon, to_lat, speed_knots, restrictions
         "via": via,
         "restrictions": restrictions,
     }
-
-class RouteRequest(BaseModel):
-    from_lon: float
-    from_lat: float
-    to_lon: float
-    to_lat: float
-    speed_knots: float = 12.0
-    from_name: Optional[str] = None
-    to_name: Optional[str] = None
-    avoid: Optional[List[str]] = None
 
 @app.get("/api/trackers")
 async def list_trackers():
@@ -200,15 +210,41 @@ async def get_map_points(tracker_id: str, status: Optional[str] = None, country:
     where, params = _filters(status, country, None, None, None, None)
     extra = ['"Latitude" IS NOT NULL', '"Longitude" IS NOT NULL']
     where = (where + " AND " + " AND ".join(extra)) if where else (" WHERE " + " AND ".join(extra))
-    sql = ('SELECT "Plant name" as name, "Unit name" as unit, Status as status, '
-           'TRY_CAST("Capacity (MW)" AS DOUBLE) as capacity, '
-           'TRY_CAST(Latitude AS DOUBLE) as lat, TRY_CAST(Longitude AS DOUBLE) as lon, '
-           '"Country/Area" as country FROM ' + tracker_id + where + ' LIMIT ' + str(limit))
+    if tracker_id == "world_ports":
+        sql = (
+            'SELECT "Plant name" as name, "Unit name" as unit, Status as status, '
+            'TRY_CAST("Capacity (MW)" AS DOUBLE) as capacity, '
+            'TRY_CAST(Latitude AS DOUBLE) as lat, TRY_CAST(Longitude AS DOUBLE) as lon, '
+            '"Country/Area" as country, '
+            'CHAN_DEPTH, CARGODEPTH, HARBORSIZE, HARBORTYPE, MAX_VESSEL '
+            'FROM ' + tracker_id + where + ' LIMIT ' + str(limit)
+        )
+    else:
+        sql = (
+            'SELECT "Plant name" as name, "Unit name" as unit, Status as status, '
+            'TRY_CAST("Capacity (MW)" AS DOUBLE) as capacity, '
+            'TRY_CAST(Latitude AS DOUBLE) as lat, TRY_CAST(Longitude AS DOUBLE) as lon, '
+            '"Country/Area" as country FROM ' + tracker_id + where + ' LIMIT ' + str(limit)
+        )
     try:
         df = con.execute(sql, params).fetchdf()
-        return json.loads(df.to_json(orient="records"))
+        rows = json.loads(df.to_json(orient="records"))
+        if tracker_id == "world_ports":
+            rows = [enrich_port_fields(r) for r in rows]
+        return rows
     except Exception as e:
-        raise HTTPException(400, str(e))
+        # Fallback without depth columns if schema missing
+        try:
+            sql2 = (
+                'SELECT "Plant name" as name, "Unit name" as unit, Status as status, '
+                'TRY_CAST("Capacity (MW)" AS DOUBLE) as capacity, '
+                'TRY_CAST(Latitude AS DOUBLE) as lat, TRY_CAST(Longitude AS DOUBLE) as lon, '
+                '"Country/Area" as country FROM ' + tracker_id + where + ' LIMIT ' + str(limit)
+            )
+            df = con.execute(sql2, params).fetchdf()
+            return json.loads(df.to_json(orient="records"))
+        except Exception as e2:
+            raise HTTPException(400, str(e2))
 
 @app.get("/api/kpis/{tracker_id}")
 async def get_kpis(tracker_id: str):
@@ -251,16 +287,41 @@ async def countries_by_capacity(tracker_id: str):
 @app.get("/api/ports")
 async def list_ports(q: Optional[str] = None, limit: int = Query(5000, le=10000)):
     try:
-        sql = 'SELECT "Plant name" as name, "Country/Area" as country, TRY_CAST(Latitude AS DOUBLE) as lat, TRY_CAST(Longitude AS DOUBLE) as lon FROM world_ports WHERE Latitude IS NOT NULL AND Longitude IS NOT NULL'
+        sql = (
+            'SELECT "Plant name" as name, "Country/Area" as country, '
+            'TRY_CAST(Latitude AS DOUBLE) as lat, TRY_CAST(Longitude AS DOUBLE) as lon, '
+            'CHAN_DEPTH, CARGODEPTH, HARBORSIZE, HARBORTYPE, MAX_VESSEL '
+            'FROM world_ports WHERE Latitude IS NOT NULL AND Longitude IS NOT NULL'
+        )
         params = []
         if q:
             sql += ' AND ("Plant name" ILIKE ? OR "Country/Area" ILIKE ?)'
             params.extend([f"%{q}%", f"%{q}%"])
         sql += f" ORDER BY name LIMIT {limit}"
-        df = con.execute(sql, params).fetchdf()
-        return json.loads(df.to_json(orient="records"))
+        try:
+            df = con.execute(sql, params).fetchdf()
+        except Exception:
+            sql = 'SELECT "Plant name" as name, "Country/Area" as country, TRY_CAST(Latitude AS DOUBLE) as lat, TRY_CAST(Longitude AS DOUBLE) as lon FROM world_ports WHERE Latitude IS NOT NULL AND Longitude IS NOT NULL'
+            if q:
+                sql += ' AND ("Plant name" ILIKE ? OR "Country/Area" ILIKE ?)'
+            sql += f" ORDER BY name LIMIT {limit}"
+            df = con.execute(sql, params).fetchdf()
+        rows = json.loads(df.to_json(orient="records"))
+        return [enrich_port_fields(r) for r in rows]
     except Exception as e:
         raise HTTPException(400, str(e))
+
+@app.get("/api/zones")
+async def get_zones():
+    return load_zones()
+
+@app.get("/api/weather")
+async def weather(lat: float = Query(...), lon: float = Query(...)):
+    return await fetch_weather(lat, lon)
+
+@app.get("/api/bunker")
+async def bunker():
+    return await fetch_bunker_prices()
 
 @app.post("/api/route")
 async def sea_route(req: RouteRequest):
@@ -277,7 +338,34 @@ async def sea_route(req: RouteRequest):
                 alt = _compute_route(req.from_lon, req.from_lat, req.to_lon, req.to_lat, speed, avoid + ["suez"])
             except Exception:
                 alt = None
-        result = {**primary, "from_name": req.from_name, "to_name": req.to_name, "method": "maritime network (searoute) · NM / kn / 24"}
+
+        zone_info = analyze_route_zones(primary.get("coordinates") or [])
+        bunker = await fetch_bunker_prices()
+        fuel = estimate_fuel_cost(
+            primary["distance_nm"], primary["duration_days"],
+            req.consumption_tpd or 25.0,
+            zone_info.get("eca_nm_share") or 0.0,
+            bunker,
+        )
+
+        # Weather at origin, midpoint sample, destination
+        coords = primary.get("coordinates") or []
+        mid = coords[len(coords) // 2] if coords else [req.from_lon, req.from_lat]
+        weather = {
+            "origin": await fetch_weather(req.from_lat, req.from_lon),
+            "midpoint": await fetch_weather(mid[1], mid[0]),
+            "destination": await fetch_weather(req.to_lat, req.to_lon),
+        }
+
+        result = {
+            **primary,
+            "from_name": req.from_name,
+            "to_name": req.to_name,
+            "method": "maritime network (searoute) · NM / kn / 24",
+            "zones": zone_info,
+            "fuel": fuel,
+            "weather": weather,
+        }
         if alt and alt["distance_nm"] > primary["distance_nm"]:
             result["alternate_cape_nm"] = alt["distance_nm"]
             result["alternate_cape_days"] = alt["duration_days"]
@@ -286,43 +374,30 @@ async def sea_route(req: RouteRequest):
         raise HTTPException(400, f"Route error: {e}")
 
 async def _sample_ais_for_ships(mmsis: List[str], imos: List[str], timeout_sec: float = 25.0) -> Dict[str, Any]:
-    """Short AISStream sample for specific MMSIs (and optional IMO match via static data)."""
     if not AISSTREAM_API_KEY:
         return {"error": "No AISStream API key configured", "vessels": []}
     try:
         import websockets as wslib
     except ImportError:
         return {"error": "Server missing websockets package", "vessels": []}
-
     vessels: Dict[str, dict] = {}
     mmsi_set = set(str(m) for m in mmsis)
     imo_set = set(str(i) for i in imos)
-
     sub = {
         "APIKey": AISSTREAM_API_KEY,
         "BoundingBoxes": [[[-90.0, -180.0], [90.0, 180.0]]],
         "FilterMessageTypes": ["PositionReport", "ShipStaticData", "StandardClassBPositionReport"],
     }
-    # Prefer MMSI filter when we have them (light, reliable)
     if mmsi_set:
         sub["FiltersShipMMSI"] = list(mmsi_set)[:50]
-
     try:
-        async with wslib.connect(
-            "wss://stream.aisstream.io/v0/stream",
-            open_timeout=15,
-            ping_interval=None,
-            max_size=2**22,
-            close_timeout=5,
-        ) as upstream:
+        async with wslib.connect("wss://stream.aisstream.io/v0/stream", open_timeout=15, ping_interval=None, max_size=2**22, close_timeout=5) as upstream:
             await upstream.send(json.dumps(sub))
             deadline = asyncio.get_event_loop().time() + max(8.0, min(timeout_sec, 40.0))
             while asyncio.get_event_loop().time() < deadline:
                 remaining = deadline - asyncio.get_event_loop().time()
                 try:
                     raw = await asyncio.wait_for(upstream.recv(), timeout=max(0.5, remaining))
-                except asyncio.TimeoutError:
-                    break
                 except Exception:
                     break
                 if isinstance(raw, bytes):
@@ -333,10 +408,8 @@ async def _sample_ais_for_ships(mmsis: List[str], imos: List[str], timeout_sec: 
                     continue
                 meta = msg.get("MetaData") or {}
                 mmsi = str(meta.get("MMSI") or "")
-                pr = (msg.get("Message") or {}).get("PositionReport") or \
-                     (msg.get("Message") or {}).get("StandardClassBPositionReport") or {}
+                pr = (msg.get("Message") or {}).get("PositionReport") or (msg.get("Message") or {}).get("StandardClassBPositionReport") or {}
                 sd = (msg.get("Message") or {}).get("ShipStaticData") or {}
-
                 if sd:
                     imo = str(sd.get("ImoNumber") or sd.get("IMO") or "")
                     name = (sd.get("Name") or meta.get("ShipName") or "").strip()
@@ -345,11 +418,8 @@ async def _sample_ais_for_ships(mmsis: List[str], imos: List[str], timeout_sec: 
                     key = mmsi or imo
                     if not key:
                         continue
-                    # Keep if MMSI requested or IMO requested
                     if mmsi_set and mmsi not in mmsi_set and (not imo or imo not in imo_set):
-                        if not imo_set:
-                            continue
-                        if imo not in imo_set:
+                        if not imo_set or imo not in imo_set:
                             continue
                     if imo_set and not mmsi_set and imo not in imo_set:
                         continue
@@ -357,85 +427,49 @@ async def _sample_ais_for_ships(mmsis: List[str], imos: List[str], timeout_sec: 
                     if name: rec["name"] = name
                     if imo: rec["imo"] = imo
                     if length: rec["length_m"] = length
-                    if sd.get("Type") is not None: rec["ship_type"] = sd.get("Type")
                     continue
-
-                lat = meta.get("Latitude")
-                lon = meta.get("Longitude")
+                lat = meta.get("Latitude"); lon = meta.get("Longitude")
                 if lat is None: lat = pr.get("Latitude")
                 if lon is None: lon = pr.get("Longitude")
                 if lat is None or lon is None or not mmsi:
                     continue
                 if mmsi_set and mmsi not in mmsi_set:
-                    # If only IMOs requested, wait for static match to link
-                    if not imo_set:
-                        continue
-                    if mmsi not in vessels:
+                    if not imo_set or mmsi not in vessels:
                         continue
                 rec = vessels.setdefault(mmsi, {"mmsi": mmsi})
-                rec["lat"] = float(lat)
-                rec["lon"] = float(lon)
+                rec["lat"] = float(lat); rec["lon"] = float(lon)
                 if pr.get("Sog") is not None: rec["sog_kn"] = pr.get("Sog")
                 if pr.get("Cog") is not None: rec["cog"] = pr.get("Cog")
-                if pr.get("TrueHeading") is not None: rec["heading"] = pr.get("TrueHeading")
                 if meta.get("ShipName"): rec["name"] = str(meta.get("ShipName")).strip()
-                rec["updated"] = datetime.utcnow().isoformat() + "Z"
-
-                # Early exit if all MMSIs found with positions
-                if mmsi_set and all(
-                    any(v.get("mmsi") == m and v.get("lat") is not None for v in vessels.values())
-                    for m in mmsi_set
-                ):
+                if mmsi_set and all(any(v.get("mmsi") == m and v.get("lat") is not None for v in vessels.values()) for m in mmsi_set):
                     break
     except Exception as e:
         return {"error": f"AIS sample failed: {e}", "vessels": list(vessels.values())}
-
-    # Filter to requested IDs
     out = []
     for v in vessels.values():
-        if mmsi_set and v.get("mmsi") in mmsi_set:
-            out.append(v)
-        elif imo_set and str(v.get("imo") or "") in imo_set:
-            out.append(v)
-        elif not mmsi_set and not imo_set:
-            out.append(v)
+        if mmsi_set and v.get("mmsi") in mmsi_set: out.append(v)
+        elif imo_set and str(v.get("imo") or "") in imo_set: out.append(v)
     return {"vessels": out, "queried_mmsi": list(mmsi_set), "queried_imo": list(imo_set)}
 
 @app.post("/api/vessel/track")
 async def track_vessels(req: VesselTrackRequest):
-    """On-demand vessel lookup by MMSI (preferred) or IMO. Samples AIS ~25s — no continuous stream."""
     raw_ids = []
     for x in req.ids or []:
         for part in str(x).replace(";", ",").split(","):
             p = part.strip()
-            if p:
-                raw_ids.append(p)
+            if p: raw_ids.append(p)
     mmsis, imos = [], []
     for p in raw_ids:
         digits = "".join(c for c in p if c.isdigit())
-        if len(digits) == 9:
-            mmsis.append(digits)
-        elif len(digits) == 7:
-            imos.append(digits)
-        elif len(digits) >= 7:
-            # treat long ids carefully
-            if len(digits) == 9:
-                mmsis.append(digits)
-            else:
-                imos.append(digits[:7])
+        if len(digits) == 9: mmsis.append(digits)
+        elif len(digits) == 7: imos.append(digits)
+        elif len(digits) > 7: imos.append(digits[:7])
     if not mmsis and not imos:
         raise HTTPException(400, "Provide at least one 9-digit MMSI or 7-digit IMO")
-
     result = await _sample_ais_for_ships(mmsis, imos, req.timeout_sec or 25.0)
     if result.get("error") and not result.get("vessels"):
         raise HTTPException(502, result["error"])
-    return {
-        "vessels": result.get("vessels", []),
-        "queried_mmsi": result.get("queried_mmsi", []),
-        "queried_imo": result.get("queried_imo", []),
-        "note": "MMSI (9 digits) is most reliable. IMO needs a static AIS report during the sample window.",
-        "error": result.get("error"),
-    }
+    return {"vessels": result.get("vessels", []), "queried_mmsi": result.get("queried_mmsi", []), "queried_imo": result.get("queried_imo", []), "error": result.get("error")}
 
 @app.post("/api/upload")
 async def upload_file(file: UploadFile = File(...)):
@@ -506,32 +540,12 @@ async def chat(req: ChatRequest):
         except Exception as e:
             reply = f"(Grok API error: {e})"
     if not reply:
-        tracker = "coal_plants"
-        msg = message.lower()
-        for key, words in [("solar", ["solar"]), ("wind", ["wind"]), ("hydro", ["hydro"]),
-                           ("nuclear", ["nuclear"]), ("coal_terminals", ["terminal"]), ("world_ports", ["port"])]:
-            if any(w in msg for w in words):
-                tracker = key; break
-        try:
-            kpis = con.execute(
-                "SELECT COUNT(*) as total, SUM(CASE WHEN LOWER(CAST(Status AS VARCHAR)) = ? THEN 1 ELSE 0 END) as op_units, "
-                "ROUND(SUM(CASE WHEN LOWER(CAST(Status AS VARCHAR)) = ? THEN TRY_CAST(\"Capacity (MW)\" AS DOUBLE) ELSE 0 END)/1000, 1) as op_gw FROM " + tracker,
-                ["operating", "operating"]
-            ).fetchone()
-            reply = f"**{TRACKERS.get(tracker, {}).get('label', tracker)}**: {kpis[0]:,} units, {kpis[1]:,} operating ({kpis[2]} GW/Mt)."
-        except Exception:
-            reply = "Ask about coal plants, terminals, ports, solar, wind, hydro or nuclear."
+        reply = "Ask about coal plants, terminals, ports, routes, ECA, bunker or weather."
     return {"reply": reply, "sql_result": None, "engine": "heuristic"}
 
 @app.get("/api/health")
 async def health():
-    return {
-        "status": "ok",
-        "trackers": list(TRACKERS.keys()),
-        "user_datasets": list(user_datasets.keys()),
-        "ais_key_configured": bool(AISSTREAM_API_KEY),
-        "time": datetime.utcnow().isoformat(),
-    }
+    return {"status": "ok", "trackers": list(TRACKERS.keys()), "version": "3.5.0", "time": datetime.utcnow().isoformat()}
 
 if __name__ == "__main__":
     import uvicorn
