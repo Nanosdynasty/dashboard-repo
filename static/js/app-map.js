@@ -1,7 +1,14 @@
 async function loadMap() {
   if (state.markers) state.markers.clearLayers();
+  var params = getFilterParams();
+  params.set("limit", "5000");
+  params.delete("offset");
+  if (state.tracker === "world_ports") {
+    params.delete("status");
+    params.delete("min_mw");
+    params.delete("max_mw");
+  }
   try {
-    var params = new URLSearchParams({ limit: "5000" });
     var res = await fetch("/api/map/" + state.tracker + "?" + params);
     if (!res.ok) throw new Error("map " + res.status);
     var points = await res.json();
@@ -9,39 +16,32 @@ async function loadMap() {
       console.error("map not array", points);
       return;
     }
-    var lvl = (state.congestionLevel || "").toLowerCase();
     var n = 0;
     points.forEach(function(p) {
       if (p.lat == null || p.lon == null) return;
-      if (state.tracker === "world_ports") {
-        if (state.congestionOnly && !p.congestion_level) return;
-        if (lvl && (p.congestion_level || "").toLowerCase() !== lvl) return;
-      }
       var color = state.tracker === "world_ports"
         ? PORT_COLOR
-        : (STATUS_COLORS[(p.status || "").toLowerCase()] || PORT_COLOR);
+        : (STATUS_COLORS[(p.status || "").toLowerCase()] || "#016B83");
       var m = L.circleMarker([p.lat, p.lon], {
-        radius: 5, fillColor: color, color: "#ffffff", weight: 1.2, fillOpacity: 0.92
+        radius: state.tracker === "world_ports" ? 5 : Math.max(4, Math.min(12, Math.sqrt(p.capacity || 10) / 3)),
+        fillColor: color, color: "#fff", weight: 1.2, fillOpacity: 0.85
       });
-      m.bindTooltip(p.name || "Port", { direction: "top", className: "port-tip" });
-      m.on("click", function() { showPortDetail(p); });
+      var title = p.name || "—";
+      m.bindPopup("<strong>" + title + "</strong><br/>" + (p.country || "") +
+        (p.status ? " · " + p.status : "") +
+        '<br/><button type="button" onclick="usePort(\'' +
+        String(title).replace(/'/g, "") + "'," + p.lat + "," + p.lon +
+        ')">Use in distance calc</button>');
       state.markers.addLayer(m);
       n++;
     });
-    console.log("markers drawn", n, "of", points.length);
+    console.log("markers drawn", n, "of", points.length, "tracker", state.tracker);
   } catch (e) { console.error("loadMap", e); }
 }
 
-function showPortDetail(p) {
-  var box = document.getElementById("map-detail");
-  var body = document.getElementById("map-detail-body");
-  if (!box || !body) return;
-  body.innerHTML = portPopupHtml(p);
-  box.classList.remove("hidden");
-}
-
 window.usePort = function(name, lat, lon) {
-  setPage("route");
+  document.getElementById("group-vessels").classList.add("open");
+  document.getElementById("group-energy").classList.remove("open");
   var fromEmpty = !document.getElementById("route-from-lat").value;
   var side = fromEmpty ? "from" : "to";
   document.getElementById("port-" + side + "-search").value = name;
@@ -49,143 +49,211 @@ window.usePort = function(name, lat, lon) {
   document.getElementById("route-" + side + "-lon").value = lon;
   document.getElementById("port-" + side + "-label").textContent =
     name + " (" + Number(lat).toFixed(2) + ", " + Number(lon).toFixed(2) + ")";
+  if (!fromEmpty) calcRoute();
 };
-
-async function loadCongestion() {
-  try {
-    var data = await (await fetch("/api/congestion")).json();
-    state.congestion = data;
-    var list = document.getElementById("cong-top-list");
-    var leg = document.getElementById("cong-legend");
-    var disc = document.getElementById("cong-disclaimer");
-    if (disc) disc.textContent = data.disclaimer || "";
-    if (leg) {
-      leg.innerHTML = ["severe", "high", "medium", "low"].map(function(l) {
-        return '<span><i style="background:' + CONG_COLORS[l] + '"></i> ' + l + "</span>";
-      }).join("");
-    }
-    if (list) {
-      list.innerHTML = (data.ports || []).slice(0, 12).map(function(p) {
-        var col = CONG_COLORS[(p.congestion_level || "").toLowerCase()] || "#64748b";
-        return '<div class="cong-top-item" data-lat="' + p.lat + '" data-lon="' + p.lon + '">' +
-          '<span class="cong-badge" style="background:' + col + '">' +
-          String(p.congestion_level || "").toUpperCase() + '</span>' +
-          '<span class="name">' + p.name + "</span></div>";
-      }).join("");
-      list.querySelectorAll(".cong-top-item").forEach(function(el) {
-        el.onclick = function() {
-          var lat = +el.dataset.lat, lon = +el.dataset.lon;
-          if (state.map) state.map.setView([lat, lon], 8);
-        };
-      });
-    }
-  } catch (e) { console.warn("congestion endpoint not available", e); }
-}
 
 async function calcRoute() {
   var fla = +document.getElementById("route-from-lat").value;
   var flo = +document.getElementById("route-from-lon").value;
   var tla = +document.getElementById("route-to-lat").value;
   var tlo = +document.getElementById("route-to-lon").value;
+  var speed = +document.getElementById("route-speed").value || 12;
   var resultEl = document.getElementById("route-result");
-  if (!fla || !flo || !tla || !tlo) {
-    resultEl.textContent = "Select two ports";
+  if ([fla, flo, tla, tlo].some(isNaN) || !fla) {
+    resultEl.textContent = "Select two ports by name first";
     return;
   }
-  resultEl.textContent = "Calculating…";
+  var fromName = document.getElementById("port-from-search").value || "Origin";
+  var toName = document.getElementById("port-to-search").value || "Destination";
+  resultEl.textContent = "Calculating sea route…";
   try {
     var res = await fetch("/api/route", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        from_lat: fla, from_lon: flo, to_lat: tla, to_lon: tlo,
-        from_name: document.getElementById("port-from-search").value,
-        to_name: document.getElementById("port-to-search").value,
-        speed_knots: +document.getElementById("route-speed").value || 12,
-        consumption_tpd: +document.getElementById("route-consumption").value || 30
+        from_lon: flo, from_lat: fla, to_lon: tlo, to_lat: tla,
+        speed_knots: speed, from_name: fromName, to_name: toName
       })
     });
     var j = await res.json();
-    if (!res.ok) throw new Error(j.detail || "route failed");
+    if (!res.ok) throw new Error(j.detail || "Route failed");
     state.routeLayer.clearLayers();
     if (j.coordinates && j.coordinates.length) {
       var ll = j.coordinates.map(function(c) { return [c[1], c[0]]; });
-      L.polyline(ll, { color: "#2563eb", weight: 3 }).addTo(state.routeLayer);
-      state.map.fitBounds(L.latLngBounds(ll).pad(0.15));
+      L.polyline(ll, { color: "#FE4F2D", weight: 3, opacity: 0.9 }).addTo(state.routeLayer);
+      L.circleMarker([fla, flo], { radius: 7, fillColor: "#016B83", color: "#fff", weight: 2, fillOpacity: 1 })
+        .bindTooltip(fromName).addTo(state.routeLayer);
+      L.circleMarker([tla, tlo], { radius: 7, fillColor: "#FE4F2D", color: "#fff", weight: 2, fillOpacity: 1 })
+        .bindTooltip(toName).addTo(state.routeLayer);
+      state.map.fitBounds(ll, { padding: [40, 40] });
     }
-    resultEl.innerHTML = "<strong>" + j.distance_nm + " nm · " +
-      (j.duration_days || 0).toFixed(2) + " d</strong><br/>" +
-      (j.via ? "Via: " + j.via + "<br/>" : "");
+    var nm = j.distance_nm != null ? j.distance_nm : (j.distance_km / 1.852);
+    var days = j.duration_days != null ? j.duration_days : (nm / speed / 24);
+    var via = j.via ? (" via " + j.via) : "";
+    resultEl.textContent = fromName + " → " + toName + via + " · " +
+      Number(nm).toLocaleString(undefined, { maximumFractionDigits: 0 }) + " nm · " +
+      speed + " kn · " + Number(days).toFixed(1) + " days";
   } catch (e) {
     resultEl.textContent = "Error: " + e.message;
   }
 }
 
-function bindUI() {
-  document.querySelectorAll(".rail-item[data-page]").forEach(function(b) {
-    b.onclick = function() { setPage(b.dataset.page); };
+function parseImoList() {
+  var raw = document.getElementById("imo-list").value || "";
+  return raw.split(/[\s,;]+/).map(function(s) { return s.trim(); }).filter(function(s) {
+    return /^\d{7,9}$/.test(s);
   });
-  document.querySelectorAll(".chip-btn[data-view]").forEach(function(b) {
-    b.onclick = function() {
-      document.querySelectorAll(".chip-btn[data-view]").forEach(function(x) { x.classList.remove("active"); });
-      b.classList.add("active");
-      switchView(b.dataset.view);
+}
+
+function vesselIcon(cog, sog) {
+  var rot = (cog != null && cog < 360) ? cog : 0;
+  var moving = sog != null && sog > 0.5;
+  var color = moving ? "#6B4C9A" : "#3D9B6A";
+  return L.divIcon({
+    className: "vessel-dash",
+    html: '<div style="transform:rotate(' + rot + "deg);width:14px;height:4px;background:" +
+      color + ';border-radius:1px;"></div>',
+    iconSize: [14, 4], iconAnchor: [7, 2]
+  });
+}
+
+function clearVessels() {
+  state.vesselLayer.clearLayers();
+  state.vesselMarkers.clear();
+  var box = document.getElementById("vessel-results");
+  if (box) box.innerHTML = "";
+  document.getElementById("imo-status").textContent = "Cleared — paste IDs and click Find";
+}
+
+async function trackVessels() {
+  var ids = parseImoList();
+  if (!ids.length) {
+    document.getElementById("imo-status").textContent = "Paste at least one 7-digit IMO or 9-digit MMSI";
+    return;
+  }
+  document.getElementById("imo-status").textContent = "Searching AIS for " + ids.length + " id(s)…";
+  state.vesselLayer.clearLayers();
+  state.vesselMarkers.clear();
+  try {
+    var res = await fetch("/api/vessel/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: ids, timeout_sec: 25 })
+    });
+    var j = await res.json();
+    if (!res.ok) throw new Error(typeof j.detail === "string" ? j.detail : "track failed");
+    var vessels = j.vessels || [];
+    if (!vessels.length) {
+      document.getElementById("imo-status").textContent = "No position in sample window. Prefer 9-digit MMSI.";
+      return;
+    }
+    var bounds = [];
+    vessels.forEach(function(v) {
+      if (v.lat == null || v.lon == null) return;
+      var name = v.name || ("MMSI " + (v.mmsi || "?"));
+      var marker = L.marker([v.lat, v.lon], { icon: vesselIcon(v.heading || v.cog, v.sog_kn) });
+      marker.bindPopup("<strong>" + name + "</strong><br/>MMSI " + (v.mmsi || "—"));
+      state.vesselLayer.addLayer(marker);
+      bounds.push([v.lat, v.lon]);
+    });
+    if (bounds.length) state.map.fitBounds(bounds, { padding: [50, 50], maxZoom: 10 });
+    document.getElementById("imo-status").textContent = "Found " + vessels.length + " vessel(s)";
+  } catch (e) {
+    document.getElementById("imo-status").textContent = "Track error: " + e.message;
+  }
+}
+
+function bindUI() {
+  document.querySelectorAll(".tab").forEach(function(tab) {
+    tab.onclick = function() {
+      document.querySelectorAll(".tab").forEach(function(t) { t.classList.remove("active"); });
+      tab.classList.add("active");
+      switchView(tab.dataset.view);
     };
   });
-  var themeBtn = document.getElementById("btn-theme");
-  if (themeBtn) themeBtn.onclick = function() {
-    applyTheme(state.theme === "dark" ? "light" : "dark");
+  var ba = document.getElementById("btn-apply");
+  if (ba) ba.onclick = function() { state.offset = 0; loadData(); };
+  var br = document.getElementById("btn-reset");
+  if (br) br.onclick = function() {
+    document.querySelectorAll("#dd-status-panel input, #dd-country-panel input").forEach(function(i) {
+      i.checked = false;
+    });
+    var min = document.getElementById("filter-min-mw");
+    var max = document.getElementById("filter-max-mw");
+    var se = document.getElementById("filter-search");
+    if (min) min.value = "";
+    if (max) max.value = "";
+    if (se) se.value = "";
+    state.offset = 0;
+    loadData();
   };
-  var closeBtn = document.getElementById("btn-close-detail");
-  if (closeBtn) closeBtn.onclick = function() {
-    document.getElementById("map-detail").classList.add("hidden");
+  var bp = document.getElementById("btn-prev");
+  if (bp) bp.onclick = function() {
+    state.offset = Math.max(0, state.offset - state.limit);
+    loadTable();
   };
-  var btnRoute = document.getElementById("btn-route");
-  if (btnRoute) btnRoute.onclick = calcRoute;
-  var btnUpload = document.getElementById("btn-upload");
-  if (btnUpload) btnUpload.onclick = function() {
+  var bn = document.getElementById("btn-next");
+  if (bn) bn.onclick = function() {
+    if (state.offset + state.limit < state.total) {
+      state.offset += state.limit;
+      loadTable();
+    }
+  };
+  var bu = document.getElementById("btn-upload");
+  if (bu) bu.onclick = function() {
     document.getElementById("upload-modal").classList.remove("hidden");
   };
-  var btnCancel = document.getElementById("btn-cancel-upload");
-  if (btnCancel) btnCancel.onclick = function() {
+  var bc = document.getElementById("btn-cancel-upload");
+  if (bc) bc.onclick = function() {
     document.getElementById("upload-modal").classList.add("hidden");
   };
-  var btnExport = document.getElementById("btn-export");
-  if (btnExport) btnExport.onclick = function() {
-    window.open("/api/export/" + state.tracker, "_blank");
+  var bd = document.getElementById("btn-do-upload");
+  if (bd) bd.onclick = doUpload;
+  var be = document.getElementById("btn-export");
+  if (be) be.onclick = function() {
+    window.open("/api/export/" + state.tracker + "?" + getFilterParams(), "_blank");
   };
-  var congSel = document.getElementById("filter-congestion");
-  if (congSel) congSel.onchange = function() {
-    state.congestionLevel = congSel.value;
-    if (state.tracker === "world_ports") loadMap();
+  var broute = document.getElementById("btn-route");
+  if (broute) broute.onclick = calcRoute;
+  var bt = document.getElementById("btn-track-imo");
+  if (bt) bt.onclick = trackVessels;
+  var bcl = document.getElementById("btn-clear-imo");
+  if (bcl) bcl.onclick = clearVessels;
+  var ul = document.getElementById("use-local-llm");
+  if (ul) ul.onchange = function(e) {
+    document.getElementById("local-llm-url").style.display = e.target.checked ? "block" : "none";
   };
-  var congOnly = document.getElementById("toggle-cong-only");
-  if (congOnly) congOnly.onchange = function() {
-    state.congestionOnly = congOnly.checked;
-    if (state.tracker === "world_ports") loadMap();
-  };
-  var gs = document.getElementById("port-search-global");
-  if (gs) gs.addEventListener("keydown", function(e) {
-    if (e.key !== "Enter") return;
-    var q = gs.value.trim().toLowerCase();
-    var hit = state.ports.find(function(x) { return (x.name || "").toLowerCase().indexOf(q) >= 0; });
-    if (hit && state.map) {
-      state.map.setView([hit.lat, hit.lon], 8);
-      showPortDetail(hit);
-    }
-  });
-  var btnApply = document.getElementById("btn-apply");
-  if (btnApply) btnApply.onclick = function() { state.offset = 0; loadData(); };
-  var btnSend = document.getElementById("btn-send");
-  if (btnSend) btnSend.onclick = sendChat;
+  var bs = document.getElementById("btn-send");
+  if (bs) bs.onclick = sendChat;
+  var ci = document.getElementById("chat-input");
+  if (ci) ci.onkeydown = function(e) { if (e.key === "Enter") sendChat(); };
 }
 
 function switchView(name) {
-  state._view = name;
   document.querySelectorAll(".view").forEach(function(v) { v.classList.remove("active"); });
   var el = document.getElementById("view-" + name);
   if (el) el.classList.add("active");
   if (name === "map" && state.map) setTimeout(function() { state.map.invalidateSize(); }, 100);
+}
+
+async function doUpload() {
+  var input = document.getElementById("file-input");
+  if (!input.files.length) {
+    document.getElementById("upload-status").textContent = "Choose a file";
+    return;
+  }
+  var fd = new FormData();
+  fd.append("file", input.files[0]);
+  document.getElementById("upload-status").textContent = "Uploading…";
+  try {
+    var res = await fetch("/api/upload", { method: "POST", body: fd });
+    var json = await res.json();
+    if (!res.ok) throw new Error(json.detail || "fail");
+    document.getElementById("upload-status").textContent = "OK " + json.message;
+    await loadTrackers();
+  } catch (e) {
+    document.getElementById("upload-status").textContent = "Error: " + e.message;
+  }
 }
 
 async function sendChat() {
@@ -193,7 +261,7 @@ async function sendChat() {
   var msg = input.value.trim();
   if (!msg) return;
   var box = document.getElementById("chat-messages");
-  box.innerHTML += '<div class="msg user">' + msg.replace(/</g, "&lt;") + "</div>";
+  box.innerHTML += '<div class="msg user">' + esc(msg) + "</div>";
   input.value = "";
   var th = document.createElement("div");
   th.className = "msg assistant";
@@ -203,11 +271,19 @@ async function sendChat() {
     var res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: msg })
+      body: JSON.stringify({
+        message: msg,
+        use_local_llm: document.getElementById("use-local-llm").checked,
+        local_llm_url: document.getElementById("local-llm-url").value.trim() || null
+      })
     });
     var json = await res.json();
     th.textContent = json.reply || "No reply";
   } catch (e) {
     th.textContent = "Error: " + e.message;
   }
+}
+
+function esc(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
