@@ -1,26 +1,255 @@
-const state={tracker:"world_ports",offset:0,total:0,limit:100,map:null,markers:null,vesselLayer:null,routeLayer:null,seaLabels:null,ecaLayer:null,piracyLayer:null,page:"map",_view:"map",ports:[],portByName:{},congestion:{ports:[]},congestionLevel:"",congestionOnly:false,congLegendCtrl:null};
-const ENERGY=["coal_plants","coal_terminals","solar","wind","hydro","nuclear"];
-const CONG_COLORS={low:"#16a34a",medium:"#ca8a04",high:"#ea580c",severe:"#dc2626"};
-const STATUS_COLORS={operating:"#65BD8B",construction:"#FE4F2D",announced:"#4A57A8",shelved:"#7F142A",cancelled:"#7F142A",retired:"#8a9aa3"};
-const WEATHER_HUBS=[{name:"Singapore",lat:1.26,lon:103.85},{name:"Rotterdam",lat:51.95,lon:4.14},{name:"Shanghai",lat:31.23,lon:121.48},{name:"Houston",lat:29.73,lon:-95.27},{name:"Richards Bay",lat:-28.8,lon:32.08},{name:"Port Hedland",lat:-20.31,lon:118.57}];
-document.addEventListener("DOMContentLoaded",()=>{initMap();loadTrackers();loadPorts();loadZones();loadCongestion();loadWeatherHubs();bindUI();setPage("map");loadData();});
-function initMap(){state.map=L.map("map",{worldCopyJump:true}).setView([20,10],2);L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{attribution:"OSM · CARTO",maxZoom:18}).addTo(state.map);state.markers=typeof L.markerClusterGroup==="function"?L.markerClusterGroup({maxClusterRadius:45,disableClusteringAtZoom:9}):L.layerGroup();state.map.addLayer(state.markers);state.vesselLayer=L.layerGroup().addTo(state.map);state.routeLayer=L.layerGroup().addTo(state.map);state.seaLabels=L.layerGroup().addTo(state.map);state.ecaLayer=L.layerGroup().addTo(state.map);state.piracyLayer=L.layerGroup().addTo(state.map);}
-async function loadZones(){try{const geo=await(await fetch("/api/zones")).json();(geo.features||[]).forEach(f=>{const p=f.properties||{},isEca=p.zone_type==="ECA";const layer=L.geoJSON(f,{style:isEca?{color:"#1d4ed8",weight:1.5,dashArray:"6 4",fillColor:"#3b82f6",fillOpacity:0.12}:{color:"#b91c1c",weight:1.5,dashArray:"4 3",fillColor:"#ef4444",fillOpacity:0.15}});if(isEca)layer.addTo(state.ecaLayer);else layer.addTo(state.piracyLayer);});}catch(e){console.warn(e);}}
-function setPage(name){state.page=name;document.querySelectorAll(".rail-item[data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===name));const map={map:"ports",ports:"ports",vessels:"vessels",route:"route",energy:"energy",ask:"ask"};const pid=map[name]||"ports";document.querySelectorAll(".panel-page").forEach(pg=>pg.classList.toggle("active",pg.id==="page-"+pid));const titles={map:"Map · World Ports",ports:"Ports",vessels:"Vessels",route:"Route",energy:"Energy",ask:"Ask"};const st=document.getElementById("stage-title");if(st)st.textContent=titles[name]||"Map";if(name==="energy"){const first=document.querySelector("#tracker-list .tracker-item");if(first&&(state.tracker==="world_ports"||!ENERGY.includes(state.tracker)))first.click();}else if(["map","ports","route","vessels"].includes(name)&&state.tracker!=="world_ports"){state.tracker="world_ports";state.offset=0;loadData();}if(name!=="ask")switchView(state._view||"map");setTimeout(()=>state.map&&state.map.invalidateSize(),80);}
-async function loadWeatherHubs(){const el=document.getElementById("weather-hubs");if(!el)return;el.innerHTML="<div class='hint'>Loading…</div>";const cards=[];for(const h of WEATHER_HUBS){try{const w=await(await fetch(`/api/weather?lat=${h.lat}&lon=${h.lon}`)).json();const parts=[];if(w.wind_speed_kn!=null)parts.push(`Wind ${w.wind_speed_kn} kn`);if(w.wave_height_m!=null)parts.push(`Wave ${w.wave_height_m} m`);if(w.sst_c!=null)parts.push(`SST ${w.sst_c}°C`);cards.push(`<div class=\"wx-card\" data-lat=\"${h.lat}\" data-lon=\"${h.lon}\"><div class=\"wx-name\">${h.name}</div><div class=\"wx-vals\">${parts.map(x=>\"<span>\"+x+\"</span>\").join(\"\")||\"<span>n/a</span>\"}</div></div>`);}catch(e){cards.push(`<div class=\"wx-card\"><div class=\"wx-name\">${h.name}</div><div class=\"wx-vals\"><span>unavailable</span></div></div>`);}}el.innerHTML=cards.join(\"\")||\"<div class='hint'>Unavailable</div>\";el.querySelectorAll(\".wx-card[data-lat]\").forEach(c=>{c.onclick=()=>{const lat=+c.dataset.lat,lon=+c.dataset.lon;if(state.map)state.map.setView([lat,lon],7);};});}
-async function loadPorts(){try{const ports=await(await fetch(\"/api/ports\")).json();state.ports=ports;state.portByName={};const dl=document.getElementById(\"port-list\");if(dl)dl.innerHTML=ports.map(p=>{const key=(p.name+(p.country?\" (\"+p.country+\")\":\"\")).trim();state.portByName[key.toLowerCase()]=p;state.portByName[p.name.toLowerCase()]=p;return `<option value=\"${key}\"></option>`;}).join(\"\");[\"from\",\"to\"].forEach(side=>{const inp=document.getElementById(\"port-\"+side+\"-search\");if(!inp)return;inp.addEventListener(\"change\",()=>pickPort(side,inp.value));inp.addEventListener(\"blur\",()=>pickPort(side,inp.value));});}catch(e){console.error(e);}}
-function pickPort(side,text){const t=(text||\"\").trim().toLowerCase();if(!t)return;let p=state.portByName[t]||state.ports.find(x=>x.name.toLowerCase().includes(t));if(!p){document.getElementById(\"port-\"+side+\"-label\").textContent=\"Not found\";return;}document.getElementById(\"route-\"+side+\"-lat\").value=p.lat;document.getElementById(\"route-\"+side+\"-lon\").value=p.lon;document.getElementById(\"port-\"+side+\"-label\").textContent=p.name+\" (\"+Number(p.lat).toFixed(2)+\", \"+Number(p.lon).toFixed(2)+\")\";}
-async function loadTrackers(){const list=await(await fetch(\"/api/trackers\")).json();const energyEl=document.getElementById(\"tracker-list\");if(energyEl)energyEl.innerHTML=\"\";list.forEach(t=>{if(t.id===\"world_ports\")return;const div=document.createElement(\"div\");div.className=\"tracker-item\"+(t.id===state.tracker?\" active\":\"\");div.dataset.id=t.id;div.innerHTML=`<span>${t.icon||\"\"}</span><div><div>${t.label}</div><div class=\"meta\">${t.rows?t.rows.toLocaleString()+\" units\":\"\"}</div></div>`;div.onclick=()=>{state.tracker=t.id;state.offset=0;document.querySelectorAll(\".tracker-item\").forEach(x=>x.classList.remove(\"active\"));div.classList.add(\"active\");loadData();};if(energyEl)energyEl.appendChild(div);});}
-function getFilterParams(){const p=new URLSearchParams();p.set(\"limit\",state.limit);p.set(\"offset\",state.offset);return p;}
-async function loadData(){await Promise.all([loadKPIs(),loadTable(),loadMap()]);}
-async function loadKPIs(){const strip=document.getElementById(\"kpi-strip\");if(!strip)return;try{const k=await(await fetch(`/api/kpis/${state.tracker}`)).json();if(state.tracker===\"world_ports\"){strip.innerHTML=`<div class=\"kpi-card\"><div class=\"label\">Ports</div><div class=\"value\">${Number(k.total_units).toLocaleString()}</div><div class=\"sub\">${k.countries} countries</div></div>`;return;}strip.innerHTML=`<div class=\"kpi-card\"><div class=\"label\">Units</div><div class=\"value\">${Number(k.total_units).toLocaleString()}</div></div>`;}catch(e){console.error(e);}}
-async function loadTable(){try{const json=await(await fetch(`/api/data/${state.tracker}?${getFilterParams()}`)).json();state.total=json.total;const thead=document.querySelector(\"#data-table thead\"),tbody=document.querySelector(\"#data-table tbody\");if(!json.data.length){thead.innerHTML=\"\";tbody.innerHTML=\"<tr><td>No rows</td></tr>\";return;}const cols=Object.keys(json.data[0]).slice(0,8);thead.innerHTML=\"<tr>\"+cols.map(c=>`<th>${c}</th>`).join(\"\")+\"</tr>\";tbody.innerHTML=json.data.map(row=>\"<tr>\"+cols.map(c=>`<td>${row[c]??\"\"}</td>`).join(\"\")+\"</tr>\").join(\"\");document.getElementById(\"table-info\").textContent=`${json.data.length} of ${json.total}`;}catch(e){console.error(e);}}
-function portPopupHtml(p){return`<div class=\"port-popup\"><h4>${p.name||\"—\"}</h4><table><tr><td>Country</td><td>${p.country||\"—\"}</td></tr><tr><td>Depth</td><td>${p.channel_depth||\"—\"}</td></tr></table><button onclick=\"usePort('${(p.name||\"\").replace(/'/g,\"\\'\")}',${p.lat},${p.lon})\">Use in route</button></div>`;}
-async function loadMap(){if(state.markers)state.markers.clearLayers();try{const params=new URLSearchParams({limit:\"5000\"});const res=await fetch(`/api/map/${state.tracker}?${params}`);const points=await res.json();if(!Array.isArray(points)){console.error(points);return;}let n=0;points.forEach(p=>{if(p.lat==null||p.lon==null)return;const color=state.tracker===\"world_ports\"?(p.congestion_color||\"#0ea5e9\"):(STATUS_COLORS[(p.status||\"\").toLowerCase()]||\"#0ea5e9\");const m=L.circleMarker([p.lat,p.lon],{radius:5,fillColor:color,color:\"#fff\",weight:1.5,fillOpacity:0.9});m.bindTooltip(p.name||\"Port\",{direction:\"top\",className:\"port-tip\"});m.on(\"click\",()=>showPortDetail(p));state.markers.addLayer(m);n++;});console.log(\"markers\",n);}catch(e){console.error(\"loadMap\",e);}}
-function showPortDetail(p){const box=document.getElementById(\"map-detail\"),body=document.getElementById(\"map-detail-body\");if(!box||!body)return;body.innerHTML=portPopupHtml(p);box.classList.remove(\"hidden\");}
-window.usePort=function(name,lat,lon){setPage(\"route\");const fromEmpty=!document.getElementById(\"route-from-lat\").value;const side=fromEmpty?\"from\":\"to\";document.getElementById(\"port-\"+side+\"-search\").value=name;document.getElementById(\"route-\"+side+\"-lat\").value=lat;document.getElementById(\"route-\"+side+\"-lon\").value=lon;document.getElementById(\"port-\"+side+\"-label\").textContent=name+\" (\"+Number(lat).toFixed(2)+\", \"+Number(lon).toFixed(2)+\")\";};
-async function loadCongestion(){try{const data=await(await fetch(\"/api/congestion\")).json();state.congestion=data;const list=document.getElementById(\"cong-top-list\"),leg=document.getElementById(\"cong-legend\"),disc=document.getElementById(\"cong-disclaimer\");if(disc)disc.textContent=data.disclaimer||\"\";if(leg)leg.innerHTML=[\"severe\",\"high\",\"medium\",\"low\"].map(l=>`<span><i style=\"background:${CONG_COLORS[l]}\"></i> ${l}</span>`).join(\"\");if(list){list.innerHTML=(data.ports||[]).slice(0,12).map(p=>{const col=CONG_COLORS[(p.congestion_level||\"\").toLowerCase()]||\"#64748b\";return`<div class=\"cong-top-item\" data-lat=\"${p.lat}\" data-lon=\"${p.lon}\"><span class=\"cong-badge\" style=\"background:${col}\">${(p.congestion_level||\"\").toUpperCase()}</span><span class=\"name\">${p.name}</span></div>`;}).join(\"\");list.querySelectorAll(\".cong-top-item\").forEach(el=>{el.onclick=()=>{const lat=+el.dataset.lat,lon=+el.dataset.lon;if(state.map)state.map.setView([lat,lon],8);};});}}catch(e){console.warn(e);}}
-async function calcRoute(){const fla=+document.getElementById(\"route-from-lat\").value,flo=+document.getElementById(\"route-from-lon\").value,tla=+document.getElementById(\"route-to-lat\").value,tlo=+document.getElementById(\"route-to-lon\").value;const resultEl=document.getElementById(\"route-result\");if(!fla||!flo||!tla||!tlo){resultEl.textContent=\"Select two ports\";return;}resultEl.textContent=\"Calculating…\";try{const res=await fetch(\"/api/route\",{method:\"POST\",headers:{\"Content-Type\":\"application/json\"},body:JSON.stringify({from_lat:fla,from_lon:flo,to_lat:tla,to_lon:tlo,from_name:document.getElementById(\"port-from-search\").value,to_name:document.getElementById(\"port-to-search\").value,speed_knots:+document.getElementById(\"route-speed\").value||12,consumption_tpd:+document.getElementById(\"route-consumption\").value||30})});const j=await res.json();if(!res.ok)throw new Error(j.detail||\"fail\");state.routeLayer.clearLayers();if(j.coordinates){const ll=j.coordinates.map(c=>[c[1],c[0]]);L.polyline(ll,{color:\"#2563eb\",weight:3}).addTo(state.routeLayer);state.map.fitBounds(L.latLngBounds(ll).pad(0.15));}resultEl.innerHTML=`<strong>${j.distance_nm} nm · ${(j.duration_days||0).toFixed(2)} d</strong>`;}catch(e){resultEl.textContent=\"Error: \"+e.message;}}
-function bindUI(){document.querySelectorAll(\".rail-item[data-page]\").forEach(b=>b.onclick=()=>setPage(b.dataset.page));document.querySelectorAll(\".chip-btn[data-view]\").forEach(b=>b.onclick=()=>{document.querySelectorAll(\".chip-btn[data-view]\").forEach(x=>x.classList.remove(\"active\"));b.classList.add(\"active\");switchView(b.dataset.view);});document.getElementById(\"btn-close-detail\")?.addEventListener(\"click\",()=>document.getElementById(\"map-detail\")?.classList.add(\"hidden\"));document.getElementById(\"btn-route\")?.addEventListener(\"click\",calcRoute);document.getElementById(\"btn-upload\")?.addEventListener(\"click\",()=>document.getElementById(\"upload-modal\").classList.remove(\"hidden\"));document.getElementById(\"btn-cancel-upload\")?.addEventListener(\"click\",()=>document.getElementById(\"upload-modal\").classList.add(\"hidden\"));document.getElementById(\"btn-export\")?.addEventListener(\"click\",()=>window.open(`/api/export/${state.tracker}`,\"_blank\"));document.getElementById(\"filter-congestion\")?.addEventListener(\"change\",e=>{state.congestionLevel=e.target.value;if(state.tracker===\"world_ports\")loadMap();});document.getElementById(\"toggle-cong-only\")?.addEventListener(\"change\",e=>{state.congestionOnly=e.target.checked;if(state.tracker===\"world_ports\")loadMap();});const gs=document.getElementById(\"port-search-global\");if(gs)gs.addEventListener(\"keydown\",e=>{if(e.key!==\"Enter\")return;const q=gs.value.trim().toLowerCase();const hit=state.ports.find(x=>(x.name||\"\").toLowerCase().includes(q));if(hit&&state.map){state.map.setView([hit.lat,hit.lon],8);showPortDetail(hit);}});document.getElementById(\"btn-apply\")?.addEventListener(\"click\",()=>{state.offset=0;loadData();});document.getElementById(\"btn-send\")?.addEventListener(\"click\",sendChat);}
-function switchView(name){state._view=name;document.querySelectorAll(\".view\").forEach(v=>v.classList.remove(\"active\"));document.getElementById(\"view-\"+name)?.classList.add(\"active\");if(name===\"map\"&&state.map)setTimeout(()=>state.map.invalidateSize(),100);}
-async function sendChat(){const input=document.getElementById(\"chat-input\");const msg=input.value.trim();if(!msg)return;const box=document.getElementById(\"chat-messages\");box.innerHTML+=`<div class=\"msg user\">${msg.replace(/</g,\"&lt;\")}</div>`;input.value=\"\";const th=document.createElement(\"div\");th.className=\"msg assistant\";th.textContent=\"Thinking…\";box.appendChild(th);try{const res=await fetch(\"/api/chat\",{method:\"POST\",headers:{\"Content-Type\":\"application/json\"},body:JSON.stringify({message:msg})});const json=await res.json();th.textContent=json.reply||\"No reply\";}catch(e){th.textContent=\"Error: \"+e.message;}}
+/* HRP Dashboard — in dev */
+const state = {
+  tracker: "world_ports", offset: 0, total: 0, limit: 100,
+  map: null, markers: null, vesselLayer: null, routeLayer: null,
+  seaLabels: null, ecaLayer: null, piracyLayer: null,
+  page: "map", _view: "map",
+  ports: [], portByName: {},
+  congestion: { ports: [] }, congestionLevel: "", congestionOnly: false, congLegendCtrl: null,
+};
+const ENERGY = ["coal_plants","coal_terminals","solar","wind","hydro","nuclear"];
+const CONG_COLORS = { low: "#22c55e", medium: "#eab308", high: "#f97316", severe: "#ef4444" };
+const STATUS_COLORS = {
+  operating: "#22c55e", construction: "#f97316", announced: "#3b82f6",
+  shelved: "#ef4444", cancelled: "#ef4444", retired: "#64748b"
+};
+const WEATHER_HUBS = [
+  { name: "Singapore", lat: 1.26, lon: 103.85 },
+  { name: "Rotterdam", lat: 51.95, lon: 4.14 },
+  { name: "Shanghai", lat: 31.23, lon: 121.48 },
+  { name: "Houston", lat: 29.73, lon: -95.27 },
+  { name: "Richards Bay", lat: -28.8, lon: 32.08 },
+  { name: "Port Hedland", lat: -20.31, lon: 118.57 },
+];
+
+document.addEventListener("DOMContentLoaded", () => {
+  initMap();
+  loadTrackers();
+  loadPorts();
+  loadZones();
+  loadCongestion();
+  loadWeatherHubs();
+  bindUI();
+  setPage("map");
+  loadData();
+});
+
+function initMap() {
+  state.map = L.map("map", { worldCopyJump: true }).setView([20, 10], 2);
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+    attribution: "OSM · CARTO", maxZoom: 18
+  }).addTo(state.map);
+  if (typeof L.markerClusterGroup === "function") {
+    state.markers = L.markerClusterGroup({ maxClusterRadius: 45, disableClusteringAtZoom: 9 });
+  } else {
+    state.markers = L.layerGroup();
+  }
+  state.map.addLayer(state.markers);
+  state.vesselLayer = L.layerGroup().addTo(state.map);
+  state.routeLayer = L.layerGroup().addTo(state.map);
+  state.seaLabels = L.layerGroup().addTo(state.map);
+  state.ecaLayer = L.layerGroup().addTo(state.map);
+  state.piracyLayer = L.layerGroup().addTo(state.map);
+}
+
+async function loadZones() {
+  try {
+    const geo = await (await fetch("/api/zones")).json();
+    (geo.features || []).forEach(f => {
+      const p = f.properties || {};
+      const isEca = p.zone_type === "ECA";
+      const layer = L.geoJSON(f, {
+        style: isEca
+          ? { color: "#38bdf8", weight: 1.5, dashArray: "6 4", fillColor: "#0ea5e9", fillOpacity: 0.12 }
+          : { color: "#f87171", weight: 1.5, dashArray: "4 3", fillColor: "#ef4444", fillOpacity: 0.12 }
+      });
+      if (isEca) layer.addTo(state.ecaLayer);
+      else layer.addTo(state.piracyLayer);
+    });
+  } catch (e) { console.warn("zones", e); }
+}
+
+function setPage(name) {
+  state.page = name;
+  document.querySelectorAll(".rail-item[data-page]").forEach(b => {
+    b.classList.toggle("active", b.dataset.page === name);
+  });
+  const panelMap = { map: "ports", ports: "ports", vessels: "vessels", route: "route", energy: "energy", ask: "ask" };
+  const pid = panelMap[name] || "ports";
+  document.querySelectorAll(".panel-page").forEach(pg => {
+    pg.classList.toggle("active", pg.id === "page-" + pid);
+  });
+  const titles = {
+    map: "Map · World Ports", ports: "Ports", vessels: "Vessels",
+    route: "Route", energy: "Energy", ask: "Ask"
+  };
+  const st = document.getElementById("stage-title");
+  if (st) st.textContent = titles[name] || "Map";
+  if (name === "energy") {
+    const first = document.querySelector("#tracker-list .tracker-item");
+    if (first && (state.tracker === "world_ports" || !ENERGY.includes(state.tracker))) first.click();
+  } else if (["map", "ports", "route", "vessels"].includes(name) && state.tracker !== "world_ports") {
+    state.tracker = "world_ports";
+    state.offset = 0;
+    loadData();
+  }
+  if (name !== "ask") switchView(state._view || "map");
+  setTimeout(() => { if (state.map) state.map.invalidateSize(); }, 80);
+}
+
+async function loadWeatherHubs() {
+  const el = document.getElementById("weather-hubs");
+  if (!el) return;
+  el.innerHTML = "<div class='hint'>Loading weather…</div>";
+  const cards = [];
+  for (const h of WEATHER_HUBS) {
+    try {
+      const w = await (await fetch("/api/weather?lat=" + h.lat + "&lon=" + h.lon)).json();
+      const parts = [];
+      if (w.wind_speed_kn != null) parts.push("Wind " + w.wind_speed_kn + " kn");
+      if (w.wave_height_m != null) parts.push("Wave " + w.wave_height_m + " m");
+      if (w.sst_c != null) parts.push("SST " + w.sst_c + "°C");
+      cards.push(
+        '<div class="wx-card" data-lat="' + h.lat + '" data-lon="' + h.lon + '">' +
+        '<div class="wx-name">' + h.name + '</div>' +
+        '<div class="wx-vals">' + (parts.length ? parts.map(function(x){return "<span>"+x+"</span>";}).join("") : "<span>n/a</span>") + '</div></div>'
+      );
+    } catch (e) {
+      cards.push('<div class="wx-card"><div class="wx-name">' + h.name + '</div><div class="wx-vals"><span>unavailable</span></div></div>');
+    }
+  }
+  el.innerHTML = cards.join("") || "<div class='hint'>Unavailable</div>";
+  el.querySelectorAll(".wx-card[data-lat]").forEach(function(c) {
+    c.onclick = function() {
+      var lat = +c.dataset.lat, lon = +c.dataset.lon;
+      if (state.map) state.map.setView([lat, lon], 7);
+    };
+  });
+}
+
+async function loadPorts() {
+  try {
+    const ports = await (await fetch("/api/ports")).json();
+    state.ports = ports;
+    state.portByName = {};
+    const dl = document.getElementById("port-list");
+    if (dl) {
+      dl.innerHTML = ports.map(function(p) {
+        var key = (p.name + (p.country ? " (" + p.country + ")" : "")).trim();
+        state.portByName[key.toLowerCase()] = p;
+        state.portByName[p.name.toLowerCase()] = p;
+        return '<option value="' + key.replace(/"/g, "") + '"></option>';
+      }).join("");
+    }
+    ["from", "to"].forEach(function(side) {
+      var inp = document.getElementById("port-" + side + "-search");
+      if (!inp) return;
+      inp.addEventListener("change", function() { pickPort(side, inp.value); });
+      inp.addEventListener("blur", function() { pickPort(side, inp.value); });
+    });
+  } catch (e) { console.error("ports", e); }
+}
+
+function pickPort(side, text) {
+  var t = (text || "").trim().toLowerCase();
+  if (!t) return;
+  var p = state.portByName[t] || state.ports.find(function(x) { return x.name.toLowerCase().includes(t); });
+  if (!p) {
+    document.getElementById("port-" + side + "-label").textContent = "Not found";
+    return;
+  }
+  document.getElementById("route-" + side + "-lat").value = p.lat;
+  document.getElementById("route-" + side + "-lon").value = p.lon;
+  document.getElementById("port-" + side + "-label").textContent =
+    p.name + " (" + Number(p.lat).toFixed(2) + ", " + Number(p.lon).toFixed(2) + ")";
+}
+
+async function loadTrackers() {
+  try {
+    const list = await (await fetch("/api/trackers")).json();
+    const energyEl = document.getElementById("tracker-list");
+    if (!energyEl) return;
+    energyEl.innerHTML = "";
+    list.forEach(function(t) {
+      if (t.id === "world_ports") return;
+      var div = document.createElement("div");
+      div.className = "tracker-item" + (t.id === state.tracker ? " active" : "");
+      div.dataset.id = t.id;
+      div.innerHTML = "<span>" + (t.icon || "") + "</span><div><div>" + t.label + "</div><div class='meta'>" +
+        (t.rows ? t.rows.toLocaleString() + " units" : "") + "</div></div>";
+      div.onclick = function() {
+        state.tracker = t.id;
+        state.offset = 0;
+        document.querySelectorAll(".tracker-item").forEach(function(x) { x.classList.remove("active"); });
+        div.classList.add("active");
+        loadData();
+      };
+      energyEl.appendChild(div);
+    });
+  } catch (e) { console.error("trackers", e); }
+}
+
+function getFilterParams() {
+  var p = new URLSearchParams();
+  p.set("limit", state.limit);
+  p.set("offset", state.offset);
+  return p;
+}
+
+async function loadData() {
+  await Promise.all([loadKPIs(), loadTable(), loadMap()]);
+}
+
+async function loadKPIs() {
+  var strip = document.getElementById("kpi-strip");
+  if (!strip) return;
+  try {
+    var k = await (await fetch("/api/kpis/" + state.tracker)).json();
+    if (state.tracker === "world_ports") {
+      strip.innerHTML =
+        '<div class="kpi-card"><div class="label">Ports</div><div class="value">' +
+        Number(k.total_units).toLocaleString() + '</div><div class="sub">' + k.countries +
+        ' countries</div></div>';
+      return;
+    }
+    strip.innerHTML =
+      '<div class="kpi-card"><div class="label">Units</div><div class="value">' +
+      Number(k.total_units).toLocaleString() + '</div></div>' +
+      '<div class="kpi-card"><div class="label">Countries</div><div class="value">' +
+      k.countries + '</div></div>';
+  } catch (e) { console.error("kpis", e); }
+}
+
+async function loadTable() {
+  try {
+    var json = await (await fetch("/api/data/" + state.tracker + "?" + getFilterParams())).json();
+    state.total = json.total;
+    var thead = document.querySelector("#data-table thead");
+    var tbody = document.querySelector("#data-table tbody");
+    if (!json.data || !json.data.length) {
+      thead.innerHTML = "";
+      tbody.innerHTML = "<tr><td>No rows</td></tr>";
+      return;
+    }
+    var cols = Object.keys(json.data[0]).slice(0, 8);
+    thead.innerHTML = "<tr>" + cols.map(function(c) { return "<th>" + c + "</th>"; }).join("") + "</tr>";
+    tbody.innerHTML = json.data.map(function(row) {
+      return "<tr>" + cols.map(function(c) { return "<td>" + (row[c] != null ? row[c] : "") + "</td>"; }).join("") + "</tr>";
+    }).join("");
+    document.getElementById("table-info").textContent = json.data.length + " of " + json.total;
+  } catch (e) { console.error("table", e); }
+}
+
+function portPopupHtml(p) {
+  var cong = "";
+  if (p.congestion_level) {
+    cong = "<tr><td>Congestion</td><td>" + p.congestion_level + "</td></tr>" +
+      "<tr><td>Waiting</td><td>" + (p.waiting_vessels != null ? p.waiting_vessels : "—") + "</td></tr>";
+  }
+  var safeName = (p.name || "").replace(/'/g, "\\'");
+  return '<div class="port-popup"><h4>' + (p.name || "—") + '</h4><table>' +
+    "<tr><td>Country</td><td>" + (p.country || "—") + "</td></tr>" +
+    "<tr><td>Depth</td><td>" + (p.channel_depth || p.CHAN_DEPTH || "—") + "</td></tr>" + cong +
+    '</table><button type="button" onclick="usePort(\'' + safeName + '\',' + p.lat + ',' + p.lon +
+    ')">Use in route</button></div>';
+}
