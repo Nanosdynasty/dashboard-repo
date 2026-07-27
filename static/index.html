@@ -1,177 +1,153 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>HRP Dashboard — in dev</title>
+  <title>Global Energy Transition Dashboard · GEM Style</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
   <link rel="stylesheet" href="/static/css/style.css" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet" />
 </head>
 <body>
-  <div class="app">
-    <aside class="rail">
-      <div class="rail-brand">
-        <div class="rail-logo">HR</div>
-        <div class="rail-brand-text">
-          <strong>HRP Dashboard</strong>
-          <span class="dev-badge">in dev</span>
-        </div>
+  <header class="header">
+    <div class="brand">
+      <div class="logo">GEM</div>
+      <div>
+        <h1>Global Energy Transition Dashboard</h1>
+        <p class="subtitle">Energy · Vessels · Ports · Sea routes</p>
       </div>
-      <nav class="rail-nav">
-        <button type="button" class="rail-item active" data-page="map"><span class="material-icons-outlined">public</span><span>Map</span></button>
-        <button type="button" class="rail-item" data-page="ports"><span class="material-icons-outlined">anchor</span><span>Ports</span></button>
-        <button type="button" class="rail-item" data-page="vessels"><span class="material-icons-outlined">directions_boat</span><span>Vessels</span></button>
-        <button type="button" class="rail-item" data-page="route"><span class="material-icons-outlined">route</span><span>Route</span></button>
-        <button type="button" class="rail-item" data-page="energy"><span class="material-icons-outlined">bolt</span><span>Energy</span></button>
-        <button type="button" class="rail-item" data-page="ask"><span class="material-icons-outlined">chat</span><span>Ask</span></button>
-      </nav>
-      <div class="rail-foot">
-        <button type="button" id="btn-theme" class="rail-item rail-foot-btn">
-          <span class="material-icons-outlined">light_mode</span><span>Light</span>
+    </div>
+    <div class="header-actions">
+      <button id="btn-upload" class="btn btn-orange">⬆ Upload</button>
+      <button id="btn-export" class="btn btn-teal">⬇ Export Excel</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="nav-group open" id="group-energy">
+        <button type="button" class="nav-group-header" data-group="energy">
+          <span>⚡ Energy</span><span class="chev">▾</span>
         </button>
-        <button type="button" id="btn-upload" class="rail-item rail-foot-btn"><span class="material-icons-outlined">upload_file</span><span>Upload</span></button>
-        <button type="button" id="btn-export" class="rail-item rail-foot-btn"><span class="material-icons-outlined">download</span><span>Export</span></button>
-      </div>
-    </aside>
-    <aside class="panel" id="side-panel">
-      <div class="panel-page active" id="page-ports">
-        <div class="panel-head"><h2>Ports</h2><p class="panel-sub">World ports · congestion · weather</p></div>
-        <div class="search-wrap"><span class="material-icons-outlined">search</span><input type="text" id="port-search-global" placeholder="Search ports…" autocomplete="off" /></div>
-        <div class="panel-block">
-          <div class="block-title">Congestion filter</div>
-          <select id="filter-congestion" class="field">
-            <option value="">All levels</option>
-            <option value="severe">Severe</option>
-            <option value="high">High</option>
-            <option value="medium">Medium</option>
-            <option value="low">Low</option>
-          </select>
-          <label class="chk"><input type="checkbox" id="toggle-cong-only" /> Only ports with congestion data</label>
-          <div id="cong-legend" class="cong-legend"></div>
-          <div id="cong-top-list" class="cong-top-list"></div>
-          <p class="hint" id="cong-disclaimer"></p>
-        </div>
-        <div class="panel-block">
-          <div class="block-title">Marine weather</div>
-          <div id="weather-hubs" class="weather-hubs"><div class="hint">Loading…</div></div>
-        </div>
-      </div>
-      <div class="panel-page" id="page-vessels">
-        <div class="panel-head"><h2>Vessels</h2><p class="panel-sub">Live AIS · track by IMO / MMSI</p></div>
-        <div class="panel-block">
-          <div class="block-title">Live AIS · dry bulk</div>
-          <input type="password" id="ais-key" class="field" placeholder="AISStream API key" />
-          <button type="button" id="btn-ais" class="btn btn-primary full">Connect AIS</button>
-          <p class="hint" id="ais-status">Key from aisstream.io</p>
-        </div>
-        <div class="panel-block">
-          <div class="block-title">Track by IMO / MMSI</div>
-          <textarea id="imo-list" class="field" rows="5" placeholder="Paste IMO or MMSI numbers"></textarea>
-          <button type="button" id="btn-track-imo" class="btn btn-outline full">Track vessels</button>
-          <p class="hint" id="imo-status">Shows listed ships when AIS is connected</p>
-        </div>
-      </div>
-      <div class="panel-page" id="page-route">
-        <div class="panel-head"><h2>Route</h2><p class="panel-sub">Distance · fuel · weather</p></div>
-        <div class="panel-block">
-          <label class="field-label">From port</label>
-          <input type="text" id="port-from-search" list="port-list" class="field" placeholder="Search port name…" autocomplete="off" />
-          <input type="hidden" id="route-from-lat" /><input type="hidden" id="route-from-lon" />
-          <p class="hint" id="port-from-label">—</p>
-          <label class="field-label">To port</label>
-          <input type="text" id="port-to-search" list="port-list" class="field" placeholder="Search port name…" autocomplete="off" />
-          <input type="hidden" id="route-to-lat" /><input type="hidden" id="route-to-lon" />
-          <p class="hint" id="port-to-label">—</p>
-          <datalist id="port-list"></datalist>
-          <div class="row-2">
-            <div><label class="field-label">Speed (kn)</label><input type="number" id="route-speed" class="field" value="12" step="0.5" min="5" max="25" /></div>
-            <div><label class="field-label">Burn (t/d)</label><input type="number" id="route-consumption" class="field" value="30" step="1" min="5" max="120" /></div>
+        <div class="nav-group-body">
+          <div id="tracker-list" class="tracker-list"></div>
+          <h4 class="sub-h">Filters</h4>
+          <div class="filter-group">
+            <label>Status</label>
+            <div class="dd" id="dd-status">
+              <button type="button" class="dd-btn" id="dd-status-btn">Select status…</button>
+              <div class="dd-panel" id="dd-status-panel"></div>
+            </div>
           </div>
-          <button type="button" id="btn-route" class="btn btn-primary full" style="margin-top:0.6rem">Calculate route</button>
-          <div id="route-result" class="route-result-box">Select two ports</div>
-        </div>
-      </div>
-      <div class="panel-page" id="page-energy">
-        <div class="panel-head"><h2>Energy</h2><p class="panel-sub">Coal · solar · wind · hydro · nuclear</p></div>
-        <div id="tracker-list" class="tracker-list"></div>
-        <div class="panel-block">
-          <div class="block-title">Filters</div>
-          <label class="field-label">Status</label>
-          <div class="dd" id="dd-status"><button type="button" class="dd-btn field" id="dd-status-btn">Select status…</button><div class="dd-panel" id="dd-status-panel"></div></div>
-          <label class="field-label">Country</label>
-          <div class="dd" id="dd-country"><button type="button" class="dd-btn field" id="dd-country-btn">Select countries…</button><div class="dd-panel" id="dd-country-panel"></div></div>
-          <label class="field-label">Capacity</label>
-          <div class="row-2"><input type="number" id="filter-min-mw" class="field" placeholder="Min" /><input type="number" id="filter-max-mw" class="field" placeholder="Max" /></div>
-          <label class="field-label">Search</label>
-          <input type="text" id="filter-search" class="field" placeholder="Plant / owner…" />
-          <div class="row-2" style="margin-top:0.55rem">
-            <button type="button" id="btn-apply" class="btn btn-primary full">Apply</button>
-            <button type="button" id="btn-reset" class="btn btn-outline full">Reset</button>
+          <div class="filter-group">
+            <label>Country <span class="hint">(by capacity)</span></label>
+            <div class="dd" id="dd-country">
+              <button type="button" class="dd-btn" id="dd-country-btn">Select countries…</button>
+              <div class="dd-panel" id="dd-country-panel"></div>
+            </div>
           </div>
+          <div class="filter-group">
+            <label>Capacity</label>
+            <div class="range-row">
+              <input type="number" id="filter-min-mw" placeholder="Min" />
+              <input type="number" id="filter-max-mw" placeholder="Max" />
+            </div>
+          </div>
+          <div class="filter-group">
+            <label>Search</label>
+            <input type="text" id="filter-search" placeholder="Plant / Owner…" />
+          </div>
+          <button id="btn-apply" class="btn btn-teal full">Apply Filters</button>
+          <button id="btn-reset" class="btn btn-ghost full">Reset</button>
         </div>
       </div>
-      <div class="panel-page" id="page-ask">
-        <div class="panel-head"><h2>Ask</h2><p class="panel-sub">Grok or local LLM</p></div>
-        <div id="chat-messages" class="chat-messages"></div>
-        <div class="chat-compose">
-          <label class="chk"><input type="checkbox" id="use-local-llm" /> Local LLM</label>
-          <input type="text" id="local-llm-url" class="field" placeholder="http://localhost:1234/v1" style="display:none" />
-          <div class="chat-row">
-            <input type="text" id="chat-input" class="field grow" placeholder="Ask about ports, weather, capacity…" />
-            <button type="button" id="btn-send" class="btn btn-primary">Send</button>
+
+      <div class="nav-group" id="group-vessels">
+        <button type="button" class="nav-group-header" data-group="vessels">
+          <span>🚢 Vessels</span><span class="chev">▾</span>
+        </button>
+        <div class="nav-group-body">
+          <div id="vessel-tracker-list" class="tracker-list"></div>
+
+          <div class="tools-box">
+            <h3>Distance calculator</h3>
+            <label class="hint">From port</label>
+            <input type="text" id="port-from-search" list="port-list" placeholder="Search port name…" autocomplete="off" />
+            <input type="hidden" id="route-from-lat" />
+            <input type="hidden" id="route-from-lon" />
+            <p class="hint" id="port-from-label">—</p>
+            <label class="hint">To port</label>
+            <input type="text" id="port-to-search" list="port-list" placeholder="Search port name…" autocomplete="off" />
+            <input type="hidden" id="route-to-lat" />
+            <input type="hidden" id="route-to-lon" />
+            <p class="hint" id="port-to-label">—</p>
+            <datalist id="port-list"></datalist>
+            <div class="range-row" style="margin-top:0.4rem">
+              <input type="number" id="route-speed" value="12" step="0.5" min="5" max="25" title="Speed knots" />
+              <span class="hint" style="align-self:center">kn</span>
+            </div>
+            <button id="btn-route" class="btn btn-orange full">Calculate route</button>
+            <p class="hint" id="route-result">Select two ports by name</p>
+          </div>
+
+          <div class="tools-box">
+            <h3>Track vessel by IMO / MMSI</h3>
+            <p class="hint">No continuous live map. Paste ship IDs to fetch current position (uses AIS for ~25s).</p>
+            <p class="hint"><strong>Best:</strong> 9-digit <strong>MMSI</strong>. 7-digit <strong>IMO</strong> is matched if the ship broadcasts static data during the sample.</p>
+            <textarea id="imo-list" rows="4" placeholder="Example:&#10;636018288&#10;9234662&#10;or comma-separated"></textarea>
+            <button id="btn-track-imo" class="btn btn-orange full">Find these vessels</button>
+            <button id="btn-clear-imo" class="btn btn-ghost full">Clear vessels from map</button>
+            <p class="hint" id="imo-status">Paste IDs then click Find</p>
+            <div id="vessel-results" class="vessel-results"></div>
           </div>
         </div>
       </div>
     </aside>
-    <main class="stage">
-      <header class="stage-bar">
-        <div class="stage-title" id="stage-title">Map · World Ports</div>
-        <div class="stage-actions">
-          <span class="live-badge">LIVE</span>
-          <button type="button" class="chip-btn active" data-view="map" id="btn-view-map">Map</button>
-          <button type="button" class="chip-btn" data-view="table" id="btn-view-table">Table</button>
-        </div>
-      </header>
+
+    <main class="main">
       <section id="kpi-strip" class="kpi-strip"></section>
-      <div id="view-map" class="view active">
-        <div id="map"></div>
-        <div id="map-detail" class="map-detail hidden">
-          <button type="button" class="map-detail-close" id="btn-close-detail" aria-label="Close"><span class="material-icons-outlined">close</span></button>
-          <div id="map-detail-body"></div>
-        </div>
+      <div class="view-tabs">
+        <button class="tab active" data-view="map">🗺 Map</button>
+        <button class="tab" data-view="table">📋 Table</button>
+        <button class="tab" data-view="chat">💬 Ask Grok</button>
       </div>
+      <div id="view-map" class="view active"><div id="map"></div></div>
       <div id="view-table" class="view">
         <div class="table-wrap"><table id="data-table"><thead></thead><tbody></tbody></table></div>
         <div class="table-footer">
           <span id="table-info"></span>
-          <div class="pager">
-            <button type="button" id="btn-prev" class="btn btn-ghost">Previous</button>
-            <button type="button" id="btn-next" class="btn btn-ghost">Next</button>
+          <div>
+            <button id="btn-prev" class="btn btn-ghost">← Prev</button>
+            <button id="btn-next" class="btn btn-ghost">Next →</button>
           </div>
+        </div>
+      </div>
+      <div id="view-chat" class="view">
+        <div id="chat-messages" class="chat-messages"></div>
+        <div class="chat-input-row">
+          <label class="chk"><input type="checkbox" id="use-local-llm" /> Local LLM</label>
+          <input type="text" id="local-llm-url" placeholder="http://localhost:1234/v1" style="display:none" />
+          <input type="text" id="chat-input" placeholder="Ask about capacity, ports, routes…" />
+          <button id="btn-send" class="btn btn-teal">Send</button>
         </div>
       </div>
     </main>
   </div>
-  <div id="vessel-tracker-list" style="display:none"></div>
+
   <div id="upload-modal" class="modal hidden">
     <div class="modal-card">
       <h2>Upload data</h2>
-      <p class="hint">Excel, CSV or JSON</p>
+      <p>Excel, CSV or JSON</p>
       <input type="file" id="file-input" accept=".xlsx,.xls,.csv,.json" />
       <p id="upload-status"></p>
       <div class="modal-actions">
-        <button type="button" id="btn-cancel-upload" class="btn btn-ghost">Cancel</button>
-        <button type="button" id="btn-do-upload" class="btn btn-primary">Upload</button>
+        <button id="btn-cancel-upload" class="btn btn-ghost">Cancel</button>
+        <button id="btn-do-upload" class="btn btn-orange">Upload</button>
       </div>
     </div>
   </div>
+
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   <script src="/static/js/app.js"></script>
-  <script src="/static/js/app-map.js"></script>
 </body>
 </html>
