@@ -22,65 +22,35 @@
         </div>
       </div>
       <nav class="rail-nav">
-        <button type="button" class="rail-item active" data-page="map">
-          <span class="material-icons-outlined">public</span><span>Map</span>
-        </button>
-        <button type="button" class="rail-item" data-page="ports">
-          <span class="material-icons-outlined">anchor</span><span>Ports</span>
-        </button>
-        <button type="button" class="rail-item" data-page="vessels">
-          <span class="material-icons-outlined">directions_boat</span><span>Vessels</span>
-        </button>
-        <button type="button" class="rail-item" data-page="route">
-          <span class="material-icons-outlined">route</span><span>Route</span>
-        </button>
-        <button type="button" class="rail-item" data-page="energy">
-          <span class="material-icons-outlined">bolt</span><span>Energy</span>
-        </button>
-        <button type="button" class="rail-item" data-page="ask">
-          <span class="material-icons-outlined">chat</span><span>Ask</span>
-        </button>
+        <button type="button" class="rail-item active" data-page="map"><span class="material-icons-outlined">public</span><span>Map</span></button>
+        <button type="button" class="rail-item" data-page="ports"><span class="material-icons-outlined">anchor</span><span>Ports</span></button>
+        <button type="button" class="rail-item" data-page="vessels"><span class="material-icons-outlined">directions_boat</span><span>Vessels</span></button>
+        <button type="button" class="rail-item" data-page="route"><span class="material-icons-outlined">route</span><span>Route</span></button>
+        <button type="button" class="rail-item" data-page="energy"><span class="material-icons-outlined">bolt</span><span>Energy</span></button>
+        <button type="button" class="rail-item" data-page="ask"><span class="material-icons-outlined">chat</span><span>Ask</span></button>
       </nav>
       <div class="rail-foot">
-        <button type="button" id="btn-upload" class="rail-item rail-foot-btn">
-          <span class="material-icons-outlined">upload_file</span><span>Upload</span>
-        </button>
-        <button type="button" id="btn-export" class="rail-item rail-foot-btn">
-          <span class="material-icons-outlined">download</span><span>Export</span>
-        </button>
+        <button type="button" id="btn-upload" class="rail-item rail-foot-btn"><span class="material-icons-outlined">upload_file</span><span>Upload</span></button>
+        <button type="button" id="btn-export" class="rail-item rail-foot-btn"><span class="material-icons-outlined">download</span><span>Export</span></button>
       </div>
     </aside>
     <aside class="panel" id="side-panel">
       <div class="panel-page active" id="page-ports">
         <div class="panel-head"><h2>Ports</h2><p class="panel-sub">World ports · congestion · weather</p></div>
-        <div class="search-wrap">
-          <span class="material-icons-outlined">search</span>
-          <input type="text" id="port-search-global" placeholder="Search ports…" autocomplete="off" />
-        </div>
+        <div class="search-wrap"><span class="material-icons-outlined">search</span><input type="text" id="port-search-global" placeholder="Search ports…" autocomplete="off" /></div>
         <div class="panel-block">
           <div class="block-title">Congestion filter</div>
-          <select id="filter-congestion" class="field">
-            <option value="">All levels</option>
-            <option value="severe">Severe</option>
-            <option value="high">High</option>
-            <option value="medium">Medium</option>
-            <option value="low">Low</option>
-          </select>
+          <select id="filter-congestion" class="field"><option value="">All levels</option><option value="severe">Severe</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select>
           <label class="chk"><input type="checkbox" id="toggle-cong-only" /> Only ports with congestion data</label>
-          <div id="cong-legend" class="cong-legend"></div>
-          <div id="cong-top-list" class="cong-top-list"></div>
+          <div id="cong-legend" class="cong-legend"></div><div id="cong-top-list" class="cong-top-list"></div>
           <p class="hint" id="cong-disclaimer"></p>
         </div>
-        <div class="panel-block">
-          <div class="block-title">Marine weather</div>
-          <div id="weather-hubs" class="weather-hubs"><div class="hint">Loading…</div></div>
-        </div>
+        <div class="panel-block"><div class="block-title">Marine weather</div><div id="weather-hubs" class="weather-hubs"><div class="hint">Loading…</div></div></div>
       </div>
       <div class="panel-page" id="page-vessels">
         <div class="panel-head"><h2>Vessels</h2><p class="panel-sub">Live AIS · track by IMO / MMSI</p></div>
         <div class="panel-block">
           <div class="block-title">Live AIS · dry bulk</div>
-          <p class="hint">Default dry bulk ≥ ~60k DWT</p>
           <input type="password" id="ais-key" class="field" placeholder="AISStream API key" />
           <button type="button" id="btn-ais" class="btn btn-primary full">Connect AIS</button>
           <p class="hint" id="ais-status">Key from aisstream.io</p>
@@ -118,26 +88,14 @@
         <div class="panel-block">
           <div class="block-title">Filters</div>
           <label class="field-label">Status</label>
-          <div class="dd" id="dd-status">
-            <button type="button" class="dd-btn field" id="dd-status-btn">Select status…</button>
-            <div class="dd-panel" id="dd-status-panel"></div>
-          </div>
+          <div class="dd" id="dd-status"><button type="button" class="dd-btn field" id="dd-status-btn">Select status…</button><div class="dd-panel" id="dd-status-panel"></div></div>
           <label class="field-label">Country</label>
-          <div class="dd" id="dd-country">
-            <button type="button" class="dd-btn field" id="dd-country-btn">Select countries…</button>
-            <div class="dd-panel" id="dd-country-panel"></div>
-          </div>
+          <div class="dd" id="dd-country"><button type="button" class="dd-btn field" id="dd-country-btn">Select countries…</button><div class="dd-panel" id="dd-country-panel"></div></div>
           <label class="field-label">Capacity</label>
-          <div class="row-2">
-            <input type="number" id="filter-min-mw" class="field" placeholder="Min" />
-            <input type="number" id="filter-max-mw" class="field" placeholder="Max" />
-          </div>
+          <div class="row-2"><input type="number" id="filter-min-mw" class="field" placeholder="Min" /><input type="number" id="filter-max-mw" class="field" placeholder="Max" /></div>
           <label class="field-label">Search</label>
           <input type="text" id="filter-search" class="field" placeholder="Plant / owner…" />
-          <div class="row-2" style="margin-top:0.55rem">
-            <button type="button" id="btn-apply" class="btn btn-primary full">Apply</button>
-            <button type="button" id="btn-reset" class="btn btn-outline full">Reset</button>
-          </div>
+          <div class="row-2" style="margin-top:0.55rem"><button type="button" id="btn-apply" class="btn btn-primary full">Apply</button><button type="button" id="btn-reset" class="btn btn-outline full">Reset</button></div>
         </div>
       </div>
       <div class="panel-page" id="page-ask">
@@ -156,30 +114,22 @@
     <main class="stage">
       <header class="stage-bar">
         <div class="stage-title" id="stage-title">Map · World Ports</div>
-        <div class="stage-actions">
-          <span class="live-badge">LIVE</span>
+        <div class="stage-actions"><span class="live-badge">LIVE</span>
           <button type="button" class="chip-btn active" data-view="map" id="btn-view-map">Map</button>
           <button type="button" class="chip-btn" data-view="table" id="btn-view-table">Table</button>
         </div>
       </header>
       <section id="kpi-strip" class="kpi-strip"></section>
-      <div id="view-map" class="view active">
-        <div id="map"></div>
+      <div id="view-map" class="view active"><div id="map"></div>
         <div id="map-detail" class="map-detail hidden">
-          <button type="button" class="map-detail-close" id="btn-close-detail" aria-label="Close">
-            <span class="material-icons-outlined">close</span>
-          </button>
+          <button type="button" class="map-detail-close" id="btn-close-detail" aria-label="Close"><span class="material-icons-outlined">close</span></button>
           <div id="map-detail-body"></div>
         </div>
       </div>
       <div id="view-table" class="view">
         <div class="table-wrap"><table id="data-table"><thead></thead><tbody></tbody></table></div>
-        <div class="table-footer">
-          <span id="table-info"></span>
-          <div class="pager">
-            <button type="button" id="btn-prev" class="btn btn-ghost">Previous</button>
-            <button type="button" id="btn-next" class="btn btn-ghost">Next</button>
-          </div>
+        <div class="table-footer"><span id="table-info"></span>
+          <div class="pager"><button type="button" id="btn-prev" class="btn btn-ghost">Previous</button><button type="button" id="btn-next" class="btn btn-ghost">Next</button></div>
         </div>
       </div>
     </main>
@@ -189,10 +139,8 @@
   <input type="checkbox" id="toggle-piracy" checked style="display:none" />
   <div id="upload-modal" class="modal hidden">
     <div class="modal-card">
-      <h2>Upload data</h2>
-      <p class="hint">Excel, CSV or JSON</p>
-      <input type="file" id="file-input" accept=".xlsx,.xls,.csv,.json" />
-      <p id="upload-status"></p>
+      <h2>Upload data</h2><p class="hint">Excel, CSV or JSON</p>
+      <input type="file" id="file-input" accept=".xlsx,.xls,.csv,.json" /><p id="upload-status"></p>
       <div class="modal-actions">
         <button type="button" id="btn-cancel-upload" class="btn btn-ghost">Cancel</button>
         <button type="button" id="btn-do-upload" class="btn btn-primary">Upload</button>
@@ -202,5 +150,6 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   <script src="/static/js/app.js"></script>
+  <script src="/static/js/app-map.js"></script>
 </body>
 </html>
