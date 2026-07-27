@@ -3,28 +3,31 @@
 An interactive FastAPI dashboard combining Global Energy Monitor assets with a
 normalized port catalog and an analytical voyage-distance tool.
 
-The current foundation prioritizes dry-bulk workflows and uses an HRP-inspired
-navy, teal, cyan, and route-orange interface.
+The current interface is map-first: a fixed world map and one clean left panel
+with Energy, Ports, Commodities, and port-to-port voyage controls. It uses the
+official Howe Robinson Partners logo and its blue, navy, red, and dark-red
+palette.
 
 ---
 
 ## Features
 
-- **Official GEM trackers** pre-loaded (Jan–Mar 2026 releases)
+- Simultaneous checkbox layers for coal, solar, wind, hydro, nuclear,
+  geothermal, and bioenergy power
+- Commodity layers for coal mines, coal terminals, iron ore mines, iron and
+  steel plants, and cement plants
 - 3,669 normalized World Port Index records with country, harbor, depth, vessel,
   navigation, service, and facility fields where present
-- Dry-bulk-first port map with category, country, search, and minimum-depth filters
-- Source-aware hover cards and persistent click-through port detail drawer
+- Every port is rendered as a small individual map dot—there are no numbered
+  clusters
+- Port filters for country, harbor size, and source-supported port categories
+- Compact hover labels and click-through port/asset detail cards
 - Geographically guarded enrichment from the GEM Global Coal Terminals Tracker
-- Voyage distance, duration, route polyline, port swap, and map-to-route selection
-- Filterable data tables (status, country, capacity, search)
-- KPI cards (operating GW, units, countries)
-- **Upload** Excel / CSV / JSON → becomes a new queryable tracker
-- **Export** current filtered view as multi-sheet Excel
-- **Chat**: plain-English questions
-  - Primary: Grok (set `XAI_API_KEY`)
-  - Optional: local LLM (LM Studio or Ollama OpenAI-compatible endpoint)
-  - Built-in heuristic fallback when no LLM is configured
+- Two-click port routing with nautical miles, vessel-speed input, sailing days,
+  remaining hours, and a visible route polyline
+- Map-only extracts from the uploaded GEM workbook bundle:
+  5,382 coal mines, 949 iron ore mines, 1,293 steel plants, 3,513 cement
+  plants, 835 geothermal assets, and 4,537 bioenergy assets
 
 ---
 
@@ -73,13 +76,6 @@ Copy `.env.example` values into your deployment environment. Important variables
 
 If an AIS credential was previously committed, revoke it at the provider and
 replace it with a newly issued environment-only key.
-
-### Optional: local LLM
-
-1. Start LM Studio or Ollama with an OpenAI-compatible server (port 1234 by default).
-2. In the dashboard chat tab, tick “Use local LLM” and confirm the URL.
-
----
 
 ## Deploy on Render.com
 

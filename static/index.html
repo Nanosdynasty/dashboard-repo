@@ -2,213 +2,139 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Global Energy & Maritime Intelligence</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Howe Robinson | Global Assets Map</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
   <link rel="stylesheet" href="/static/css/style.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 </head>
 <body>
-  <header class="header">
-    <div class="brand">
-      <div class="logo">HRP</div>
-      <div>
-        <h1>Global Energy & Maritime Intelligence</h1>
-        <p class="subtitle">Dry bulk assets · Ports · Voyage planning</p>
-      </div>
-    </div>
-    <div class="header-actions">
-      <span class="source-pill">GEM + NGA WPI</span>
-      <button id="btn-upload" class="btn btn-ghost-light">Upload data</button>
-      <button id="btn-export" class="btn btn-teal">Export Excel</button>
-    </div>
-  </header>
-  <div class="layout">
-    <aside class="sidebar">
-      <div class="nav-group" id="group-energy">
-        <button type="button" class="nav-group-header" data-group="energy">
-          <span>⚡ Energy</span><span class="chev">▾</span>
-        </button>
-        <div class="nav-group-body">
-          <div id="tracker-list" class="tracker-list"></div>
-          <h4 class="sub-h">Filters</h4>
-          <div class="filter-group">
-            <label>Status</label>
-            <div class="dd" id="dd-status">
-              <button type="button" class="dd-btn" id="dd-status-btn">Select status…</button>
-              <div class="dd-panel" id="dd-status-panel"></div>
+  <div class="app-shell">
+    <aside class="control-panel">
+      <header class="brand">
+        <img src="/static/img/howe-robinson-logo.svg" alt="Howe Robinson Partners" />
+        <p>Global assets &amp; voyage intelligence</p>
+      </header>
+
+      <div class="panel-scroll">
+        <details class="filter-section" open>
+          <summary>
+            <span><i class="section-icon energy-icon"></i>Energy</span>
+            <span class="section-count" id="energy-active-count">0 active</span>
+          </summary>
+          <div class="section-body">
+            <p class="section-help">Select one or more generation layers.</p>
+            <div class="layer-list" id="energy-layers">
+              <label><input type="checkbox" value="coal_plants" /><i style="--dot:#6f7782"></i><span>Coal plants</span><small>14,509</small></label>
+              <label><input type="checkbox" value="solar" /><i style="--dot:#e9a823"></i><span>Solar power</span><small>103,940</small></label>
+              <label><input type="checkbox" value="wind" /><i style="--dot:#55a6c8"></i><span>Wind power</span><small>33,248</small></label>
+              <label><input type="checkbox" value="hydro" /><i style="--dot:#296fba"></i><span>Hydropower</span><small>6,772</small></label>
+              <label><input type="checkbox" value="nuclear" /><i style="--dot:#8b65b6"></i><span>Nuclear power</span><small>1,749</small></label>
+              <label><input type="checkbox" value="geothermal" /><i style="--dot:#db5b45"></i><span>Geothermal</span><small>835</small></label>
+              <label><input type="checkbox" value="bioenergy" /><i style="--dot:#629c4d"></i><span>Bioenergy</span><small>4,537</small></label>
             </div>
           </div>
-          <div class="filter-group">
-            <label>Country <span class="hint">(by capacity)</span></label>
-            <div class="dd" id="dd-country">
-              <button type="button" class="dd-btn" id="dd-country-btn">Select countries…</button>
-              <div class="dd-panel" id="dd-country-panel"></div>
-            </div>
-          </div>
-          <div class="filter-group">
-            <label>Capacity</label>
-            <div class="range-row">
-              <input type="number" id="filter-min-mw" placeholder="Min" />
-              <input type="number" id="filter-max-mw" placeholder="Max" />
-            </div>
-          </div>
-          <div class="filter-group">
-            <label>Search</label>
-            <input type="text" id="filter-search" placeholder="Plant / Owner…" />
-          </div>
-          <button id="btn-apply" class="btn btn-teal full">Apply Filters</button>
-          <button id="btn-reset" class="btn btn-ghost full">Reset</button>
-        </div>
-      </div>
-      <div class="nav-group open" id="group-vessels">
-        <button type="button" class="nav-group-header" data-group="vessels">
-          <span>Ports &amp; Voyages</span><span class="chev">▾</span>
-        </button>
-        <div class="nav-group-body">
-          <div id="vessel-tracker-list" class="tracker-list"></div>
-          <div class="maritime-filters">
-            <div class="filter-title-row">
-              <div>
-                <h3>Port layers</h3>
-                <p class="hint">Filter the map by sourced capabilities.</p>
-              </div>
-              <label class="switch-label">
-                <input type="checkbox" id="dry-bulk-focus" checked />
-                <span class="switch"></span>
-                <span>Dry bulk</span>
-              </label>
-            </div>
-            <div class="filter-group">
-              <label for="port-filter-search">Port or UN/LOCODE</label>
-              <input type="text" id="port-filter-search" placeholder="Search mapped ports…" />
-            </div>
-            <div class="filter-group">
-              <label for="port-country-filter">Country</label>
-              <select id="port-country-filter">
+        </details>
+
+        <details class="filter-section" open>
+          <summary>
+            <span><i class="section-icon ports-icon"></i>Ports</span>
+            <span class="section-count" id="port-visible-count">3,669 shown</span>
+          </summary>
+          <div class="section-body">
+            <label class="master-toggle">
+              <span>Show all world ports</span>
+              <input type="checkbox" id="show-ports" checked />
+            </label>
+            <div class="field">
+              <label for="port-country">Country</label>
+              <select id="port-country">
                 <option value="">All countries</option>
               </select>
             </div>
-            <div class="filter-group">
-              <label>Port category</label>
-              <div id="port-category-options" class="category-grid"></div>
+            <div class="field">
+              <label for="port-size">Harbor size</label>
+              <select id="port-size">
+                <option value="">All sizes</option>
+              </select>
             </div>
-            <div class="filter-group">
-              <label>Minimum charted depth</label>
-              <div class="depth-grid">
-                <label><span>Channel</span><input type="number" id="port-min-channel" min="0" step="0.5" placeholder="m" /></label>
-                <label><span>Cargo pier</span><input type="number" id="port-min-cargo" min="0" step="0.5" placeholder="m" /></label>
-                <label><span>Anchorage</span><input type="number" id="port-min-anchorage" min="0" step="0.5" placeholder="m" /></label>
-              </div>
+            <p class="field-label">Port category</p>
+            <div class="layer-list compact" id="port-categories">
+              <label><input type="checkbox" value="dry_bulk" /><i style="--dot:#b52a2a"></i><span>Dry bulk</span><small id="count-dry-bulk">386</small></label>
+              <label><input type="checkbox" value="coal" /><i style="--dot:#db2f34"></i><span>Coal terminal</span><small id="count-coal">386</small></label>
+              <label><input type="checkbox" value="oil" /><i style="--dot:#b36b3f"></i><span>Oil terminal</span><small id="count-oil">0</small></label>
+              <label><input type="checkbox" value="container" /><i style="--dot:#258aa5"></i><span>Container</span><small id="count-container">0</small></label>
+              <label><input type="checkbox" value="liquid_bulk" /><i style="--dot:#825c7d"></i><span>Liquid bulk</span><small id="count-liquid-bulk">0</small></label>
+              <label><input type="checkbox" value="lng" /><i style="--dot:#6855a4"></i><span>LNG</span><small id="count-lng">0</small></label>
             </div>
-            <div class="filter-actions">
-              <button id="btn-port-apply" class="btn btn-teal">Apply</button>
-              <button id="btn-port-reset" class="btn btn-ghost">Reset</button>
-            </div>
-            <p class="coverage-note" id="port-coverage-note">Loading port classification coverage…</p>
+            <p class="source-note">Port types reflect fields available in the loaded WPI extract. Zero means not classified, not confirmed absent.</p>
           </div>
-          <div class="tools-box">
-            <div class="tool-heading">
-              <div>
-                <h3>Voyage calculator</h3>
-                <p class="hint">Analytical sea-route estimate</p>
-              </div>
-              <button id="btn-route-swap" class="icon-button" title="Swap origin and destination">⇄</button>
+        </details>
+
+        <details class="filter-section">
+          <summary>
+            <span><i class="section-icon commodity-icon"></i>Commodities</span>
+            <span class="section-count" id="commodity-active-count">0 active</span>
+          </summary>
+          <div class="section-body">
+            <p class="group-label">Coal</p>
+            <div class="layer-list" id="coal-layers">
+              <label><input type="checkbox" value="coal_mines" /><i style="--dot:#242b38"></i><span>Coal mines</span><small>5,382</small></label>
+              <label><input type="checkbox" value="coal_terminals" /><i style="--dot:#db2f34"></i><span>Coal terminals</span><small>519</small></label>
             </div>
-            <label class="hint">From port</label>
-            <input type="text" id="port-from-search" list="port-list" placeholder="Search port name…" autocomplete="off" />
-            <input type="hidden" id="route-from-lat" />
-            <input type="hidden" id="route-from-lon" />
-            <p class="hint" id="port-from-label">—</p>
-            <label class="hint">To port</label>
-            <input type="text" id="port-to-search" list="port-list" placeholder="Search port name…" autocomplete="off" />
-            <input type="hidden" id="route-to-lat" />
-            <input type="hidden" id="route-to-lon" />
-            <p class="hint" id="port-to-label">—</p>
-            <datalist id="port-list"></datalist>
-            <div class="range-row" style="margin-top:0.4rem">
-              <input type="number" id="route-speed" value="12" step="0.5" min="5" max="25" title="Speed knots" />
-              <span class="hint" style="align-self:center">kn</span>
+            <p class="group-label">Iron ore &amp; steel</p>
+            <div class="layer-list" id="iron-layers">
+              <label><input type="checkbox" value="iron_ore_mines" /><i style="--dot:#a45332"></i><span>Iron ore mines</span><small>949</small></label>
+              <label><input type="checkbox" value="steel_plants" /><i style="--dot:#536a7a"></i><span>Iron &amp; steel plants</span><small>1,293</small></label>
             </div>
-            <button id="btn-route" class="btn btn-route full">Calculate voyage</button>
-            <div id="route-result" class="route-result">Select two ports by name or from the map.</div>
+            <p class="group-label">Cement</p>
+            <div class="layer-list" id="cement-layers">
+              <label><input type="checkbox" value="cement_plants" /><i style="--dot:#9a8a73"></i><span>Cement plants</span><small>3,513</small></label>
+            </div>
           </div>
-          <div class="tools-box">
-            <h3>Track vessel by IMO / MMSI</h3>
-            <p class="hint">Paste ship IDs to fetch current position (AIS ~25s).</p>
-            <textarea id="imo-list" rows="4" placeholder="MMSI or IMO, one per line"></textarea>
-            <button id="btn-track-imo" class="btn btn-orange full">Find these vessels</button>
-            <button id="btn-clear-imo" class="btn btn-ghost full">Clear vessels from map</button>
-            <p class="hint" id="imo-status">Paste IDs then click Find</p>
-            <div id="vessel-results" class="vessel-results"></div>
+        </details>
+
+        <section class="voyage-card">
+          <div class="voyage-heading">
+            <div>
+              <span class="eyebrow">Port-to-port</span>
+              <h2>Voyage distance</h2>
+            </div>
+            <button type="button" class="text-button" id="route-reset">Reset</button>
           </div>
-        </div>
+          <button type="button" id="route-pick" class="primary-button">Select two ports on map</button>
+          <div class="route-ports">
+            <div><span>From</span><strong id="route-from-name">Select origin</strong></div>
+            <div><span>To</span><strong id="route-to-name">Select destination</strong></div>
+          </div>
+          <label class="speed-field" for="route-speed">
+            <span>Vessel speed</span>
+            <span><input id="route-speed" type="number" value="12" min="4" max="30" step="0.5" /> kn</span>
+          </label>
+          <div id="route-result" class="route-result">Click the button, then choose two port dots.</div>
+        </section>
       </div>
     </aside>
-    <main class="main">
-      <section id="kpi-strip" class="kpi-strip"></section>
-      <div class="view-tabs">
-        <button class="tab active" data-view="map">Map</button>
-        <button class="tab" data-view="table">Data table</button>
-        <button class="tab" data-view="chat">Ask assistant</button>
+
+    <main class="map-panel">
+      <div id="map"></div>
+      <div class="map-topbar">
+        <div class="map-status"><span></span><strong id="map-status">Loading ports…</strong></div>
+        <button type="button" id="fit-world" class="map-button" title="Fit world">World view</button>
       </div>
-      <div id="view-map" class="view active">
-        <div class="map-shell">
-          <div id="map"></div>
-          <div class="map-status-card">
-            <span class="status-dot"></span>
-            <span id="map-status">Loading map layer…</span>
-          </div>
-          <aside id="port-drawer" class="port-drawer" aria-hidden="true">
-            <div class="drawer-topbar">
-              <div>
-                <p class="drawer-eyebrow">Port intelligence</p>
-                <h2 id="port-drawer-title">Select a port</h2>
-              </div>
-              <button id="btn-close-port-drawer" class="drawer-close" aria-label="Close port details">×</button>
-            </div>
-            <div id="port-drawer-content" class="drawer-content"></div>
-          </aside>
-        </div>
-      </div>
-      <div id="view-table" class="view">
-        <div class="table-wrap"><table id="data-table"><thead></thead><tbody></tbody></table></div>
-        <div class="table-footer">
-          <span id="table-info"></span>
-          <div>
-            <button id="btn-prev" class="btn btn-ghost">← Prev</button>
-            <button id="btn-next" class="btn btn-ghost">Next →</button>
-          </div>
-        </div>
-      </div>
-      <div id="view-chat" class="view">
-        <div id="chat-messages" class="chat-messages"></div>
-        <div class="chat-input-row">
-          <label class="chk"><input type="checkbox" id="use-local-llm" /> Local LLM</label>
-          <input type="text" id="local-llm-url" placeholder="http://localhost:1234/v1" style="display:none" />
-          <input type="text" id="chat-input" placeholder="Ask about capacity, ports, routes…" />
-          <button id="btn-send" class="btn btn-teal">Send</button>
-        </div>
+      <div id="loading-indicator" class="loading-indicator" hidden>Loading layer…</div>
+      <aside id="port-card" class="port-card" aria-hidden="true">
+        <button id="close-port-card" class="close-button" aria-label="Close port details">×</button>
+        <div id="port-card-content"></div>
+      </aside>
+      <div class="map-key">
+        <span><i class="port-key"></i>Port</span>
+        <span><i class="asset-key"></i>Selected asset</span>
+        <span><i class="route-key"></i>Voyage route</span>
       </div>
     </main>
   </div>
-  <div id="upload-modal" class="modal hidden">
-    <div class="modal-card">
-      <h2>Upload data</h2>
-      <p>Excel, CSV or JSON</p>
-      <input type="file" id="file-input" accept=".xlsx,.xls,.csv,.json" />
-      <p id="upload-status"></p>
-      <div class="modal-actions">
-        <button id="btn-cancel-upload" class="btn btn-ghost">Cancel</button>
-        <button id="btn-do-upload" class="btn btn-orange">Upload</button>
-      </div>
-    </div>
-  </div>
+
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   <script src="/static/js/app.js"></script>
-  <script src="/static/js/app-map.js"></script>
 </body>
 </html>

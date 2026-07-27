@@ -1,395 +1,403 @@
-/* GEM Dashboard — all World Ports on map */
+const LAYER_CONFIG = {
+  coal_plants: { label: "Coal plant", color: "#6f7782", radius: 3 },
+  solar: { label: "Solar power", color: "#e9a823", radius: 2 },
+  wind: { label: "Wind power", color: "#55a6c8", radius: 2 },
+  hydro: { label: "Hydropower", color: "#296fba", radius: 3 },
+  nuclear: { label: "Nuclear power", color: "#8b65b6", radius: 4 },
+  geothermal: { label: "Geothermal", color: "#db5b45", radius: 3 },
+  bioenergy: { label: "Bioenergy", color: "#629c4d", radius: 2 },
+  coal_mines: { label: "Coal mine", color: "#242b38", radius: 3 },
+  coal_terminals: { label: "Coal terminal", color: "#db2f34", radius: 3 },
+  iron_ore_mines: { label: "Iron ore mine", color: "#a45332", radius: 3 },
+  steel_plants: { label: "Iron & steel plant", color: "#536a7a", radius: 3 },
+  cement_plants: { label: "Cement plant", color: "#9a8a73", radius: 3 }
+};
+
 const state = {
-  tracker: "world_ports", offset: 0, limit: 100, total: 0,
-  map: null, markers: null, cluster: null, vesselLayer: null, routeLayer: null, seaLabels: null,
-  ports: [], portByName: {}, vesselMarkers: new Map(),
-  portFacets: {}, portSummary: {}, selectedPort: null
+  map: null,
+  portLayer: null,
+  assetLayers: new Map(),
+  assetCache: new Map(),
+  ports: [],
+  filteredPorts: [],
+  routeLayer: null,
+  routeMode: false,
+  routePorts: []
 };
-const STATUS_COLORS = {
-  operating: "#65BD8B", construction: "#FE4F2D", announced: "#4A57A8",
-  "pre-permit": "#4A57A8", permitted: "#4A57A8", proposed: "#4A57A8",
-  shelved: "#7F142A", cancelled: "#7F142A", mothballed: "#8a9aa3", retired: "#8a9aa3"
-};
-const PORT_CATEGORIES = {
-  dry_bulk: { label: "Dry bulk", color: "#18b7a0" },
-  coal: { label: "Coal terminal", color: "#f4a340" },
-  container: { label: "Container", color: "#4aa8d8" },
-  breakbulk: { label: "Breakbulk", color: "#8bd3c7" },
-  liquid_bulk: { label: "Liquid bulk", color: "#d97845" },
-  oil: { label: "Oil terminal", color: "#e06a4d" },
-  lng: { label: "LNG", color: "#9278d2" },
-  roro: { label: "Ro-Ro", color: "#e7c65b" },
-  anchorage: { label: "Anchorage", color: "#8ca0ad" }
-};
-const ALL_STATUSES = ["operating","construction","announced","pre-permit","permitted","proposed","shelved","cancelled","mothballed","retired"];
-const SEA_LABELS = [
-  {name:"Mediterranean Sea",lat:35,lon:18},{name:"Red Sea",lat:20,lon:38},
-  {name:"Persian Gulf",lat:26.5,lon:52},{name:"Arabian Sea",lat:15,lon:65},
-  {name:"Bay of Bengal",lat:15,lon:88},{name:"South China Sea",lat:12,lon:115},
-  {name:"East China Sea",lat:28,lon:125},{name:"North Sea",lat:56,lon:3},
-  {name:"Baltic Sea",lat:58,lon:20},{name:"Caribbean Sea",lat:15,lon:-75},
-  {name:"Gulf of Mexico",lat:25,lon:-90},{name:"Indian Ocean",lat:-20,lon:80},
-  {name:"Suez Canal",lat:30.5,lon:32.4},{name:"Strait of Hormuz",lat:26.5,lon:56.5},
-  {name:"Strait of Malacca",lat:2.5,lon:101.5},{name:"Bab el-Mandeb",lat:12.6,lon:43.3},
-  {name:"Cape of Good Hope",lat:-34.3,lon:18.4},{name:"Singapore Strait",lat:1.2,lon:103.8}
-];
 
-document.addEventListener("DOMContentLoaded", function() {
-  initMap();
-  initStatusDD();
-  initNavGroups();
-  bindUI();
-  switchView("map");
-  var vg = document.getElementById("group-vessels");
-  var eg = document.getElementById("group-energy");
-  if (vg) vg.classList.add("open");
-  if (eg) eg.classList.remove("open");
-  state.tracker = "world_ports";
-  Promise.all([loadTrackers(), loadPorts(), loadPortFacets()]).then(function() { loadData(); });
-});
+document.addEventListener("DOMContentLoaded", init);
 
-function initMap() {
-  state.map = L.map("map", { worldCopyJump: true }).setView([20, 10], 2);
+async function init() {
+  state.map = L.map("map", {
+    preferCanvas: true,
+    worldCopyJump: true,
+    zoomControl: true,
+    minZoom: 2
+  }).setView([18, 10], 2);
   L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-    attribution: "OSM CARTO", maxZoom: 18
+    maxZoom: 18,
+    attribution: "&copy; OpenStreetMap &copy; CARTO"
   }).addTo(state.map);
-  if (typeof L.markerClusterGroup === "function") {
-    state.cluster = L.markerClusterGroup({
-      maxClusterRadius: 40, spiderfyOnMaxZoom: true,
-      showCoverageOnHover: false, disableClusteringAtZoom: 8
-    });
-    state.map.addLayer(state.cluster);
-    state.markers = state.cluster;
-  } else {
-    state.markers = L.layerGroup().addTo(state.map);
-  }
-  state.vesselLayer = L.layerGroup().addTo(state.map);
+  state.portLayer = L.layerGroup().addTo(state.map);
   state.routeLayer = L.layerGroup().addTo(state.map);
-  state.seaLabels = L.layerGroup().addTo(state.map);
-  SEA_LABELS.forEach(function(s) {
-    var icon = L.divIcon({
-      className: "sea-label", html: "<span>" + s.name + "</span>",
-      iconSize: [120, 18], iconAnchor: [60, 9]
-    });
-    L.marker([s.lat, s.lon], { icon: icon, interactive: false }).addTo(state.seaLabels);
-  });
+  bindControls();
+  await loadPortFacets();
+  await loadPorts();
 }
 
-function initNavGroups() {
-  document.querySelectorAll(".nav-group-header").forEach(function(btn) {
-    btn.onclick = function() {
-      var g = btn.closest(".nav-group");
-      var wasOpen = g.classList.contains("open");
-      document.querySelectorAll(".nav-group").forEach(function(x) { x.classList.remove("open"); });
-      if (!wasOpen) g.classList.add("open");
-      if (g.id === "group-vessels" && !wasOpen) {
-        state.tracker = "world_ports";
-        state.offset = 0;
-        document.querySelectorAll(".tracker-item").forEach(function(x) {
-          x.classList.toggle("active", x.dataset.id === "world_ports");
-        });
-        loadData();
-      }
-    };
+function bindControls() {
+  document.querySelectorAll("#energy-layers input, #coal-layers input, #iron-layers input, #cement-layers input")
+    .forEach(input => input.addEventListener("change", () => toggleAssetLayer(input)));
+  document.getElementById("show-ports").addEventListener("change", renderPorts);
+  document.getElementById("port-country").addEventListener("change", loadPorts);
+  document.getElementById("port-size").addEventListener("change", loadPorts);
+  document.querySelectorAll("#port-categories input").forEach(input => input.addEventListener("change", loadPorts));
+  document.getElementById("route-pick").addEventListener("click", startRoutePicking);
+  document.getElementById("route-reset").addEventListener("click", resetRoute);
+  document.getElementById("route-speed").addEventListener("change", () => {
+    if (state.routePorts.length === 2) calculateRoute();
   });
-}
-
-function initStatusDD() {
-  var panel = document.getElementById("dd-status-panel");
-  if (!panel) return;
-  panel.innerHTML = ALL_STATUSES.map(function(s) {
-    return '<label class="dd-item"><input type="checkbox" value="' + s + '"/> ' + s + "</label>";
-  }).join("");
-  var sb = document.getElementById("dd-status-btn");
-  var cb = document.getElementById("dd-country-btn");
-  if (sb) sb.onclick = function(e) {
-    e.stopPropagation();
-    document.getElementById("dd-status").classList.toggle("open");
-    document.getElementById("dd-country").classList.remove("open");
-  };
-  if (cb) cb.onclick = function(e) {
-    e.stopPropagation();
-    document.getElementById("dd-country").classList.toggle("open");
-    document.getElementById("dd-status").classList.remove("open");
-  };
-  document.addEventListener("click", function() {
-    var ds = document.getElementById("dd-status");
-    var dc = document.getElementById("dd-country");
-    if (ds) ds.classList.remove("open");
-    if (dc) dc.classList.remove("open");
-  });
-  if (panel) panel.onclick = function(e) { e.stopPropagation(); };
-  var cp = document.getElementById("dd-country-panel");
-  if (cp) cp.onclick = function(e) { e.stopPropagation(); };
-}
-
-async function loadPorts() {
-  try {
-    var response = await (await fetch("/api/ports?limit=10000")).json();
-    state.ports = Array.isArray(response) ? response : (response.data || []);
-    state.portByName = {};
-    var dl = document.getElementById("port-list");
-    if (dl) {
-      dl.innerHTML = state.ports.map(function(p) {
-        var key = (p.name + (p.country ? " (" + p.country + ")" : "")).trim();
-        state.portByName[key.toLowerCase()] = p;
-        state.portByName[String(p.name || "").toLowerCase()] = p;
-        return '<option value="' + key.replace(/"/g, "") + '"></option>';
-      }).join("");
-    }
-    ["from", "to"].forEach(function(side) {
-      var inp = document.getElementById("port-" + side + "-search");
-      if (!inp) return;
-      inp.addEventListener("change", function() { pickPort(side, inp.value); });
-      inp.addEventListener("blur", function() { pickPort(side, inp.value); });
-    });
-  } catch (e) { console.error("ports", e); }
+  document.getElementById("close-port-card").addEventListener("click", closePortCard);
+  document.getElementById("fit-world").addEventListener("click", () => state.map.setView([18, 10], 2));
 }
 
 async function loadPortFacets() {
-  try {
-    var json = await (await fetch("/api/ports/facets")).json();
-    state.portFacets = json.facets || {};
-    state.portSummary = json.summary || {};
-    var countries = state.portFacets.countries || [];
-    var country = document.getElementById("port-country-filter");
-    if (country) {
-      country.innerHTML = '<option value="">All countries</option>' + countries.map(function(row) {
-        var value = typeof row === "string" ? row : row.id;
-        var count = typeof row === "string" ? "" : " (" + Number(row.count || 0).toLocaleString() + ")";
-        return '<option value="' + escAttr(value) + '">' + esc(value) + count + "</option>";
-      }).join("");
-    }
-    var counts = {};
-    (state.portFacets.categories || []).forEach(function(row) { counts[row.id] = row.count; });
-    var categoryBox = document.getElementById("port-category-options");
-    if (categoryBox) {
-      categoryBox.innerHTML = Object.keys(PORT_CATEGORIES).map(function(key) {
-        var count = Number(counts[key] || 0);
-        return '<label class="category-option' + (count ? "" : " is-empty") + '">' +
-          '<input type="checkbox" value="' + key + '"' + (count ? "" : " disabled") + "/>" +
-          '<span class="category-dot" style="background:' + PORT_CATEGORIES[key].color + '"></span>' +
-          "<span>" + PORT_CATEGORIES[key].label + "</span><small>" + count.toLocaleString() + "</small></label>";
-      }).join("");
-    }
-    updatePortCoverageNote();
-  } catch (e) { console.error("port facets", e); }
-}
-
-function updatePortCoverageNote(filteredTotal) {
-  var note = document.getElementById("port-coverage-note");
-  if (!note) return;
-  var summary = state.portSummary || {};
-  var total = Number(summary.total || 0);
-  var dry = Number(summary.dry_bulk || 0);
-  var channel = Number(summary.with_channel_depth || 0);
-  var shown = filteredTotal == null ? dry : Number(filteredTotal);
-  note.textContent = shown.toLocaleString() + " ports match · " + dry.toLocaleString() +
-    " dry-bulk/coal classified · " + channel.toLocaleString() +
-    " have channel-depth data. Unknown values are not treated as zero.";
-}
-
-function pickPort(side, text) {
-  var t = (text || "").trim().toLowerCase();
-  if (!t) return;
-  var p = state.portByName[t] || state.ports.find(function(x) {
-    return String(x.name || "").toLowerCase() === t || String(x.name || "").toLowerCase().indexOf(t) >= 0;
+  const response = await fetch("/api/ports/facets");
+  const json = await response.json();
+  const facets = json.facets || {};
+  const country = document.getElementById("port-country");
+  country.innerHTML = '<option value="">All countries</option>' +
+    (facets.countries || []).map(item =>
+      `<option value="${escapeAttr(item.id)}">${escapeHtml(item.label)} (${Number(item.count).toLocaleString()})</option>`
+    ).join("");
+  const size = document.getElementById("port-size");
+  size.innerHTML = '<option value="">All sizes</option>' +
+    (facets.harbor_sizes || []).map(item =>
+      `<option value="${escapeAttr(item.id)}">${escapeHtml(item.label)} (${Number(item.count).toLocaleString()})</option>`
+    ).join("");
+  const counts = Object.fromEntries((facets.categories || []).map(item => [item.id, item.count]));
+  ["dry_bulk", "coal", "oil", "container", "liquid_bulk", "lng"].forEach(key => {
+    const el = document.getElementById("count-" + key.replaceAll("_", "-"));
+    if (el) el.textContent = Number(counts[key] || 0).toLocaleString();
   });
-  if (!p) {
-    document.getElementById("port-" + side + "-label").textContent = "Port not found";
+}
+
+function portParams() {
+  const params = new URLSearchParams({ limit: "10000" });
+  const categories = Array.from(document.querySelectorAll("#port-categories input:checked")).map(x => x.value);
+  const country = document.getElementById("port-country").value;
+  const size = document.getElementById("port-size").value;
+  if (categories.length) params.set("categories", categories.join(","));
+  if (country) params.set("countries", country);
+  if (size) params.set("harbor_sizes", size);
+  return params;
+}
+
+async function loadPorts() {
+  setLoading(true, "Loading ports…");
+  try {
+    const response = await fetch("/api/map/world_ports?" + portParams());
+    if (!response.ok) throw new Error("Could not load ports");
+    state.ports = await response.json();
+    state.filteredPorts = state.ports;
+    renderPorts();
+  } catch (error) {
+    setStatus(error.message);
+  } finally {
+    setLoading(false);
+  }
+}
+
+function renderPorts() {
+  state.portLayer.clearLayers();
+  const visible = document.getElementById("show-ports").checked;
+  if (!visible) {
+    document.getElementById("port-visible-count").textContent = "hidden";
+    updateMapStatus();
     return;
   }
-  document.getElementById("route-" + side + "-lat").value = p.lat;
-  document.getElementById("route-" + side + "-lon").value = p.lon;
-  document.getElementById("port-" + side + "-label").textContent =
-    p.name + (p.country ? " · " + p.country : "") +
-    " (" + Number(p.lat).toFixed(2) + ", " + Number(p.lon).toFixed(2) + ")";
-}
-
-async function loadTrackers() {
-  try {
-    var list = await (await fetch("/api/trackers")).json();
-    var energyEl = document.getElementById("tracker-list");
-    var vesselEl = document.getElementById("vessel-tracker-list");
-    if (energyEl) energyEl.innerHTML = "";
-    if (vesselEl) vesselEl.innerHTML = "";
-    list.forEach(function(t) {
-      var parent = t.id === "world_ports" ? vesselEl : energyEl;
-      if (parent) parent.appendChild(makeItem(t));
+  const renderer = L.canvas({ padding: 0.5 });
+  state.filteredPorts.forEach(port => {
+    const lat = Number(port.lat);
+    const lon = Number(port.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+    const marker = L.circleMarker([lat, lon], {
+      renderer,
+      radius: 2.4,
+      color: "#ffffff",
+      weight: 0.55,
+      fillColor: portColor(port.categories),
+      fillOpacity: 0.88
     });
-  } catch (e) { console.error("trackers", e); }
-}
-
-function makeItem(t) {
-  var div = document.createElement("div");
-  div.className = "tracker-item" + (t.id === state.tracker ? " active" : "");
-  div.dataset.id = t.id;
-  var meta = "";
-  if (t.id === "coal_terminals") meta = (t.rows ? t.rows.toLocaleString() + " terminals" : "");
-  else if (t.id === "world_ports") {
-    meta = (t.rows ? t.rows.toLocaleString() + " ports" : "");
-    if (t.countries) meta += " · " + t.countries + " countries";
-  } else meta = (t.rows ? t.rows.toLocaleString() + " units" : "");
-  div.innerHTML = '<span class="icon">' + (t.icon || "") + '</span><div><div>' + t.label +
-    '</div><div class="meta">' + meta + "</div></div>";
-  div.onclick = function() {
-    state.tracker = t.id;
-    state.offset = 0;
-    document.querySelectorAll(".tracker-item").forEach(function(x) { x.classList.remove("active"); });
-    div.classList.add("active");
-    document.querySelectorAll(".nav-group").forEach(function(g) { g.classList.remove("open"); });
-    document.getElementById(t.id === "world_ports" ? "group-vessels" : "group-energy").classList.add("open");
-    loadCountries();
-    loadData();
-  };
-  return div;
-}
-
-async function loadCountries() {
-  try {
-    var rows = await (await fetch("/api/countries/" + state.tracker)).json();
-    var panel = document.getElementById("dd-country-panel");
-    if (!panel) return;
-    panel.innerHTML = rows.map(function(r) {
-      return '<label class="dd-item"><input type="checkbox" value="' + r.country + '"/> ' +
-        r.country + ' <span class="hint">(' + Math.round(r.capacity).toLocaleString() + ")</span></label>";
-    }).join("") || "<div class='dd-item'>No countries</div>";
-  } catch (e) { console.error(e); }
-}
-
-function getFilterParams() {
-  var statuses = Array.from(document.querySelectorAll("#dd-status-panel input:checked")).map(function(i) { return i.value; });
-  var countries = Array.from(document.querySelectorAll("#dd-country-panel input:checked")).map(function(i) { return i.value; });
-  var p = new URLSearchParams();
-  if (state.tracker !== "world_ports" && statuses.length) p.set("status", statuses.join(","));
-  if (countries.length) p.set("country", countries.join(","));
-  var minEl = document.getElementById("filter-min-mw");
-  var maxEl = document.getElementById("filter-max-mw");
-  if (minEl && minEl.value && state.tracker !== "world_ports") p.set("min_mw", minEl.value);
-  if (maxEl && maxEl.value && state.tracker !== "world_ports") p.set("max_mw", maxEl.value);
-  var searchEl = document.getElementById("filter-search");
-  if (searchEl && searchEl.value.trim()) p.set("search", searchEl.value.trim());
-  p.set("limit", state.limit);
-  p.set("offset", state.offset);
-  var sb = document.getElementById("dd-status-btn");
-  var cb = document.getElementById("dd-country-btn");
-  if (sb) sb.textContent = statuses.length ? statuses.length + " status selected" : "Select status…";
-  if (cb) cb.textContent = countries.length ? countries.length + " countries selected" : "Select countries…";
-  return p;
-}
-
-function getPortFilterParams(includePaging) {
-  var p = new URLSearchParams();
-  var categories = Array.from(document.querySelectorAll("#port-category-options input:checked"))
-    .map(function(input) { return input.value; });
-  var focus = document.getElementById("dry-bulk-focus");
-  if (focus && focus.checked && categories.indexOf("dry_bulk") < 0) categories.push("dry_bulk");
-  if (categories.length) p.set("categories", categories.join(","));
-  var country = document.getElementById("port-country-filter");
-  var search = document.getElementById("port-filter-search");
-  if (country && country.value) p.set("countries", country.value);
-  if (search && search.value.trim()) p.set("q", search.value.trim());
-  [
-    ["port-min-channel", "min_channel_m"],
-    ["port-min-cargo", "min_cargo_m"],
-    ["port-min-anchorage", "min_anchorage_m"]
-  ].forEach(function(pair) {
-    var input = document.getElementById(pair[0]);
-    if (input && input.value !== "") p.set(pair[1], input.value);
+    marker.bindTooltip(portTooltip(port), {
+      className: "port-tooltip",
+      direction: "top",
+      opacity: 1
+    });
+    marker.on("click", () => handlePortClick(port));
+    marker.addTo(state.portLayer);
   });
-  if (includePaging !== false) {
-    p.set("limit", state.limit);
-    p.set("offset", state.offset);
-  }
-  return p;
+  document.getElementById("port-visible-count").textContent =
+    state.filteredPorts.length.toLocaleString() + " shown";
+  updateMapStatus();
 }
 
-async function loadData() {
-  var cp = document.getElementById("dd-country-panel");
-  if (cp && !cp.children.length) await loadCountries();
-  await Promise.all([loadKPIs(), loadTable(), loadMap()]);
+function portColor(categories = []) {
+  if (categories.includes("coal")) return "#db2f34";
+  if (categories.includes("dry_bulk")) return "#b52a2a";
+  if (categories.includes("oil")) return "#b36b3f";
+  if (categories.includes("container")) return "#258aa5";
+  if (categories.includes("lng")) return "#6855a4";
+  return "#003671";
 }
 
-async function loadKPIs() {
-  var strip = document.getElementById("kpi-strip");
-  if (!strip) return;
-  if (state.tracker.indexOf("user_") === 0) {
-    strip.innerHTML = '<div class="kpi-card"><div class="label">User</div><div class="value">' + state.tracker + "</div></div>";
+function portTooltip(port) {
+  const cats = (port.categories || []).map(labelize).join(" · ") || "World port";
+  return `<strong>${escapeHtml(port.name)}</strong>${escapeHtml(port.country || "")}<br>${escapeHtml(cats)}`;
+}
+
+async function toggleAssetLayer(input) {
+  const id = input.value;
+  if (!input.checked) {
+    const layer = state.assetLayers.get(id);
+    if (layer) state.map.removeLayer(layer);
+    updateActiveCounts();
+    updateMapStatus();
     return;
   }
+  setLoading(true, `Loading ${LAYER_CONFIG[id].label.toLowerCase()}…`);
   try {
-    if (state.tracker === "world_ports") {
-      var params = getPortFilterParams(false);
-      params.set("limit", "1");
-      var portJson = await (await fetch("/api/ports?" + params)).json();
-      var summary = portJson.summary || state.portSummary || {};
-      var matched = Number(portJson.total || 0);
-      var total = Number(summary.total || 0);
-      var dry = Number(summary.dry_bulk || 0);
-      var channel = Number(summary.with_channel_depth || 0);
-      updatePortCoverageNote(matched);
-      strip.innerHTML =
-        '<div class="kpi-card"><div class="label">Ports shown</div><div class="value">' +
-        matched.toLocaleString() + '</div><div class="sub">of ' + total.toLocaleString() + " mapped ports</div></div>" +
-        '<div class="kpi-card"><div class="label">Dry-bulk / coal</div><div class="value">' +
-        dry.toLocaleString() + '</div><div class="sub">source-backed classification</div></div>' +
-        '<div class="kpi-card"><div class="label">Channel depth</div><div class="value">' +
-        (total ? Math.round(channel / total * 100) : 0) + '%</div><div class="sub">' +
-        channel.toLocaleString() + " ports with data</div></div>";
-      return;
+    let points = state.assetCache.get(id);
+    if (!points) {
+      const response = await fetch(`/api/map/${encodeURIComponent(id)}?limit=150000`);
+      if (!response.ok) throw new Error(`Could not load ${LAYER_CONFIG[id].label}`);
+      points = await response.json();
+      state.assetCache.set(id, points);
     }
-    var k = await (await fetch("/api/kpis/" + state.tracker)).json();
-    var isTerm = state.tracker === "coal_terminals";
-    var unit = isTerm ? "Mt" : "GW";
-    var opVal = isTerm ? Math.round(k.operating_mw).toLocaleString() : (k.operating_mw / 1000).toFixed(1);
-    strip.innerHTML =
-      '<div class="kpi-card"><div class="label">Operating</div><div class="value">' + opVal +
-      " <small>" + unit + "</small></div></div>" +
-      '<div class="kpi-card"><div class="label">Total Units</div><div class="value">' +
-      Number(k.total_units).toLocaleString() + "</div></div>";
-  } catch (e) { console.error("kpis", e); }
+    let layer = state.assetLayers.get(id);
+    if (!layer) {
+      layer = buildAssetLayer(id, points);
+      state.assetLayers.set(id, layer);
+    }
+    layer.addTo(state.map);
+  } catch (error) {
+    input.checked = false;
+    setStatus(error.message);
+  } finally {
+    setLoading(false);
+    updateActiveCounts();
+    updateMapStatus();
+  }
 }
 
-async function loadTable() {
+function buildAssetLayer(id, points) {
+  const config = LAYER_CONFIG[id];
+  const group = L.layerGroup();
+  const renderer = L.canvas({ padding: 0.5 });
+  points.forEach(point => {
+    const lat = Number(point.lat);
+    const lon = Number(point.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+    const marker = L.circleMarker([lat, lon], {
+      renderer,
+      radius: config.radius,
+      color: "#ffffff",
+      weight: 0.45,
+      fillColor: config.color,
+      fillOpacity: 0.84
+    });
+    marker.bindTooltip(assetTooltip(config, point), {
+      className: "asset-tooltip",
+      direction: "top",
+      opacity: 1
+    });
+    marker.on("click", () => showAssetCard(config, point));
+    marker.addTo(group);
+  });
+  return group;
+}
+
+function assetTooltip(config, point) {
+  const capacity = point.capacity == null ? "" :
+    `<br>${Number(point.capacity).toLocaleString()} ${escapeHtml(point.capacity_unit || "MW")}`;
+  return `<strong>${escapeHtml(point.name || config.label)}</strong>` +
+    `${escapeHtml(point.country || "")}${point.status ? " · " + escapeHtml(point.status) : ""}${capacity}`;
+}
+
+function handlePortClick(port) {
+  if (!state.routeMode) {
+    showPortCard(port);
+    return;
+  }
+  if (state.routePorts.length === 2) resetRoute(false);
+  state.routePorts.push(port);
+  updateRouteSelection();
+  if (state.routePorts.length === 2) {
+    state.routeMode = false;
+    document.getElementById("route-pick").classList.remove("active");
+    document.getElementById("route-pick").textContent = "Select two ports on map";
+    calculateRoute();
+  }
+}
+
+function startRoutePicking() {
+  resetRoute(false);
+  state.routeMode = true;
+  closePortCard();
+  const button = document.getElementById("route-pick");
+  button.classList.add("active");
+  button.textContent = "Click origin port…";
+  document.getElementById("route-result").textContent = "Click a port dot for the origin, then another for the destination.";
+}
+
+function updateRouteSelection() {
+  const from = state.routePorts[0];
+  const to = state.routePorts[1];
+  document.getElementById("route-from-name").textContent = from ? from.name : "Select origin";
+  document.getElementById("route-to-name").textContent = to ? to.name : "Select destination";
+  const button = document.getElementById("route-pick");
+  if (state.routeMode) button.textContent = from ? "Click destination port…" : "Click origin port…";
+}
+
+function resetRoute(clearText = true) {
+  state.routeLayer.clearLayers();
+  state.routePorts = [];
+  state.routeMode = false;
+  const button = document.getElementById("route-pick");
+  button.classList.remove("active");
+  button.textContent = "Select two ports on map";
+  updateRouteSelection();
+  if (clearText) document.getElementById("route-result").textContent = "Click the button, then choose two port dots.";
+}
+
+async function calculateRoute() {
+  if (state.routePorts.length !== 2) return;
+  const [from, to] = state.routePorts;
+  const speed = Number(document.getElementById("route-speed").value) || 12;
+  const result = document.getElementById("route-result");
+  result.textContent = "Calculating sea route…";
   try {
-    var url = state.tracker === "world_ports"
-      ? "/api/ports?" + getPortFilterParams()
-      : "/api/data/" + state.tracker + "?" + getFilterParams();
-    var json = await (await fetch(url)).json();
-    state.total = json.total;
-    var thead = document.querySelector("#data-table thead");
-    var tbody = document.querySelector("#data-table tbody");
-    if (!json.data || !json.data.length) {
-      thead.innerHTML = "";
-      tbody.innerHTML = "<tr><td>No rows</td></tr>";
-      return;
+    const response = await fetch("/api/route", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from_lon: from.lon,
+        from_lat: from.lat,
+        to_lon: to.lon,
+        to_lat: to.lat,
+        speed_knots: speed,
+        from_name: from.name,
+        to_name: to.name
+      })
+    });
+    const route = await response.json();
+    if (!response.ok) throw new Error(route.detail || "Route calculation failed");
+    const coordinates = (route.coordinates || []).map(item => [item[1], item[0]]);
+    state.routeLayer.clearLayers();
+    if (coordinates.length) {
+      L.polyline(coordinates, { color: "#db2f34", weight: 3.2, opacity: 0.92 }).addTo(state.routeLayer);
+      L.circleMarker([from.lat, from.lon], { radius: 6, color: "#fff", weight: 2, fillColor: "#003671", fillOpacity: 1 }).addTo(state.routeLayer);
+      L.circleMarker([to.lat, to.lon], { radius: 6, color: "#fff", weight: 2, fillColor: "#db2f34", fillOpacity: 1 }).addTo(state.routeLayer);
+      state.map.fitBounds(coordinates, { padding: [50, 50] });
     }
-    var cols = state.tracker === "world_ports"
-      ? ["name", "country", "unlocode", "categories", "channel_depth", "cargo_depth", "anchorage_depth", "max_vessel"]
-      : Object.keys(json.data[0]).slice(0, 8);
-    thead.innerHTML = "<tr>" + cols.map(function(c) { return "<th>" + c + "</th>"; }).join("") + "</tr>";
-    tbody.innerHTML = json.data.map(function(row) {
-      return '<tr' + (state.tracker === "world_ports" ? ' class="clickable-row" data-port-id="' + escAttr(row.id) + '"' : "") + ">" +
-        cols.map(function(c) {
-        var value = row[c];
-        if (Array.isArray(value)) value = value.map(categoryLabel).join(", ");
-        return "<td>" + esc(value != null && value !== "" ? value : "—") + "</td>";
-      }).join("") + "</tr>";
-    }).join("");
-    if (state.tracker === "world_ports") {
-      tbody.querySelectorAll("[data-port-id]").forEach(function(row) {
-        row.onclick = function() { openPortDetail(row.dataset.portId); };
-      });
-    }
-    var info = document.getElementById("table-info");
-    if (info) info.textContent = json.data.length + " of " + json.total.toLocaleString();
-  } catch (e) { console.error("table", e); }
+    const nm = route.distance_nm != null ? route.distance_nm : route.distance_km / 1.852;
+    const days = route.duration_days != null ? route.duration_days : nm / speed / 24;
+    const totalHours = Math.round(days * 24);
+    const wholeDays = Math.floor(totalHours / 24);
+    const hours = totalHours % 24;
+    result.innerHTML = `<strong>${Number(nm).toLocaleString(undefined, {maximumFractionDigits: 0})} nm</strong>` +
+      `<b>${wholeDays} days ${hours} hours</b> at ${speed} kn` +
+      `<br>${escapeHtml(route.via ? "Via " + route.via : "Estimated sea route")}` +
+      `<br><small>Analytical estimate only—not for navigation.</small>`;
+  } catch (error) {
+    result.textContent = error.message;
+  }
 }
 
-function categoryLabel(key) {
-  return PORT_CATEGORIES[key] ? PORT_CATEGORIES[key].label : String(key || "").replace(/_/g, " ");
+async function showPortCard(port) {
+  const response = await fetch("/api/ports/" + encodeURIComponent(port.id));
+  const detail = response.ok ? await response.json() : port;
+  const card = document.getElementById("port-card");
+  document.getElementById("port-card-content").innerHTML =
+    `<span class="detail-eyebrow">Port</span><h2>${escapeHtml(detail.name)}</h2>` +
+    `<p class="detail-meta">${escapeHtml(detail.country || "Country unknown")}` +
+    `${detail.unlocode ? " · " + escapeHtml(detail.unlocode) : ""}</p>` +
+    `<div class="detail-grid">` +
+    detailCell("Harbor size", detail.harbor_size) +
+    detailCell("Harbor type", detail.harbor_type) +
+    detailCell("Channel depth", detail.channel_depth) +
+    detailCell("Cargo pier", detail.cargo_depth) +
+    detailCell("Anchorage", detail.anchorage_depth) +
+    detailCell("Max vessel", detail.max_vessel) +
+    `</div><p class="detail-note">Berth count is unknown in the current source. Unknown values are not treated as zero.</p>`;
+  card.classList.add("open");
+  card.setAttribute("aria-hidden", "false");
 }
 
-function escAttr(value) {
-  return esc(value == null ? "" : value).replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+function showAssetCard(config, point) {
+  const card = document.getElementById("port-card");
+  document.getElementById("port-card-content").innerHTML =
+    `<span class="detail-eyebrow">${escapeHtml(config.label)}</span><h2>${escapeHtml(point.name || config.label)}</h2>` +
+    `<p class="detail-meta">${escapeHtml(point.country || "Country unknown")}</p>` +
+    `<div class="detail-grid">` +
+    detailCell("Status", point.status) +
+    detailCell("Capacity", point.capacity == null ? "Unknown" :
+      Number(point.capacity).toLocaleString() + " " + (point.capacity_unit || "MW")) +
+    `</div><p class="detail-note">Source: Global Energy Monitor workbook layer.</p>`;
+  card.classList.add("open");
+  card.setAttribute("aria-hidden", "false");
+}
+
+function closePortCard() {
+  const card = document.getElementById("port-card");
+  card.classList.remove("open");
+  card.setAttribute("aria-hidden", "true");
+}
+
+function detailCell(label, value) {
+  return `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value || "Unknown")}</strong></div>`;
+}
+
+function updateActiveCounts() {
+  const energy = document.querySelectorAll("#energy-layers input:checked").length;
+  const commodities = document.querySelectorAll("#coal-layers input:checked, #iron-layers input:checked, #cement-layers input:checked").length;
+  document.getElementById("energy-active-count").textContent = `${energy} active`;
+  document.getElementById("commodity-active-count").textContent = `${commodities} active`;
+}
+
+function updateMapStatus() {
+  const ports = document.getElementById("show-ports").checked ? state.filteredPorts.length : 0;
+  let assets = 0;
+  state.assetLayers.forEach((layer, id) => {
+    if (state.map.hasLayer(layer)) assets += (state.assetCache.get(id) || []).length;
+  });
+  const parts = [];
+  if (ports) parts.push(`${ports.toLocaleString()} ports`);
+  if (assets) parts.push(`${assets.toLocaleString()} assets`);
+  setStatus(parts.length ? parts.join(" · ") : "No layers selected");
+}
+
+function setStatus(text) {
+  document.getElementById("map-status").textContent = text;
+}
+
+function setLoading(active, text = "Loading layer…") {
+  const indicator = document.getElementById("loading-indicator");
+  indicator.hidden = !active;
+  indicator.textContent = text;
+}
+
+function labelize(value) {
+  return String(value || "").replaceAll("_", " ").replace(/\b\w/g, char => char.toUpperCase());
+}
+
+function escapeHtml(value) {
+  return String(value == null ? "" : value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}
+
+function escapeAttr(value) {
+  return escapeHtml(value).replaceAll('"', "&quot;").replaceAll("'", "&#39;");
 }

@@ -39,6 +39,20 @@ TRACKERS = {
     "wind": {"label": "Wind", "file": "wind.csv.gz", "icon": "💨"},
     "hydro": {"label": "Hydropower", "file": "hydro.csv.gz", "icon": "💧"},
     "nuclear": {"label": "Nuclear", "file": "nuclear.csv.gz", "icon": "⚛️"},
+    "geothermal": {"label": "Geothermal Power", "file": "geothermal.csv.gz", "icon": "♨"},
+    "bioenergy": {"label": "Bioenergy Power", "file": "bioenergy.csv.gz", "icon": "◉"},
+    "coal_mines": {"label": "Coal Mines", "file": "coal_mines.csv.gz", "icon": "◆"},
+    "iron_ore_mines": {"label": "Iron Ore Mines", "file": "iron_ore_mines.csv.gz", "icon": "◆"},
+    "steel_plants": {"label": "Iron & Steel Plants", "file": "steel_plants.csv.gz", "icon": "●"},
+    "cement_plants": {"label": "Cement Plants", "file": "cement_plants.csv.gz", "icon": "●"},
+}
+NORMALIZED_MAP_TRACKERS = {
+    "geothermal",
+    "bioenergy",
+    "coal_mines",
+    "iron_ore_mines",
+    "steel_plants",
+    "cement_plants",
 }
 user_datasets: Dict[str, Path] = {}
 con = duckdb.connect(database=":memory:")
@@ -280,7 +294,7 @@ async def get_map_points(
     min_channel_m: Optional[float] = None,
     min_cargo_m: Optional[float] = None,
     min_anchorage_m: Optional[float] = None,
-    limit: int = Query(5000, le=10000),
+    limit: int = Query(5000, ge=1, le=150000),
 ):
     if tracker_id not in TRACKERS and not tracker_id.startswith("user_"):
         raise HTTPException(404)
@@ -296,6 +310,38 @@ async def get_map_points(
             min_anchorage_m=min_anchorage_m,
         )
         return [ports.compact(item) for item in filtered[:limit]]
+    if tracker_id in NORMALIZED_MAP_TRACKERS:
+        clauses = ["lat IS NOT NULL", "lon IS NOT NULL"]
+        params: List[Any] = []
+        if status:
+            values = _csv_values(status)
+            if values:
+                clauses.append(
+                    "LOWER(CAST(status AS VARCHAR)) IN ("
+                    + ",".join(["?"] * len(values))
+                    + ")"
+                )
+                params.extend(value.lower() for value in values)
+        if country:
+            values = _csv_values(country)
+            if values:
+                clauses.append(
+                    "LOWER(CAST(country AS VARCHAR)) IN ("
+                    + ",".join(["?"] * len(values))
+                    + ")"
+                )
+                params.extend(value.lower() for value in values)
+        sql = (
+            "SELECT asset_id AS id, name, unit, status, capacity, "
+            "capacity_unit, lat, lon, country, layer FROM "
+            + tracker_id
+            + " WHERE "
+            + " AND ".join(clauses)
+            + " LIMIT "
+            + str(limit)
+        )
+        frame = con.execute(sql, params).fetchdf()
+        return json.loads(frame.to_json(orient="records"))
     where, params = _filters(status, country, None, None, None, None)
     extra = ['"Latitude" IS NOT NULL', '"Longitude" IS NOT NULL']
     where = (where + " AND " + " AND ".join(extra)) if where else (" WHERE " + " AND ".join(extra))

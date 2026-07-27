@@ -55,6 +55,23 @@ class PortApiTests(unittest.TestCase):
         response = self.client.get("/api/export/not-a-real-tracker")
         self.assertEqual(response.status_code, 404)
 
+    def test_uploaded_bundle_map_layers_are_available(self):
+        expected = {
+            "coal_mines": 5_382,
+            "iron_ore_mines": 949,
+            "steel_plants": 1_293,
+            "cement_plants": 3_513,
+            "geothermal": 835,
+            "bioenergy": 4_537,
+        }
+        for layer, count in expected.items():
+            with self.subTest(layer=layer):
+                response = self.client.get(
+                    f"/api/map/{layer}", params={"limit": 150_000}
+                )
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(len(response.json()), count)
+
 
 if __name__ == "__main__":
     unittest.main()

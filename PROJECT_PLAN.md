@@ -10,7 +10,8 @@ operational workflow.
 - Never infer berth counts, drafts, capacity, or classifications as zero.
 - Make map hover useful for scanning and map click useful for investigation.
 - Keep distance outputs explicitly analytical and not suitable for navigation.
-- Use Howe Robinson Partners-inspired navy, teal, cyan, and orange accents.
+- Use the official Howe Robinson Partners logo palette: blue, navy, red, and
+  dark red.
 
 ## Phase 1 — Dry-bulk port foundation
 
@@ -27,11 +28,13 @@ Status: implemented locally on `codex/dry-bulk-foundation`.
 
 ## Phase 2 — Complete ZIP ingestion
 
-Status: next.
+Status: map-layer subset implemented; full detail modeling remains next.
 
 - Create a manifest for all 23 uploaded workbooks and their reporting grains.
-- Normalize coal plants, iron ore mines, steel, cement, terminals, bioenergy,
-  geothermal, hydropower, nuclear, solar, wind, and related trackers.
+- Map-ready layers are implemented for coal mines, iron ore mines, steel,
+  cement, bioenergy, and geothermal alongside the existing power trackers.
+- Normalize the remaining workbook fields into full detail models rather than
+  map-only extracts.
 - Preserve original row/source identifiers for audit and drill-through.
 - Add tracker-specific schemas, validation reports, filters, legends, and detail
   cards rather than forcing unlike datasets into one generic model.
