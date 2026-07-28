@@ -482,11 +482,61 @@ async function loadNppPower(force = false) {
       { label: "Demand met", value: demand.demand_met_mw, color: "#2c8a63" },
       { label: "Reported deficit", value: Math.abs(demand.deficit_mw), color: "#db2f34" }
     ] : [], "MW");
+    const generation = data.daily_generation || {};
+    renderNppBars("npp-daily-generation-chart", generation.date ? [
+      { label: `Actual · ${humanDate(generation.date)}`, value: generation.actual_mu, color: "#2c8a63" },
+      { label: "Programme", value: generation.program_mu, color: "#003671" },
+      { label: `Prior year · ${humanDate(generation.prior_year_date)}`, value: generation.prior_year_actual_mu, color: "#8b65b6" }
+    ] : [], "MU", 1);
+    document.getElementById("npp-generation-period").textContent = generation.date
+      ? `${humanDate(generation.date)} · ${formatNumber(generation.deviation_percent, 1)}% vs programme`
+      : "Official daily-generation row unavailable";
+    const stock = data.coal_stock_availability || {};
+    const stockColors = { "Non-pithead stations": "#db2f34", "Pithead stations": "#e9a823" };
+    renderNppBars(
+      "npp-coal-stock-chart",
+      (stock.rows || []).map(row => ({
+        label: `${row.stock_cover_band} · ${row.station_type}`,
+        value: row.station_count,
+        color: stockColors[row.station_type] || "#6f7782"
+      })),
+      "stations"
+    );
+    document.getElementById("npp-coal-stock-period").textContent = stock.date
+      ? `As on ${humanDate(stock.date)} · counts by stock-cover band`
+      : "Official coal-stock row unavailable";
+    const cumulative = data.cumulative_generation || {};
+    renderNppBars("npp-cumulative-generation-chart", cumulative.period_end ? [
+      { label: `${humanDate(cumulative.period_start)} – ${humanDate(cumulative.period_end)}`, value: cumulative.actual_mu, color: "#2c8a63" },
+      { label: "Programme for current period", value: cumulative.program_mu, color: "#003671" },
+      { label: `${humanDate(cumulative.prior_period_start)} – ${humanDate(cumulative.prior_period_end)}`, value: cumulative.prior_year_actual_mu, color: "#8b65b6" }
+    ] : [], "MU", 1);
+    document.getElementById("npp-cumulative-period").textContent = cumulative.period_end
+      ? `${formatNumber(cumulative.deviation_percent, 1)}% vs programme`
+      : "Official cumulative-generation row unavailable";
+    const thermalPlf = data.sector_plf?.thermal_current;
+    const nuclearPlf = data.sector_plf?.nuclear_current;
+    const plfRows = thermalPlf ? [
+      { label: "Thermal · All India", value: thermalPlf.all_india_percent, color: "#db2f34" },
+      { label: "Thermal · Central", value: thermalPlf.central_percent, color: "#003671" },
+      { label: "Thermal · State", value: thermalPlf.state_percent, color: "#55a6c8" },
+      { label: "Thermal · Private", value: thermalPlf.private_percent, color: "#e9a823" }
+    ] : [];
+    if (nuclearPlf) {
+      plfRows.push(
+        { label: "Nuclear · All India", value: nuclearPlf.all_india_percent, color: "#8b65b6" },
+        { label: "Nuclear · Central", value: nuclearPlf.central_percent, color: "#66508d" }
+      );
+    }
+    renderNppBars("npp-sector-plf-chart", plfRows, "%", 1);
+    document.getElementById("npp-plf-period").textContent = thermalPlf
+      ? `${thermalPlf.category} ${thermalPlf.report_type || ""} · FY ${thermalPlf.financial_year || "unavailable"}`
+      : "Official PLF row unavailable";
     renderNppHistory(data.historical_installed_capacity || []);
     const fetchedAt = data.fetched_at ? new Date(data.fetched_at).toLocaleString() : "unknown";
     freshness.textContent = data.stale
       ? `Showing last validated cache · refresh failed · fetched ${fetchedAt}`
-      : `Validated from NPP · fetched ${fetchedAt} · auto-refresh every ${Math.round((data.refresh_interval_seconds || 900) / 60)} min`;
+      : `Validated from NPP · fetched ${fetchedAt} · auto-refresh every ${formatRefreshInterval(data.refresh_interval_seconds || 43200)}`;
     freshness.classList.toggle("stale", Boolean(data.stale));
     document.getElementById("npp-quality-note").textContent =
       "Category and sector totals reconcile to the NPP installed-capacity headline. Shutdown and unscheduled values are supporting status measures and are not added to the capacity total.";
@@ -494,7 +544,7 @@ async function loadNppPower(force = false) {
     if (!state.nppRefreshTimer) {
       state.nppRefreshTimer = setInterval(
         () => loadNppPower(false),
-        Math.max(60, Number(data.refresh_interval_seconds || 900)) * 1000
+        Math.max(60, Number(data.refresh_interval_seconds || 43200)) * 1000
       );
     }
   } catch (error) {
@@ -507,7 +557,7 @@ async function loadNppPower(force = false) {
   }
 }
 
-function renderNppBars(id, rows, unit) {
+function renderNppBars(id, rows, unit, digits = 0) {
   const container = document.getElementById(id);
   if (!rows.length) {
     container.innerHTML = `<div class="coal-empty">Official source row unavailable.</div>`;
@@ -515,7 +565,7 @@ function renderNppBars(id, rows, unit) {
   }
   const max = Math.max(...rows.map(row => Number(row.value || 0)), 1);
   container.innerHTML = rows.map(row =>
-    `<div class="npp-bar-row"><div><span>${escapeHtml(row.label)}</span><strong>${formatNumber(row.value, 0)} ${escapeHtml(unit)}</strong></div>` +
+    `<div class="npp-bar-row"><div><span>${escapeHtml(row.label)}</span><strong>${formatNumber(row.value, digits)} ${escapeHtml(unit)}</strong></div>` +
     `<div class="npp-bar-track"><i style="width:${Math.max(0.5, Number(row.value || 0) / max * 100)}%;background:${escapeAttr(row.color)}"></i></div></div>`
   ).join("");
 }
@@ -527,30 +577,74 @@ function renderNppHistory(rows) {
     return;
   }
   const width = 920;
-  const height = 250;
-  const pad = { left: 42, right: 14, top: 18, bottom: 28 };
+  const height = 270;
+  const pad = { left: 56, right: 16, top: 16, bottom: 42 };
   const series = [
-    ["Thermal", "thermal_mw", "#6f7782"],
-    ["Hydro", "hydro_mw", "#296fba"],
-    ["Nuclear", "nuclear_mw", "#8b65b6"],
-    ["Renewables", "renewables_mw", "#629c4d"]
+    ["Thermal", "thermal_mw", "#6f7782", ""],
+    ["Hydro", "hydro_mw", "#296fba", "7 3"],
+    ["Nuclear", "nuclear_mw", "#8b65b6", "2 3"],
+    ["Renewables", "renewables_mw", "#629c4d", "10 3 2 3"]
   ];
   const max = Math.max(...rows.flatMap(row => series.map(item => Number(row[item[1]] || 0))), 1);
   const x = index => pad.left + index / (rows.length - 1) * (width - pad.left - pad.right);
   const y = value => height - pad.bottom - Number(value || 0) / max * (height - pad.top - pad.bottom);
+  const yTicks = [0, max / 2, max];
+  const grid = yTicks.map(value =>
+    `<line x1="${pad.left}" y1="${y(value).toFixed(1)}" x2="${width - pad.right}" y2="${y(value).toFixed(1)}" stroke="#e4e8eb"></line>` +
+    `<text x="${pad.left - 8}" y="${(y(value) + 4).toFixed(1)}" text-anchor="end" font-size="10" fill="#6c7883">${formatNumber(value / 1000, 0)}</text>`
+  ).join("");
+  const tickCount = Math.min(7, rows.length);
+  const tickIndexes = [...new Set(Array.from({ length: tickCount }, (_, index) =>
+    Math.round(index * (rows.length - 1) / Math.max(tickCount - 1, 1))
+  ))];
+  const xTicks = tickIndexes.map(index => {
+    const year = rows[index].date?.slice(0, 4) || "";
+    return `<line x1="${x(index).toFixed(1)}" y1="${height - pad.bottom}" x2="${x(index).toFixed(1)}" y2="${height - pad.bottom + 5}" stroke="#aeb8c0"></line>` +
+      `<text x="${x(index).toFixed(1)}" y="${height - 18}" text-anchor="middle" font-size="10" fill="#6c7883">${escapeHtml(year)}</text>`;
+  }).join("");
   const polylines = series.map(item => {
     const points = rows.map((row, index) => `${x(index).toFixed(1)},${y(row[item[1]]).toFixed(1)}`).join(" ");
-    return `<polyline points="${points}" fill="none" stroke="${item[2]}" stroke-width="2.5" vector-effect="non-scaling-stroke"></polyline>`;
+    const circles = rows.map((row, index) =>
+      `<circle class="npp-history-point" cx="${x(index).toFixed(1)}" cy="${y(row[item[1]]).toFixed(1)}" r="3.2" fill="#fff" stroke="${item[2]}" stroke-width="2" tabindex="0" role="img" aria-label="${escapeAttr(`${item[0]}, ${row.date}, ${formatNumber(row[item[1]], 0)} MW`)}" data-series="${escapeAttr(item[0])}" data-date="${escapeAttr(row.date || "")}" data-value="${Number(row[item[1]] || 0)}"></circle>`
+    ).join("");
+    return `<polyline points="${points}" fill="none" stroke="${item[2]}" stroke-width="2.5" stroke-dasharray="${item[3]}" vector-effect="non-scaling-stroke"></polyline>${circles}`;
   }).join("");
-  const firstYear = rows[0].date?.slice(0, 4) || "";
-  const lastYear = rows[rows.length - 1].date?.slice(0, 4) || "";
   container.innerHTML =
-    `<div class="npp-history-legend">${series.map(item => `<span><i style="background:${item[2]}"></i>${item[0]}</span>`).join("")}</div>` +
+    `<div class="npp-history-legend">${series.map(item => `<span><i style="background:${item[2]}"></i>${item[0]}</span>`).join("")}<span>Y-axis: GW</span></div>` +
+    `<div class="npp-history-plot">` +
     `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Historical growth of installed capacity">` +
-    `<line x1="${pad.left}" y1="${height - pad.bottom}" x2="${width - pad.right}" y2="${height - pad.bottom}" stroke="#cfd6db"></line>` +
-    `<text x="${pad.left}" y="${height - 8}" font-size="11" fill="#6c7883">${escapeHtml(firstYear)}</text>` +
-    `<text x="${width - pad.right}" y="${height - 8}" text-anchor="end" font-size="11" fill="#6c7883">${escapeHtml(lastYear)}</text>` +
-    polylines + `</svg>`;
+    grid + xTicks + polylines +
+    `</svg><div class="npp-history-tooltip" hidden><strong></strong><span></span></div></div>`;
+  const plot = container.querySelector(".npp-history-plot");
+  const tooltip = container.querySelector(".npp-history-tooltip");
+  const showTooltip = (point, event) => {
+    const value = Number(point.dataset.value || 0);
+    tooltip.querySelector("strong").textContent =
+      `${point.dataset.series} · ${humanDate(point.dataset.date)}`;
+    tooltip.querySelector("span").textContent =
+      `${formatNumber(value / 1000, 1)} GW · ${formatNumber(value, 0)} MW`;
+    tooltip.hidden = false;
+    const bounds = plot.getBoundingClientRect();
+    const pointBounds = point.getBoundingClientRect();
+    const px = event?.clientX ?? pointBounds.left + pointBounds.width / 2;
+    const py = event?.clientY ?? pointBounds.top;
+    tooltip.style.left = `${Math.min(bounds.width - 75, Math.max(75, px - bounds.left))}px`;
+    tooltip.style.top = `${Math.max(55, py - bounds.top)}px`;
+  };
+  container.querySelectorAll(".npp-history-point").forEach(point => {
+    point.addEventListener("mouseenter", event => showTooltip(point, event));
+    point.addEventListener("mousemove", event => showTooltip(point, event));
+    point.addEventListener("mouseleave", () => { tooltip.hidden = true; });
+    point.addEventListener("focus", () => showTooltip(point));
+    point.addEventListener("blur", () => { tooltip.hidden = true; });
+  });
+}
+
+function formatRefreshInterval(seconds) {
+  const hours = Number(seconds || 0) / 3600;
+  return hours >= 1
+    ? `${formatNumber(hours, Number.isInteger(hours) ? 0 : 1)} hr`
+    : `${formatNumber(Number(seconds || 0) / 60, 0)} min`;
 }
 
 function formatNumber(value, digits = 0) {

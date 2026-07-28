@@ -3,7 +3,7 @@ from __future__ import annotations
 import os, json, io, uuid, asyncio, logging, re, zipfile
 from pathlib import Path
 from typing import Optional, Dict, List, Any
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import pandas as pd
 import duckdb
 from fastapi import FastAPI, UploadFile, File, Query, HTTPException, WebSocket, WebSocketDisconnect
@@ -33,9 +33,10 @@ BUNDLED_DATA_DIR.mkdir(exist_ok=True)
 NPP_CACHE_DIR = UPLOAD_DIR / "_npp_cache"
 NPP_CACHE_DIR.mkdir(exist_ok=True)
 NPP_CACHE_PATH = NPP_CACHE_DIR / "power_dashboard.json"
-NPP_CACHE_TTL_SECONDS = int(os.getenv("NPP_CACHE_TTL_SECONDS", "900"))
+NPP_CACHE_TTL_SECONDS = int(os.getenv("NPP_CACHE_TTL_SECONDS", "43200"))
 NPP_ALL_INDIA_URL = "https://npp.gov.in/dashBoard/getAllZone"
 NPP_HISTORY_URL = "https://npp.gov.in/dashBoard/get_installed_capacity_list"
+NPP_GENERATION_URL = "https://npp.gov.in/dashBoard/getAllZoneGen"
 
 AISSTREAM_API_KEY = os.getenv("AISSTREAM_API_KEY", "").strip()
 
@@ -329,8 +330,9 @@ _npp_memory_cache: Optional[Dict[str, Any]] = None
 
 def _npp_iso_date(value: Any) -> Optional[str]:
     try:
+        india_timezone = timezone(timedelta(hours=5, minutes=30))
         return datetime.fromtimestamp(
-            float(value) / 1000, tz=timezone.utc
+            float(value) / 1000, tz=india_timezone
         ).date().isoformat()
     except (TypeError, ValueError, OSError):
         return None
@@ -339,7 +341,9 @@ def _npp_iso_date(value: Any) -> Optional[str]:
 def _transform_npp_power(
     all_india: Dict[str, Any],
     history: Dict[str, Any],
+    generation: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
+    generation = generation or {}
     installed = all_india.get("installed_Capacity") or {}
     status = all_india.get("monthlyAllIndiaGen") or {}
     category = [
@@ -405,12 +409,129 @@ def _transform_npp_power(
         "daily_demand_available": bool(daily_demand),
         "history_available": bool(historical),
     }
+    daily_generation_source = generation.get("dailyPGen") or {}
+    daily_generation = {
+        "date": _npp_iso_date(daily_generation_source.get("generation_date")),
+        "prior_year_date": _npp_iso_date(
+            daily_generation_source.get("generation_date_ly")
+        ),
+        "actual_mu": float(
+            daily_generation_source.get("actual_generation") or 0
+        ),
+        "prior_year_actual_mu": float(
+            daily_generation_source.get("actual_generation_ly") or 0
+        ),
+        "program_mu": float(
+            daily_generation_source.get("program_generation") or 0
+        ),
+        "deviation_percent": float(
+            daily_generation_source.get("pdeviation") or 0
+        ),
+    }
+    cumulative_generation = {
+        "period_start": _npp_iso_date(
+            daily_generation_source.get("generation_date_apr")
+        ),
+        "period_end": _npp_iso_date(
+            daily_generation_source.get("generation_date")
+        ),
+        "prior_period_start": _npp_iso_date(
+            daily_generation_source.get("generation_date_apr_ly")
+        ),
+        "prior_period_end": _npp_iso_date(
+            daily_generation_source.get("generation_date_ly")
+        ),
+        "actual_mu": float(
+            daily_generation_source.get("actual_generation_cumulative") or 0
+        ),
+        "prior_year_actual_mu": float(
+            daily_generation_source.get(
+                "actual_generation_cumulative_ly"
+            ) or 0
+        ),
+        "program_mu": float(
+            daily_generation_source.get("program_generation_cumulative") or 0
+        ),
+        "deviation_percent": float(
+            daily_generation_source.get("pdeviation_cumulative") or 0
+        ),
+    }
+    stock_band_fields = (
+        ("0–5 days", "coal_0_5"),
+        ("6–15 days", "coal_5_15"),
+        ("16–25 days", "coal_15_25"),
+        ("26+ days", "coal_gt_25"),
+    )
+    stock_mode_labels = {
+        "N": "Non-pithead stations",
+        "P": "Pithead stations",
+    }
+    coal_stock_availability = []
+    coal_stock_date = None
+    for item in generation.get("dailyColeStock") or []:
+        mode = str(item.get("mode_transport") or "").upper()
+        coal_stock_date = coal_stock_date or _npp_iso_date(
+            item.get("coal_date")
+        )
+        for band, field in stock_band_fields:
+            coal_stock_availability.append(
+                {
+                    "stock_cover_band": band,
+                    "station_type": stock_mode_labels.get(
+                        mode, f"Mode {mode or 'unclassified'}"
+                    ),
+                    "station_count": int(item.get(field) or 0),
+                }
+            )
+    plf_rows = generation.get("plfMonthWise") or []
+
+    def plf_snapshot(item: Dict[str, Any], category_name: str) -> Dict[str, Any]:
+        return {
+            "category": category_name,
+            "financial_year": item.get("fin_year"),
+            "report_type": item.get("report_type"),
+            "period_end": _npp_iso_date(item.get("month_period_end")),
+            "all_india_percent": float(item.get("plf_allindia") or 0),
+            "central_percent": float(item.get("plf_central") or 0),
+            "state_percent": float(item.get("plf_state") or 0),
+            "private_percent": float(item.get("plf_private") or 0),
+        }
+
+    sector_plf = {
+        "thermal_current": (
+            plf_snapshot(plf_rows[0], "Thermal") if len(plf_rows) > 0 else None
+        ),
+        "thermal_previous": (
+            plf_snapshot(plf_rows[1], "Thermal") if len(plf_rows) > 1 else None
+        ),
+        "nuclear_current": (
+            plf_snapshot(plf_rows[2], "Nuclear") if len(plf_rows) > 2 else None
+        ),
+        "nuclear_previous": (
+            plf_snapshot(plf_rows[3], "Nuclear") if len(plf_rows) > 3 else None
+        ),
+    }
+    generation_quality_checks = {
+        "daily_generation_available": bool(
+            daily_generation_source.get("generation_date")
+            and daily_generation["actual_mu"]
+        ),
+        "cumulative_generation_available": bool(
+            cumulative_generation["actual_mu"]
+        ),
+        "coal_stock_availability_available": bool(coal_stock_availability),
+        "sector_plf_available": bool(sector_plf["thermal_current"]),
+    }
     return {
         "source": {
             "name": "National Power Portal, Government of India",
             "dashboard_url": "https://npp.gov.in/dashBoard/cp-map-dashboard",
+            "generation_dashboard_url": (
+                "https://npp.gov.in/dashBoard/gc-map-dashboard"
+            ),
             "all_india_endpoint": NPP_ALL_INDIA_URL,
             "history_endpoint": NPP_HISTORY_URL,
+            "generation_endpoint": NPP_GENERATION_URL,
         },
         "source_reported_date": _npp_iso_date(
             installed.get("reporting_date") or status.get("reporting_date")
@@ -434,8 +555,21 @@ def _transform_npp_power(
             ),
         },
         "daily_demand": daily_demand,
+        "daily_generation": daily_generation,
+        "cumulative_generation": cumulative_generation,
+        "coal_stock_availability": {
+            "date": coal_stock_date,
+            "unit": "stations",
+            "rows": coal_stock_availability,
+            "definition": (
+                "Number of NPP-reported generating stations grouped by coal "
+                "stock-cover days and pithead status."
+            ),
+        },
+        "sector_plf": sector_plf,
         "historical_installed_capacity": historical,
         "quality_checks": quality_checks,
+        "generation_quality_checks": generation_quality_checks,
         "excluded_visuals": ["Historical growth of electricity consumption"],
     }
 
@@ -458,19 +592,24 @@ async def _get_npp_power_dashboard(force: bool = False) -> Dict[str, Any]:
                 return _npp_memory_cache
         try:
             async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
-                all_response, history_response = await asyncio.gather(
+                all_response, history_response, generation_response = await asyncio.gather(
                     client.get(NPP_ALL_INDIA_URL),
                     client.get(NPP_HISTORY_URL),
+                    client.get(NPP_GENERATION_URL),
                 )
             all_response.raise_for_status()
             history_response.raise_for_status()
+            generation_response.raise_for_status()
             all_india = all_response.json()
             if isinstance(all_india, str):
                 all_india = json.loads(all_india)
             history = history_response.json()
             if isinstance(history, str):
                 history = json.loads(history)
-            payload = _transform_npp_power(all_india, history)
+            generation = generation_response.json()
+            if isinstance(generation, str):
+                generation = json.loads(generation)
+            payload = _transform_npp_power(all_india, history, generation)
             if not all(payload["quality_checks"].values()):
                 raise ValueError(
                     "NPP response failed one or more reconciliation/freshness checks"
@@ -501,6 +640,7 @@ async def _get_npp_power_dashboard(force: bool = False) -> Dict[str, Any]:
                 fallback = dict(cached)
                 fallback["stale"] = True
                 fallback["refresh_error"] = str(exc)
+                fallback["refresh_interval_seconds"] = NPP_CACHE_TTL_SECONDS
                 _npp_memory_cache = fallback
                 return fallback
             raise HTTPException(

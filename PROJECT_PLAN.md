@@ -99,10 +99,14 @@ production analytics await user uploads.
   installed capacity, all-India capacity status, category and sector splits,
   daily demand, and historical growth of installed capacity. Explicitly exclude
   historical electricity-consumption growth.
-- Refresh the official NPP JSON feeds every 15 minutes on demand, reconcile
+- Refresh the official NPP JSON feeds every 12 hours or on manual request, reconcile
   category and sector totals before publishing, retain the last validated
   snapshot for source outages, and label stale data rather than silently
   substituting values.
+- Add NPP daily generation, cumulative generation, coal-stock availability
+  bands (station counts by days of cover), and sector-wise thermal/nuclear PLF.
+- Show installed-capacity history with labelled year and GW axes plus accessible
+  point-level hover and keyboard-focus values.
 
 ## Phase 4 — Voyage intelligence
 

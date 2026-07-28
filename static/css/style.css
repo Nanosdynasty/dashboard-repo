@@ -336,11 +336,29 @@ button, summary, label, select { -webkit-tap-highlight-color: transparent; }
 .npp-bar-row strong { color: var(--hrp-navy); font-size: 9px; }
 .npp-bar-track { height: 8px; overflow: hidden; background: #edf1f3; border-radius: 5px; }
 .npp-bar-track i { display: block; height: 100%; border-radius: 5px; }
-.npp-history-chart { min-height: 270px; overflow: hidden; }
-.npp-history-chart svg { display: block; width: 100%; height: 245px; }
+.npp-history-chart { min-height: 300px; }
+.npp-history-plot { position: relative; margin-top: 5px; }
+.npp-history-chart svg { display: block; width: 100%; height: 270px; overflow: visible; }
 .npp-history-legend { display: flex; flex-wrap: wrap; gap: 12px; color: #596671; font-size: 9px; }
 .npp-history-legend span { display: flex; align-items: center; gap: 5px; }
 .npp-history-legend i { width: 13px; height: 3px; }
+.npp-history-point { cursor: crosshair; transition: r .12s ease, stroke-width .12s ease; }
+.npp-history-point:hover, .npp-history-point:focus { r: 6px; stroke-width: 3px; outline: none; }
+.npp-history-tooltip {
+  position: absolute;
+  z-index: 3;
+  min-width: 145px;
+  padding: 8px 10px;
+  color: #fff;
+  background: rgba(28,41,74,.96);
+  box-shadow: 0 5px 16px rgba(28,41,74,.2);
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - 10px));
+  font-size: 9px;
+  line-height: 1.45;
+}
+.npp-history-tooltip strong, .npp-history-tooltip span { display: block; }
+.npp-history-tooltip span { color: #cbd5df; }
 .npp-quality-note { margin: 10px 0 0; padding: 10px; color: #596671; background: #fff; border-left: 3px solid var(--hrp-blue); font-size: 9px; }
 
 .port-card {

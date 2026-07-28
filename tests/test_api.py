@@ -2,7 +2,7 @@ import unittest
 
 from fastapi.testclient import TestClient
 
-from app import app, _transform_npp_power
+from app import NPP_CACHE_TTL_SECONDS, app, _transform_npp_power
 
 
 class PortApiTests(unittest.TestCase):
@@ -176,6 +176,10 @@ class PortApiTests(unittest.TestCase):
         self.assertIn('<option value="operating" selected>Operating</option>', html)
         self.assertIn("Coal-consuming industries", html)
         self.assertIn("India power", html)
+        self.assertIn("Daily generation summary", html)
+        self.assertIn("Coal stock availability", html)
+        self.assertIn("Cumulative generation", html)
+        self.assertIn("Sector-wise PLF", html)
 
     def test_map_uses_only_explicit_english_labels(self):
         response = self.client.get("/static/js/app.js")
@@ -185,6 +189,8 @@ class PortApiTests(unittest.TestCase):
         self.assertIn('["South America", -18, -59]', javascript)
         self.assertNotIn("World_Light_Gray_Reference", javascript)
         self.assertNotIn("event.preventDefault()", javascript)
+        self.assertIn("npp-history-point", javascript)
+        self.assertIn("formatRefreshInterval", javascript)
 
     def test_npp_transform_reconciles_requested_power_visuals(self):
         reporting_date = 1_720_000_000_000
@@ -237,10 +243,74 @@ class PortApiTests(unittest.TestCase):
                 },
             ]
         }
-        payload = _transform_npp_power(all_india, history)
+        generation = {
+            "dailyPGen": {
+                "generation_date": reporting_date,
+                "generation_date_ly": 1_688_000_000_000,
+                "generation_date_apr": 1_711_929_600_000,
+                "generation_date_apr_ly": 1_680_307_200_000,
+                "actual_generation": 4600,
+                "program_generation": 4500,
+                "pdeviation": 2.2,
+                "actual_generation_ly": 4300,
+                "actual_generation_cumulative": 500000,
+                "program_generation_cumulative": 505000,
+                "pdeviation_cumulative": -1,
+                "actual_generation_cumulative_ly": 470000,
+            },
+            "dailyColeStock": [
+                {
+                    "mode_transport": "N",
+                    "coal_date": reporting_date,
+                    "coal_0_5": 10,
+                    "coal_5_15": 20,
+                    "coal_15_25": 30,
+                    "coal_gt_25": 40,
+                },
+                {
+                    "mode_transport": "P",
+                    "coal_date": reporting_date,
+                    "coal_0_5": 1,
+                    "coal_5_15": 2,
+                    "coal_15_25": 3,
+                    "coal_gt_25": 4,
+                },
+            ],
+            "plfMonthWise": [
+                {
+                    "fin_year": "2024-25",
+                    "report_type": "Actual",
+                    "month_period_end": reporting_date,
+                    "plf_allindia": 70,
+                    "plf_central": 72,
+                    "plf_state": 65,
+                    "plf_private": 75,
+                },
+                {},
+                {
+                    "fin_year": "2024-25",
+                    "report_type": "Actual",
+                    "month_period_end": reporting_date,
+                    "plf_allindia": 85,
+                    "plf_central": 85,
+                },
+            ],
+        }
+        payload = _transform_npp_power(all_india, history, generation)
         self.assertTrue(all(payload["quality_checks"].values()))
+        self.assertTrue(all(payload["generation_quality_checks"].values()))
         self.assertEqual(payload["installed_capacity_mw"], 100)
         self.assertEqual(payload["daily_demand"][0]["demand_met_mw"], 88)
+        self.assertEqual(payload["daily_generation"]["actual_mu"], 4600)
+        self.assertEqual(payload["cumulative_generation"]["actual_mu"], 500000)
+        self.assertEqual(
+            payload["cumulative_generation"]["period_start"], "2024-04-01"
+        )
+        self.assertEqual(len(payload["coal_stock_availability"]["rows"]), 8)
+        self.assertEqual(
+            payload["sector_plf"]["thermal_current"]["central_percent"], 72
+        )
+        self.assertEqual(NPP_CACHE_TTL_SECONDS, 43_200)
         self.assertIn(
             "Historical growth of electricity consumption",
             payload["excluded_visuals"],
