@@ -174,6 +174,24 @@ class PortApiTests(unittest.TestCase):
             payload["quality_summary"]["with_official_website"], 31
         )
         self.assertEqual(
+            payload["quality_summary"]["with_documented_draft"], 23
+        )
+        self.assertEqual(
+            payload["quality_summary"]["with_documented_berths"], 30
+        )
+        self.assertEqual(
+            payload["quality_summary"]["with_port_capacity"], 21
+        )
+        self.assertEqual(
+            payload["quality_summary"]["with_facility_records"], 27
+        )
+        self.assertEqual(
+            payload["quality_summary"]["with_commodity_flow_records"], 15
+        )
+        self.assertEqual(len(payload["berth_facilities"]), 41)
+        self.assertEqual(len(payload["commodity_flows"]), 26)
+        self.assertEqual(len(payload["research_sources"]), 25)
+        self.assertEqual(
             len({item["asset_id"] for item in payload["ports"]}), 31
         )
         self.assertTrue(
@@ -190,6 +208,43 @@ class PortApiTests(unittest.TestCase):
         self.assertEqual(detail.json()["max_documented_draft_m"], 16)
         self.assertGreater(detail.json()["documented_berth_count"], 0)
         self.assertTrue(detail.json()["sources"])
+
+        mundra = next(
+            item for item in payload["ports"]
+            if item["asset_name"] == "Mundra Port"
+        )
+        self.assertEqual(mundra["max_documented_draft_m"], 17.5)
+        self.assertEqual(mundra["documented_berth_count"], 28)
+        self.assertEqual(len(mundra["commodity_flows"]), 1)
+        self.assertTrue(
+            all(
+                item["draft_type"] == "declared"
+                for item in mundra["dry_bulk_facilities"]
+            )
+        )
+
+        dahej = next(
+            item for item in payload["ports"]
+            if item["asset_name"] == "Dahej Port"
+        )
+        self.assertEqual(dahej["max_documented_draft_m"], 14)
+        self.assertEqual(dahej["documented_dry_bulk_berth_count"], 2)
+        self.assertEqual(
+            {item["name"] for item in dahej["dry_bulk_facilities"]},
+            {"North Berth", "South Berth"},
+        )
+
+        bedi = next(
+            item for item in payload["ports"]
+            if item["asset_name"] == "Bedi Port"
+        )
+        self.assertIsNone(bedi["max_documented_draft_m"])
+        anchorage = next(
+            item for item in bedi["dry_bulk_facilities"]
+            if item["facility_type"] == "anchorage"
+        )
+        self.assertEqual(anchorage["draft_m"], 16)
+        self.assertIn("not a berth limit", anchorage["draft_conditions"])
 
         terminals = self.client.get(
             "/api/coal/assets",
@@ -210,6 +265,8 @@ class PortApiTests(unittest.TestCase):
             export.headers["content-disposition"],
         )
         self.assertIn("Max documented draft (m)", export.text)
+        self.assertIn("Facility record count", export.text)
+        self.assertIn("Coal flow record count", export.text)
 
     def test_port_ui_does_not_advertise_unsupported_zero_categories(self):
         response = self.client.get("/")
@@ -229,7 +286,7 @@ class PortApiTests(unittest.TestCase):
         self.assertIn("Coal stock availability", html)
         self.assertIn("Cumulative generation", html)
         self.assertIn("Sector-wise PLF", html)
-        self.assertIn("app.js?v=20260728-4", html)
+        self.assertIn("app.js?v=20260728-5", html)
 
     def test_map_uses_only_explicit_english_labels(self):
         response = self.client.get("/static/js/app.js")
@@ -238,6 +295,8 @@ class PortApiTests(unittest.TestCase):
         self.assertIn('["Africa", 7, 20]', javascript)
         self.assertIn('["South America", -18, -59]', javascript)
         self.assertNotIn("World_Light_Gray_Reference", javascript)
+        self.assertIn("formatFacilityPrimaryLine", javascript)
+        self.assertIn("Coal flows by direction", javascript)
         self.assertNotIn("event.preventDefault()", javascript)
         self.assertIn("npp-history-point", javascript)
         self.assertIn("formatRefreshInterval", javascript)

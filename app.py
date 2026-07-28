@@ -1350,11 +1350,24 @@ async def export_coal_port_specifications():
                 "Documented dry-bulk berth count": item.get(
                     "documented_dry_bulk_berth_count"
                 ),
+                "Facility record count": len(
+                    item.get("berth_facilities", [])
+                ),
                 "Port capacity (MTPA)": item.get("port_capacity_mtpa"),
+                "Terminal operating capacity (MTPA)": item.get(
+                    "terminal_operating_capacity_mtpa"
+                ),
+                "Terminal expansion capacity (MTPA)": item.get(
+                    "terminal_expansion_capacity_mtpa"
+                ),
                 "Latest port traffic (MT)": item.get("latest_traffic_mt"),
                 "Latest traffic period": item.get("latest_traffic_period"),
+                "Coal flow record count": len(
+                    item.get("commodity_flows", [])
+                ),
                 "Official website": item.get("official_website"),
                 "Source as of": item.get("source_as_of"),
+                "Specification note": item.get("specification_note"),
                 "Data caveat": item.get("data_caveat"),
             }
         )

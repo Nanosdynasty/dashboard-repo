@@ -411,9 +411,11 @@ button, summary, label, select { -webkit-tap-highlight-color: transparent; }
 .satellite-grid figcaption { padding: 6px 7px; color: #586773; font-size: 8px; font-weight: 700; }
 .facility-list, .source-list { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin: 0; padding: 0; list-style: none; }
 .facility-list li, .source-list li { min-width: 0; padding: 8px; background: #f3f5f6; }
-.facility-list strong, .facility-list span, .source-list a, .source-list span { display: block; }
+.facility-list strong, .facility-list span, .facility-list small, .facility-list em, .source-list a, .source-list span { display: block; }
 .facility-list strong, .source-list a { color: var(--hrp-navy); font-size: 9px; }
 .facility-list span, .source-list span { margin-top: 3px; color: #7c8790; font-size: 8px; }
+.facility-list small { margin-top: 4px; color: #536a7a; font-size: 8px; line-height: 1.4; }
+.facility-list em { margin-top: 4px; color: #8c5b22; font-size: 8px; font-style: normal; line-height: 1.4; }
 .port-spec-more { margin: 8px 0 0; color: #7c8790; font-size: 8px; }
 .commodity-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .commodity-chips span { padding: 7px 9px; color: #68747e; background: #f3f5f6; font-size: 8px; }

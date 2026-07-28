@@ -1039,6 +1039,7 @@ async function showCoalPortDetails(point) {
       ? detail.dry_bulk_facilities
       : detail.berth_facilities || []).slice(0, 14);
     const commodities = (detail.dry_bulk_commodities || []).slice(0, 8);
+    const commodityFlows = (detail.commodity_flows || []).slice(0, 16);
     const sources = detail.sources || [];
     const lat = Number(detail.latitude);
     const lon = Number(detail.longitude);
@@ -1069,13 +1070,26 @@ async function showCoalPortDetails(point) {
       (facilityRows.length
         ? `<ul class="facility-list">${facilityRows.map(item =>
             `<li><strong>${escapeHtml(item.name || "Documented facility")}</strong>` +
-            `<span>${item.draft_m == null ? "Draft not flattened" : `${formatNumber(item.draft_m, 1)} m documented draft`} · as of ${escapeHtml(item.as_of || "source date unavailable")}</span></li>`
+            `<span>${escapeHtml(formatFacilityPrimaryLine(item))}</span>` +
+            (formatFacilitySecondaryLine(item)
+              ? `<small>${escapeHtml(formatFacilitySecondaryLine(item))}</small>`
+              : "") +
+            (item.draft_conditions
+              ? `<em>${escapeHtml(item.draft_conditions)}</em>`
+              : "") +
+            `</li>`
           ).join("")}</ul>`
         : `<div class="coal-empty">No berth-level specification was safely flattenable from the supplied workbook or current official source.</div>`) +
       (detail.berth_facilities?.length > facilityRows.length
         ? `<p class="port-spec-more">Showing ${facilityRows.length} dry-bulk-relevant records from ${detail.berth_facilities.length} documented berth/facility rows.</p>`
         : "") +
       `</section>` +
+      (commodityFlows.length
+        ? `<section class="port-spec-section"><h3>Coal flows by direction</h3><div class="commodity-chips">${commodityFlows.map(item =>
+            `<span><strong>${escapeHtml(labelize(item.trade_direction || "reported flow"))}</strong>` +
+            `${escapeHtml(labelize(item.commodity || "coal"))} · ${formatNumber(item.quantity_mt, 3)} MT · ${escapeHtml(item.period || "")}</span>`
+          ).join("")}</div></section>`
+        : "") +
       (commodities.length
         ? `<section class="port-spec-section"><h3>Latest documented dry-bulk flows</h3><div class="commodity-chips">${commodities.map(item =>
             `<span><strong>${escapeHtml(item.commodity)}</strong>${formatNumber(item.total_mt, 3)} MT · FY ${escapeHtml(item.fy || "")}</span>`
@@ -1096,6 +1110,35 @@ async function showCoalPortDetails(point) {
       `<span class="detail-eyebrow">India coal port</span><h2>${escapeHtml(point.name || "Port")}</h2>` +
       `<p class="detail-note">${escapeHtml(error.message)}</p>`;
   }
+}
+
+function formatFacilityPrimaryLine(item) {
+  const type = labelize(item.facility_type || "facility");
+  const role = item.import_export_role && item.import_export_role !== "unknown"
+    ? ` · ${labelize(item.import_export_role)}`
+    : "";
+  let draft = "Draft not published";
+  if (item.draft_m != null) {
+    if (item.facility_type === "anchorage") {
+      draft = `${formatNumber(item.draft_m, 1)} m anchorage figure`;
+    } else if (item.draft_type && item.draft_type !== "unknown") {
+      draft = `${formatNumber(item.draft_m, 1)} m ${labelize(item.draft_type)} draft`;
+    } else {
+      draft = `${formatNumber(item.draft_m, 1)} m documented figure`;
+    }
+  }
+  return `${type}${role} · ${draft} · as of ${item.as_of || "source date unavailable"}`;
+}
+
+function formatFacilitySecondaryLine(item) {
+  const facts = [];
+  if (item.quay_length_m != null) facts.push(`${formatNumber(item.quay_length_m, 0)} m quay`);
+  if (item.max_dwt != null) facts.push(`${formatNumber(item.max_dwt, 0)} DWT`);
+  if (item.annual_capacity_mtpa != null) facts.push(`${formatNumber(item.annual_capacity_mtpa, 1)} MTPA`);
+  if (item.loading_rate_tph != null) facts.push(`${formatNumber(item.loading_rate_tph, 0)} TPH loading`);
+  if (item.unloading_rate_tph != null) facts.push(`${formatNumber(item.unloading_rate_tph, 0)} TPH unloading`);
+  if (item.handling_system) facts.push(item.handling_system);
+  return facts.join(" · ");
 }
 
 function satelliteImageUrl(lat, lon, span) {

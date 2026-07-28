@@ -31,12 +31,41 @@ await fs.writeFile(
   sheetSummary.ndjson,
   "utf8",
 );
+const formulaErrors = await workbook.inspect({
+  kind: "match",
+  searchTerm: "#REF!|#DIV/0!|#VALUE!|#NAME\\?|#N/A",
+  options: { useRegex: true, maxResults: 300 },
+  summary: "formula error scan",
+  maxChars: 8000,
+});
+await fs.writeFile(
+  path.join(outputDir, "formula-errors.ndjson"),
+  formulaErrors.ndjson,
+  "utf8",
+);
 
 const sheetValues = {};
+const renderedSheets = [];
 for (let index = 0; index < workbook.worksheets.items.length; index += 1) {
   const currentSheet = workbook.worksheets.getItemAt(index);
   const currentUsed = currentSheet.getUsedRange(true);
   sheetValues[currentSheet.name] = currentUsed.values;
+  const preview = await workbook.render({
+    sheetName: currentSheet.name,
+    autoCrop: "all",
+    scale: 1,
+    format: "png",
+  });
+  const safeName = currentSheet.name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+  const previewName = `preview-${index + 1}-${safeName || "sheet"}.png`;
+  await fs.writeFile(
+    path.join(outputDir, previewName),
+    new Uint8Array(await preview.arrayBuffer()),
+  );
+  renderedSheets.push(previewName);
 }
 await fs.writeFile(
   path.join(outputDir, "values.json"),
@@ -45,21 +74,12 @@ await fs.writeFile(
 );
 const sheet = workbook.worksheets.getItemAt(0);
 const used = sheet.getUsedRange(true);
-const preview = await workbook.render({
-  sheetName: sheet.name,
-  autoCrop: "all",
-  scale: 1,
-  format: "png",
-});
-await fs.writeFile(
-  path.join(outputDir, "preview.png"),
-  new Uint8Array(await preview.arrayBuffer()),
-);
 console.log(
   JSON.stringify({
     sheet: sheet.name,
     rows: used.values.length,
     columns: Math.max(...used.values.map((row) => row.length), 0),
+    renderedSheets,
     outputDir,
   }),
 );
