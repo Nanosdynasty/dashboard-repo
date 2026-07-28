@@ -37,6 +37,7 @@ NPP_CACHE_TTL_SECONDS = int(os.getenv("NPP_CACHE_TTL_SECONDS", "43200"))
 NPP_ALL_INDIA_URL = "https://npp.gov.in/dashBoard/getAllZone"
 NPP_HISTORY_URL = "https://npp.gov.in/dashBoard/get_installed_capacity_list"
 NPP_GENERATION_URL = "https://npp.gov.in/dashBoard/getAllZoneGen"
+INDIA_COAL_PORT_SPECS_PATH = DATA_DIR / "india_coal_port_specs.json"
 
 AISSTREAM_API_KEY = os.getenv("AISSTREAM_API_KEY", "").strip()
 
@@ -112,6 +113,56 @@ def _coal_dataset_metadata() -> List[Dict[str, Any]]:
         except (OSError, json.JSONDecodeError):
             log.warning("Skipping unreadable coal dataset metadata: %s", path)
     return sorted(datasets, key=lambda item: item.get("uploaded_at", ""), reverse=True)
+
+
+def _india_coal_port_specs() -> Dict[str, Any]:
+    if not INDIA_COAL_PORT_SPECS_PATH.exists():
+        return {
+            "dataset": "India coal-port specifications",
+            "quality_summary": {},
+            "ports": [],
+        }
+    try:
+        payload = json.loads(
+            INDIA_COAL_PORT_SPECS_PATH.read_text(encoding="utf-8")
+        )
+        if not isinstance(payload, dict) or not isinstance(
+            payload.get("ports"), list
+        ):
+            raise ValueError("Invalid port specification dataset shape")
+        return payload
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        log.warning("Could not load India coal-port specifications: %s", exc)
+        return {
+            "dataset": "India coal-port specifications",
+            "quality_summary": {},
+            "ports": [],
+        }
+
+
+def _port_specification_summary(
+    specification: Optional[Dict[str, Any]],
+) -> Optional[Dict[str, Any]]:
+    if not specification:
+        return None
+    return {
+        "official_port_name": specification.get("official_port_name"),
+        "state_ut": specification.get("state_ut"),
+        "port_class": specification.get("port_class"),
+        "max_documented_draft_m": specification.get(
+            "max_documented_draft_m"
+        ),
+        "documented_berth_count": specification.get(
+            "documented_berth_count"
+        ),
+        "port_capacity_mtpa": specification.get("port_capacity_mtpa"),
+        "latest_traffic_mt": specification.get("latest_traffic_mt"),
+        "latest_traffic_period": specification.get(
+            "latest_traffic_period"
+        ),
+        "official_website": specification.get("official_website"),
+        "source_as_of": specification.get("source_as_of"),
+    }
 
 
 def _coal_asset_rows(status_group: str = "operating") -> List[Dict[str, Any]]:
@@ -199,6 +250,12 @@ def _coal_asset_rows(status_group: str = "operating") -> List[Dict[str, Any]]:
             rows.append(record)
 
     if "coal_trade_terminals" in table_names:
+        port_specifications = _india_coal_port_specs()
+        specifications_by_id = {
+            str(item.get("asset_id")): item
+            for item in port_specifications.get("ports", [])
+            if item.get("asset_id")
+        }
         terminal_frame = con.execute(
             "SELECT asset_id AS id, name, status, capacity, capacity_unit, "
             "lat, lon, country, asset_type, parent_port, source_text "
@@ -256,10 +313,13 @@ def _coal_asset_rows(status_group: str = "operating") -> List[Dict[str, Any]]:
                 if operating
                 else project_status
             )
-            rows.append(
-                {
+            terminal_id = (
+                "india-coal-terminal-"
+                + re.sub(r"[^a-z0-9]+", "-", parent.lower()).strip("-")
+            )
+            terminal_row = {
                     **representative,
-                    "id": f"india-coal-terminal-{re.sub(r'[^a-z0-9]+', '-', parent.lower()).strip('-')}",
+                    "id": terminal_id,
                     "name": parent,
                     "status": display_status,
                     "project_status": project_status,
@@ -289,7 +349,12 @@ def _coal_asset_rows(status_group: str = "operating") -> List[Dict[str, Any]]:
                     "asset_kind": "coal_trade_terminals",
                     "asset_label": "Coal trade terminal",
                 }
+            port_summary = _port_specification_summary(
+                specifications_by_id.get(terminal_id)
             )
+            terminal_row["port_specification"] = port_summary
+            terminal_row["port_specification_available"] = bool(port_summary)
+            rows.append(terminal_row)
 
     if status_group == "operating":
         for port in ports.filtered(
@@ -1253,6 +1318,74 @@ async def coal_assets(
         allowed = set(_csv_values(asset_kind))
         rows = [row for row in rows if row["asset_kind"] in allowed]
     return {"data": rows[:limit], "total": len(rows)}
+
+
+@app.get("/api/coal/port-specifications")
+async def coal_port_specifications():
+    return _india_coal_port_specs()
+
+
+@app.get("/api/coal/port-specifications/export")
+async def export_coal_port_specifications():
+    payload = _india_coal_port_specs()
+    export_rows = []
+    for item in payload.get("ports", []):
+        export_rows.append(
+            {
+                "Asset ID": item.get("asset_id"),
+                "Coal terminal card": item.get("asset_name"),
+                "Official port name": item.get("official_port_name"),
+                "State / UT": item.get("state_ut"),
+                "Coast": item.get("coast"),
+                "Port class": item.get("port_class"),
+                "Operating status": item.get("operating_status"),
+                "Latitude": item.get("latitude"),
+                "Longitude": item.get("longitude"),
+                "Max documented draft (m)": item.get(
+                    "max_documented_draft_m"
+                ),
+                "Documented berth count": item.get(
+                    "documented_berth_count"
+                ),
+                "Documented dry-bulk berth count": item.get(
+                    "documented_dry_bulk_berth_count"
+                ),
+                "Port capacity (MTPA)": item.get("port_capacity_mtpa"),
+                "Latest port traffic (MT)": item.get("latest_traffic_mt"),
+                "Latest traffic period": item.get("latest_traffic_period"),
+                "Official website": item.get("official_website"),
+                "Source as of": item.get("source_as_of"),
+                "Data caveat": item.get("data_caveat"),
+            }
+        )
+    frame = pd.DataFrame(export_rows)
+    buffer = io.StringIO()
+    frame.to_csv(buffer, index=False)
+    return StreamingResponse(
+        iter([buffer.getvalue()]),
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": (
+                "attachment; filename=india_coal_port_specifications.csv"
+            )
+        },
+    )
+
+
+@app.get("/api/coal/port-specifications/{asset_id}")
+async def coal_port_specification(asset_id: str):
+    payload = _india_coal_port_specs()
+    specification = next(
+        (
+            item
+            for item in payload.get("ports", [])
+            if str(item.get("asset_id")) == asset_id
+        ),
+        None,
+    )
+    if not specification:
+        raise HTTPException(404, "Port specification not found")
+    return specification
 
 
 @app.get("/api/coal/datasets")

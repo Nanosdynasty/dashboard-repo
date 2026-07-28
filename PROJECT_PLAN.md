@@ -107,6 +107,13 @@ production analytics await user uploads.
   bands (station counts by days of cover), and sector-wise thermal/nuclear PLF.
 - Show installed-capacity history with labelled year and GW axes plus accessible
   point-level hover and keyboard-focus values.
+- Maintain a consolidated India coal-port specification dataset at one record
+  per operating terminal card. Reconcile names to the official port master,
+  retain row-level source links and observation dates, and never convert missing
+  draft or berth values to zero.
+- Open detailed coal-port cards with dated draft/berth references, dry-bulk
+  commodity context, three attributed satellite views, official source links,
+  and a downloadable consolidated CSV.
 
 ## Phase 4 — Voyage intelligence
 

@@ -1,0 +1,4309 @@
+{
+  "dataset": "India coal-port specifications",
+  "version": "2026-07-28",
+  "generated_on": "2026-07-28",
+  "source_workbook": "Indian_Ports_Data_2026-07.xlsx",
+  "source_workbook_as_of": "2026-07-28",
+  "grain": "One record per operating India coal-terminal card",
+  "quality_summary": {
+    "asset_rows": 31,
+    "unique_asset_ids": 31,
+    "matched_to_port_master": 31,
+    "with_official_website": 31,
+    "with_documented_draft": 11,
+    "with_documented_berths": 12,
+    "with_latest_traffic": 31
+  },
+  "ports": [
+    {
+      "asset_id": "india-coal-terminal-bedi-port",
+      "asset_name": "Bedi Port",
+      "official_port_id": "NM002",
+      "official_port_name": "Bedi",
+      "match_method": "controlled_alias",
+      "match_confidence": 1.0,
+      "state_ut": "Gujarat",
+      "coast": "West",
+      "port_class": "Non-major",
+      "operating_status": "Cargo handled in FY2024-25",
+      "latitude": 22.515273,
+      "longitude": 70.029323,
+      "official_website": "https://gmbports.org/gmb-owned-ports",
+      "source_as_of": "2025-03-31",
+      "max_documented_draft_m": null,
+      "documented_berth_count": null,
+      "documented_dry_bulk_berth_count": null,
+      "port_capacity_mtpa": null,
+      "latest_traffic_mt": 2.586,
+      "latest_traffic_period": "2024-25",
+      "latest_traffic_scope": "Bedi",
+      "terminal_operating_capacity_mtpa": 6.0,
+      "terminal_expansion_capacity_mtpa": null,
+      "dry_bulk_commodities": [],
+      "berth_facilities": [],
+      "dry_bulk_facilities": [],
+      "specification_note": null,
+      "data_caveat": "Draft and berth values are dated reference snapshots, not navigational limits. Confirm current permissible draft, tide restrictions and berth availability with the port or agent.",
+      "satellite_context": {
+        "provider": "Esri World Imagery",
+        "attribution_url": "https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9",
+        "views": [
+          {
+            "label": "Terminal detail",
+            "span_degrees": 0.018
+          },
+          {
+            "label": "Harbour context",
+            "span_degrees": 0.055
+          },
+          {
+            "label": "Regional approach",
+            "span_degrees": 0.14
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "Basic Port Statistics of India 2024-25",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2025-03-31",
+          "scope": "Official port master and infrastructure snapshot"
+        },
+        {
+          "title": "Workbook traffic source",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2024-25",
+          "scope": "Latest available port traffic"
+        },
+        {
+          "title": "Gujarat Maritime Board port network",
+          "url": "https://gmbports.org/gmb-owned-ports",
+          "as_of": "2026-07-28",
+          "scope": "Port ownership and operating context"
+        }
+      ]
+    },
+    {
+      "asset_id": "india-coal-terminal-cochin-port",
+      "asset_name": "Cochin Port",
+      "official_port_id": "M06",
+      "official_port_name": "Cochin Port Authority",
+      "match_method": "controlled_alias",
+      "match_confidence": 1.0,
+      "state_ut": "Kerala",
+      "coast": "West",
+      "port_class": "Major",
+      "operating_status": "Operational",
+      "latitude": 9.961316,
+      "longitude": 76.265212,
+      "official_website": "https://cochinport.gov.in/",
+      "source_as_of": "2025-03-31",
+      "max_documented_draft_m": 11.5,
+      "documented_berth_count": 18,
+      "documented_dry_bulk_berth_count": 2,
+      "port_capacity_mtpa": 80.5,
+      "latest_traffic_mt": 37.75,
+      "latest_traffic_period": "2024-25",
+      "latest_traffic_scope": "Cochin Port Authority",
+      "terminal_operating_capacity_mtpa": 35.0,
+      "terminal_expansion_capacity_mtpa": null,
+      "dry_bulk_commodities": [
+        {
+          "commodity": "Cement",
+          "fy": "2024-25",
+          "total_mt": 0.836
+        },
+        {
+          "commodity": "Salt",
+          "fy": "2024-25",
+          "total_mt": 0.131
+        },
+        {
+          "commodity": "Iron & Steel",
+          "fy": "2024-25",
+          "total_mt": 0.044
+        }
+      ],
+      "berth_facilities": [
+        {
+          "name": "Q1 - General Cargo",
+          "draft_m": 9.1,
+          "dry_bulk_relevant": false,
+          "raw_text": "Q1 - General Cargo 9.1 188 16000 60 26",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Q2 - General Cargo",
+          "draft_m": 9.1,
+          "dry_bulk_relevant": false,
+          "raw_text": "Q2 - General Cargo 9.1 16000 9 0",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Q3 - General Cargo",
+          "draft_m": 9.1,
+          "dry_bulk_relevant": false,
+          "raw_text": "Q3 - General Cargo 9.1 16000 0 0",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Q4 - POL Product",
+          "draft_m": 9.14,
+          "dry_bulk_relevant": false,
+          "raw_text": "Q4 - POL Product 9.14 251 30000 52 50",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Q7 - General Cargo",
+          "draft_m": 10.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "Q7 - General Cargo 10.5 20000 44 22",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Q10 - Fert. Raw Materials/Phos.Acid",
+          "draft_m": 11.5,
+          "dry_bulk_relevant": true,
+          "raw_text": "Q10 - Fert. Raw Materials/Phos.Acid 11.5 278 60000 41 38",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "BTP - Passenger & Cargo/Liquid Bulk",
+          "draft_m": 10.0,
+          "dry_bulk_relevant": true,
+          "raw_text": "BTP - Passenger & Cargo/Liquid Bulk 10.0 270 35000 57 51",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "NCB - General Cargo/Liquid Amonia",
+          "draft_m": 9.1,
+          "dry_bulk_relevant": false,
+          "raw_text": "NCB - General Cargo/Liquid Amonia 9.1 209 35000 35 28",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "SCB - General Cargo/Liquid Amonia",
+          "draft_m": 9.1,
+          "dry_bulk_relevant": false,
+          "raw_text": "SCB - General Cargo/Liquid Amonia 9.1 192 15000 23 29",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "COT - POL /Crude",
+          "draft_m": 12.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "COT - POL /Crude 12.5 430 115000 53 49",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "NTB - POL Products",
+          "draft_m": 9.1,
+          "dry_bulk_relevant": false,
+          "raw_text": "NTB - POL Products 9.1 298 30000 27 18",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "STB - POL Products",
+          "draft_m": 9.1,
+          "dry_bulk_relevant": false,
+          "raw_text": "STB - POL Products 9.1 266 20000 0 0",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "SPM - Crude Oil",
+          "draft_m": 22.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "SPM - Crude Oil 22.5 NA 300000 66 60",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "V2 Container",
+          "draft_m": 14.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "V2 Container 14.5 100000 61 71",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "V3 Container",
+          "draft_m": 14.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "V3 Container 14.5 100000 70 75",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "LNG",
+          "draft_m": 12.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "LNG 12.5 377 100000 7 8",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "UTL",
+          "draft_m": 5.3,
+          "dry_bulk_relevant": false,
+          "raw_text": "UTL 5.3 300 - 100 100",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "MULT",
+          "draft_m": 13.0,
+          "dry_bulk_relevant": false,
+          "raw_text": "MULT 13.0 290 - 12 25",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        }
+      ],
+      "dry_bulk_facilities": [
+        {
+          "name": "Q10 - Fert. Raw Materials/Phos.Acid",
+          "draft_m": 11.5,
+          "dry_bulk_relevant": true,
+          "raw_text": "Q10 - Fert. Raw Materials/Phos.Acid 11.5 278 60000 41 38",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "BTP - Passenger & Cargo/Liquid Bulk",
+          "draft_m": 10.0,
+          "dry_bulk_relevant": true,
+          "raw_text": "BTP - Passenger & Cargo/Liquid Bulk 10.0 270 35000 57 51",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        }
+      ],
+      "specification_note": null,
+      "data_caveat": "Draft and berth values are dated reference snapshots, not navigational limits. Confirm current permissible draft, tide restrictions and berth availability with the port or agent.",
+      "satellite_context": {
+        "provider": "Esri World Imagery",
+        "attribution_url": "https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9",
+        "views": [
+          {
+            "label": "Terminal detail",
+            "span_degrees": 0.018
+          },
+          {
+            "label": "Harbour context",
+            "span_degrees": 0.055
+          },
+          {
+            "label": "Regional approach",
+            "span_degrees": 0.14
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "Basic Port Statistics of India 2024-25",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2025-03-31",
+          "scope": "Official port master and infrastructure snapshot"
+        },
+        {
+          "title": "Workbook traffic source",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2024-25",
+          "scope": "Latest available port traffic"
+        }
+      ]
+    },
+    {
+      "asset_id": "india-coal-terminal-dahej-port",
+      "asset_name": "Dahej Port",
+      "official_port_id": "NM010",
+      "official_port_name": "Dahej",
+      "match_method": "controlled_alias",
+      "match_confidence": 1.0,
+      "state_ut": "Gujarat",
+      "coast": "West",
+      "port_class": "Non-major",
+      "operating_status": "Cargo handled in FY2024-25",
+      "latitude": 21.692444,
+      "longitude": 72.534056,
+      "official_website": "https://www.adaniports.com/",
+      "source_as_of": "2025-03-31",
+      "max_documented_draft_m": null,
+      "documented_berth_count": null,
+      "documented_dry_bulk_berth_count": null,
+      "port_capacity_mtpa": 16,
+      "latest_traffic_mt": 36.076,
+      "latest_traffic_period": "2024-25",
+      "latest_traffic_scope": "Dahej",
+      "terminal_operating_capacity_mtpa": 20.0,
+      "terminal_expansion_capacity_mtpa": null,
+      "dry_bulk_commodities": [],
+      "berth_facilities": [],
+      "dry_bulk_facilities": [],
+      "specification_note": null,
+      "data_caveat": "Draft and berth values are dated reference snapshots, not navigational limits. Confirm current permissible draft, tide restrictions and berth availability with the port or agent.",
+      "satellite_context": {
+        "provider": "Esri World Imagery",
+        "attribution_url": "https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9",
+        "views": [
+          {
+            "label": "Terminal detail",
+            "span_degrees": 0.018
+          },
+          {
+            "label": "Harbour context",
+            "span_degrees": 0.055
+          },
+          {
+            "label": "Regional approach",
+            "span_degrees": 0.14
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "Basic Port Statistics of India 2024-25",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2025-03-31",
+          "scope": "Official port master and infrastructure snapshot"
+        },
+        {
+          "title": "Workbook traffic source",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2024-25",
+          "scope": "Latest available port traffic"
+        },
+        {
+          "title": "Adani Ports capacity disclosure",
+          "url": "https://www.adaniports.com/-/media/Project/Ports/Investor/corporate-governance/Corporate-Announcement/other-intimation/Press-Release-30_AUG.pdf",
+          "as_of": "2024-08-30",
+          "scope": "Company-reported port capacity"
+        },
+        {
+          "title": "Gujarat Maritime Board port network",
+          "url": "https://gmbports.org/gmb-owned-ports",
+          "as_of": "2026-07-28",
+          "scope": "Port ownership and operating context"
+        }
+      ]
+    },
+    {
+      "asset_id": "india-coal-terminal-dhamra-port",
+      "asset_name": "Dhamra Port",
+      "official_port_id": "NM191",
+      "official_port_name": "Dhamra",
+      "match_method": "controlled_alias",
+      "match_confidence": 1.0,
+      "state_ut": "Odisha",
+      "coast": "East",
+      "port_class": "Non-major",
+      "operating_status": "Cargo handled in FY2024-25",
+      "latitude": 20.823283,
+      "longitude": 86.964602,
+      "official_website": "https://www.adaniports.com/",
+      "source_as_of": "2025-03-31",
+      "max_documented_draft_m": null,
+      "documented_berth_count": null,
+      "documented_dry_bulk_berth_count": null,
+      "port_capacity_mtpa": 50,
+      "latest_traffic_mt": 46.081,
+      "latest_traffic_period": "2024-25",
+      "latest_traffic_scope": "Dhamra",
+      "terminal_operating_capacity_mtpa": 25.0,
+      "terminal_expansion_capacity_mtpa": 289.0,
+      "dry_bulk_commodities": [],
+      "berth_facilities": [],
+      "dry_bulk_facilities": [],
+      "specification_note": null,
+      "data_caveat": "Draft and berth values are dated reference snapshots, not navigational limits. Confirm current permissible draft, tide restrictions and berth availability with the port or agent.",
+      "satellite_context": {
+        "provider": "Esri World Imagery",
+        "attribution_url": "https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9",
+        "views": [
+          {
+            "label": "Terminal detail",
+            "span_degrees": 0.018
+          },
+          {
+            "label": "Harbour context",
+            "span_degrees": 0.055
+          },
+          {
+            "label": "Regional approach",
+            "span_degrees": 0.14
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "Basic Port Statistics of India 2024-25",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2025-03-31",
+          "scope": "Official port master and infrastructure snapshot"
+        },
+        {
+          "title": "Workbook traffic source",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2024-25",
+          "scope": "Latest available port traffic"
+        },
+        {
+          "title": "Adani Ports capacity disclosure",
+          "url": "https://www.adaniports.com/-/media/Project/Ports/Investor/corporate-governance/Corporate-Announcement/other-intimation/Press-Release-30_AUG.pdf",
+          "as_of": "2024-08-30",
+          "scope": "Company-reported port capacity"
+        }
+      ]
+    },
+    {
+      "asset_id": "india-coal-terminal-gangavaram-port",
+      "asset_name": "Gangavaram Port",
+      "official_port_id": "NM099",
+      "official_port_name": "Gangavaram",
+      "match_method": "controlled_alias",
+      "match_confidence": 1.0,
+      "state_ut": "Andhra Pradesh",
+      "coast": "East",
+      "port_class": "Non-major",
+      "operating_status": "Cargo handled in FY2024-25",
+      "latitude": 17.616667,
+      "longitude": 83.233333,
+      "official_website": "https://www.adaniports.com/",
+      "source_as_of": "2025-03-31",
+      "max_documented_draft_m": null,
+      "documented_berth_count": null,
+      "documented_dry_bulk_berth_count": null,
+      "port_capacity_mtpa": 64,
+      "latest_traffic_mt": 26.965,
+      "latest_traffic_period": "2024-25",
+      "latest_traffic_scope": "Gangavaram",
+      "terminal_operating_capacity_mtpa": 20.0,
+      "terminal_expansion_capacity_mtpa": null,
+      "dry_bulk_commodities": [],
+      "berth_facilities": [],
+      "dry_bulk_facilities": [],
+      "specification_note": null,
+      "data_caveat": "Draft and berth values are dated reference snapshots, not navigational limits. Confirm current permissible draft, tide restrictions and berth availability with the port or agent.",
+      "satellite_context": {
+        "provider": "Esri World Imagery",
+        "attribution_url": "https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9",
+        "views": [
+          {
+            "label": "Terminal detail",
+            "span_degrees": 0.018
+          },
+          {
+            "label": "Harbour context",
+            "span_degrees": 0.055
+          },
+          {
+            "label": "Regional approach",
+            "span_degrees": 0.14
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "Basic Port Statistics of India 2024-25",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2025-03-31",
+          "scope": "Official port master and infrastructure snapshot"
+        },
+        {
+          "title": "Workbook traffic source",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2024-25",
+          "scope": "Latest available port traffic"
+        },
+        {
+          "title": "Adani Ports capacity disclosure",
+          "url": "https://www.adaniports.com/-/media/Project/Ports/Investor/corporate-governance/Corporate-Announcement/other-intimation/Press-Release-30_AUG.pdf",
+          "as_of": "2024-08-30",
+          "scope": "Company-reported port capacity"
+        }
+      ]
+    },
+    {
+      "asset_id": "india-coal-terminal-haldia-port",
+      "asset_name": "Haldia Port",
+      "official_port_id": "M12",
+      "official_port_name": "Syama Prasad Mookerjee Port, Kolkata",
+      "match_method": "controlled_alias",
+      "match_confidence": 1.0,
+      "state_ut": "West Bengal",
+      "coast": "East",
+      "port_class": "Major",
+      "operating_status": "Operational",
+      "latitude": 22.037654,
+      "longitude": 88.091404,
+      "official_website": "https://smportkolkata.shipping.gov.in/",
+      "source_as_of": "2025-03-31",
+      "max_documented_draft_m": 12.2,
+      "documented_berth_count": 17,
+      "documented_dry_bulk_berth_count": 14,
+      "port_capacity_mtpa": 93.02,
+      "latest_traffic_mt": 63.95,
+      "latest_traffic_period": "2024-25",
+      "latest_traffic_scope": "Syama Prasad Mookerjee Port, Kolkata",
+      "terminal_operating_capacity_mtpa": 20.0,
+      "terminal_expansion_capacity_mtpa": 3.7,
+      "dry_bulk_commodities": [
+        {
+          "commodity": "Coking Coal",
+          "fy": "2024-25",
+          "total_mt": 8.478
+        },
+        {
+          "commodity": "Other Ore",
+          "fy": "2024-25",
+          "total_mt": 3.202
+        },
+        {
+          "commodity": "Iron Ore/Pellets",
+          "fy": "2024-25",
+          "total_mt": 0.458
+        },
+        {
+          "commodity": "Iron & Steel",
+          "fy": "2024-25",
+          "total_mt": 0.217
+        },
+        {
+          "commodity": "Fertiliser",
+          "fy": "2024-25",
+          "total_mt": 0.214
+        },
+        {
+          "commodity": "Thermal Coal",
+          "fy": "2024-25",
+          "total_mt": 0.114
+        },
+        {
+          "commodity": "Iron Scrap",
+          "fy": "2024-25",
+          "total_mt": 0.092
+        },
+        {
+          "commodity": "Food Grains",
+          "fy": "2024-25",
+          "total_mt": 0.061
+        }
+      ],
+      "berth_facilities": [
+        {
+          "name": "Berth No.16 HOJ-I - POL, Amonia & Chemical",
+          "draft_m": 12.2,
+          "dry_bulk_relevant": false,
+          "raw_text": "Berth No.16 HOJ-I - POL, Amonia & Chemical 12.2 236 90000 76 75",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No.17 HOJ-II - POL",
+          "draft_m": 12.2,
+          "dry_bulk_relevant": false,
+          "raw_text": "Berth No.17 HOJ-II - POL 12.2 277 150000 71 68",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No. 18 HOJ-III- POL Crude",
+          "draft_m": 12.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "Berth No. 18 HOJ-III- POL Crude 12.5 275 150000 64 67",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No.1 - Multipurpose Berth handling Dry Bulk",
+          "draft_m": 10.0,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No.1 - Multipurpose Berth handling Dry Bulk 10.0 238 75000 81 72",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "other bulk",
+          "draft_m": 12.2,
+          "dry_bulk_relevant": true,
+          "raw_text": "other bulk 12.2 239 75000 18 0",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No.- 3 -Thermal Coal (Mechanised)",
+          "draft_m": 12.2,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No.- 3 -Thermal Coal (Mechanised) 12.2 239 75000 41 56",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No.- 4- Coking Coal (Mechanised)",
+          "draft_m": 12.2,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No.- 4- Coking Coal (Mechanised) 12.2 230 75000 64 53",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No. - 5 - Multipurpose-Dry Bulk & Break Bulk",
+          "draft_m": 12.2,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No. - 5 - Multipurpose-Dry Bulk & Break Bulk 12.2 180 75000 75 62",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No. 6 - Coking Coal & FRM (Dry)-Mechanised",
+          "draft_m": 12.2,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No. 6 - Coking Coal & FRM (Dry)-Mechanised 12.2 183 75000 35 45",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No. 7 - Multipurpose-Dry Bulk, Break Bulk & Liquid Bulk",
+          "draft_m": 12.2,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No. 7 - Multipurpose-Dry Bulk, Break Bulk & Liquid Bulk 12.2 212 75000 61 56",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No. 8 - Multipurpose-Dry Bulk, Break Bulk & Liquid Bulk",
+          "draft_m": 12.2,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No. 8 - Multipurpose-Dry Bulk, Break Bulk & Liquid Bulk 12.2 212 75000 46 49",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No. 9 - Multipurpose-Dry Bulk, Break Bulk & Liquid Bulk",
+          "draft_m": 12.2,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No. 9 - Multipurpose-Dry Bulk, Break Bulk & Liquid Bulk 12.2 220 75000 77 64",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No. 10 - Multiporpose-Dry Bulk, Break Bulk & Container",
+          "draft_m": 12.2,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No. 10 - Multiporpose-Dry Bulk, Break Bulk & Container 12.2 210 75000 61 31",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No. 11 - Multipurpose-Dry Bulk, Break Bulk & Container",
+          "draft_m": 12.2,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No. 11 - Multipurpose-Dry Bulk, Break Bulk & Container 12.2 210 75000 29 48",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No. 12 - Multipurpose-Dry Bulk, Break Bulk & Container",
+          "draft_m": 12.2,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No. 12 - Multipurpose-Dry Bulk, Break Bulk & Container 12.2 210 75000 38 50",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No. 13 - Multiporpose-Dry Bulk & Break Bulk",
+          "draft_m": 12.2,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No. 13 - Multiporpose-Dry Bulk & Break Bulk 12.2 210 75000 55 42",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No. 14 - Multiporpose-Dry Bulk & Break Bulk",
+          "draft_m": 10.0,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No. 14 - Multiporpose-Dry Bulk & Break Bulk 10.0 210 75000 77 60",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        }
+      ],
+      "dry_bulk_facilities": [
+        {
+          "name": "Berth No.1 - Multipurpose Berth handling Dry Bulk",
+          "draft_m": 10.0,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No.1 - Multipurpose Berth handling Dry Bulk 10.0 238 75000 81 72",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "other bulk",
+          "draft_m": 12.2,
+          "dry_bulk_relevant": true,
+          "raw_text": "other bulk 12.2 239 75000 18 0",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No.- 3 -Thermal Coal (Mechanised)",
+          "draft_m": 12.2,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No.- 3 -Thermal Coal (Mechanised) 12.2 239 75000 41 56",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No.- 4- Coking Coal (Mechanised)",
+          "draft_m": 12.2,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No.- 4- Coking Coal (Mechanised) 12.2 230 75000 64 53",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No. - 5 - Multipurpose-Dry Bulk & Break Bulk",
+          "draft_m": 12.2,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No. - 5 - Multipurpose-Dry Bulk & Break Bulk 12.2 180 75000 75 62",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No. 6 - Coking Coal & FRM (Dry)-Mechanised",
+          "draft_m": 12.2,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No. 6 - Coking Coal & FRM (Dry)-Mechanised 12.2 183 75000 35 45",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No. 7 - Multipurpose-Dry Bulk, Break Bulk & Liquid Bulk",
+          "draft_m": 12.2,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No. 7 - Multipurpose-Dry Bulk, Break Bulk & Liquid Bulk 12.2 212 75000 61 56",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No. 8 - Multipurpose-Dry Bulk, Break Bulk & Liquid Bulk",
+          "draft_m": 12.2,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No. 8 - Multipurpose-Dry Bulk, Break Bulk & Liquid Bulk 12.2 212 75000 46 49",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No. 9 - Multipurpose-Dry Bulk, Break Bulk & Liquid Bulk",
+          "draft_m": 12.2,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No. 9 - Multipurpose-Dry Bulk, Break Bulk & Liquid Bulk 12.2 220 75000 77 64",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No. 10 - Multiporpose-Dry Bulk, Break Bulk & Container",
+          "draft_m": 12.2,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No. 10 - Multiporpose-Dry Bulk, Break Bulk & Container 12.2 210 75000 61 31",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No. 11 - Multipurpose-Dry Bulk, Break Bulk & Container",
+          "draft_m": 12.2,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No. 11 - Multipurpose-Dry Bulk, Break Bulk & Container 12.2 210 75000 29 48",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No. 12 - Multipurpose-Dry Bulk, Break Bulk & Container",
+          "draft_m": 12.2,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No. 12 - Multipurpose-Dry Bulk, Break Bulk & Container 12.2 210 75000 38 50",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No. 13 - Multiporpose-Dry Bulk & Break Bulk",
+          "draft_m": 12.2,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No. 13 - Multiporpose-Dry Bulk & Break Bulk 12.2 210 75000 55 42",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No. 14 - Multiporpose-Dry Bulk & Break Bulk",
+          "draft_m": 10.0,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No. 14 - Multiporpose-Dry Bulk & Break Bulk 10.0 210 75000 77 60",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        }
+      ],
+      "specification_note": null,
+      "data_caveat": "Draft and berth values are dated reference snapshots, not navigational limits. Confirm current permissible draft, tide restrictions and berth availability with the port or agent.",
+      "satellite_context": {
+        "provider": "Esri World Imagery",
+        "attribution_url": "https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9",
+        "views": [
+          {
+            "label": "Terminal detail",
+            "span_degrees": 0.018
+          },
+          {
+            "label": "Harbour context",
+            "span_degrees": 0.055
+          },
+          {
+            "label": "Regional approach",
+            "span_degrees": 0.14
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "Basic Port Statistics of India 2024-25",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2025-03-31",
+          "scope": "Official port master and infrastructure snapshot"
+        },
+        {
+          "title": "Workbook traffic source",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2024-25",
+          "scope": "Latest available port traffic"
+        }
+      ]
+    },
+    {
+      "asset_id": "india-coal-terminal-hazira-port-essar",
+      "asset_name": "Hazira Port (Essar)",
+      "official_port_id": "NM012",
+      "official_port_name": "Hazira(Surat)- HPPL & AHPPL",
+      "match_method": "controlled_alias",
+      "match_confidence": 1.0,
+      "state_ut": "Gujarat",
+      "coast": "West",
+      "port_class": "Non-major",
+      "operating_status": "Cargo handled in FY2024-25",
+      "latitude": 21.0922615383,
+      "longitude": 72.6572530513,
+      "official_website": "https://www.adaniports.com/",
+      "source_as_of": "2025-03-31",
+      "max_documented_draft_m": null,
+      "documented_berth_count": null,
+      "documented_dry_bulk_berth_count": null,
+      "port_capacity_mtpa": 30,
+      "latest_traffic_mt": 28.946,
+      "latest_traffic_period": "2024-25",
+      "latest_traffic_scope": "Hazira(Surat)- HPPL & AHPPL",
+      "terminal_operating_capacity_mtpa": 50.0,
+      "terminal_expansion_capacity_mtpa": null,
+      "dry_bulk_commodities": [],
+      "berth_facilities": [],
+      "dry_bulk_facilities": [],
+      "specification_note": null,
+      "data_caveat": "Draft and berth values are dated reference snapshots, not navigational limits. Confirm current permissible draft, tide restrictions and berth availability with the port or agent.",
+      "satellite_context": {
+        "provider": "Esri World Imagery",
+        "attribution_url": "https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9",
+        "views": [
+          {
+            "label": "Terminal detail",
+            "span_degrees": 0.018
+          },
+          {
+            "label": "Harbour context",
+            "span_degrees": 0.055
+          },
+          {
+            "label": "Regional approach",
+            "span_degrees": 0.14
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "Basic Port Statistics of India 2024-25",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2025-03-31",
+          "scope": "Official port master and infrastructure snapshot"
+        },
+        {
+          "title": "Workbook traffic source",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2024-25",
+          "scope": "Latest available port traffic"
+        },
+        {
+          "title": "Adani Ports capacity disclosure",
+          "url": "https://www.adaniports.com/-/media/Project/Ports/Investor/corporate-governance/Corporate-Announcement/other-intimation/Press-Release-30_AUG.pdf",
+          "as_of": "2024-08-30",
+          "scope": "Company-reported port capacity"
+        }
+      ]
+    },
+    {
+      "asset_id": "india-coal-terminal-jsw-dharamtar-port",
+      "asset_name": "JSW Dharamtar Port",
+      "official_port_id": "NM059",
+      "official_port_name": "Dharamtar (Alibag)",
+      "match_method": "controlled_alias",
+      "match_confidence": 1.0,
+      "state_ut": "Maharashtra",
+      "coast": "West",
+      "port_class": "Non-major",
+      "operating_status": "Cargo handled in FY2024-25",
+      "latitude": 18.704952,
+      "longitude": 73.027153,
+      "official_website": "https://www.jsw.in/jsw-infrastructure/",
+      "source_as_of": "2025-03-31",
+      "max_documented_draft_m": null,
+      "documented_berth_count": 5,
+      "documented_dry_bulk_berth_count": null,
+      "port_capacity_mtpa": 34,
+      "latest_traffic_mt": 28.242,
+      "latest_traffic_period": "2024-25",
+      "latest_traffic_scope": "Dharamtar (Alibag)",
+      "terminal_operating_capacity_mtpa": 8.0,
+      "terminal_expansion_capacity_mtpa": 47.0,
+      "dry_bulk_commodities": [],
+      "berth_facilities": [],
+      "dry_bulk_facilities": [],
+      "specification_note": "JSW reports five berths and 34 MTPA capacity. No current maximum draft was published in the source used here.",
+      "data_caveat": "Draft and berth values are dated reference snapshots, not navigational limits. Confirm current permissible draft, tide restrictions and berth availability with the port or agent.",
+      "satellite_context": {
+        "provider": "Esri World Imagery",
+        "attribution_url": "https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9",
+        "views": [
+          {
+            "label": "Terminal detail",
+            "span_degrees": 0.018
+          },
+          {
+            "label": "Harbour context",
+            "span_degrees": 0.055
+          },
+          {
+            "label": "Regional approach",
+            "span_degrees": 0.14
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "Basic Port Statistics of India 2024-25",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2025-03-31",
+          "scope": "Official port master and infrastructure snapshot"
+        },
+        {
+          "title": "Workbook traffic source",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2024-25",
+          "scope": "Latest available port traffic"
+        },
+        {
+          "title": "JSW Infrastructure ports and terminals",
+          "url": "https://www.jsw.in/jsw-infrastructure/",
+          "as_of": "2026-07-28",
+          "scope": "Port or terminal specifications"
+        }
+      ]
+    },
+    {
+      "asset_id": "india-coal-terminal-jaigarh-port",
+      "asset_name": "Jaigarh Port",
+      "official_port_id": "NM061",
+      "official_port_name": "Jaigad",
+      "match_method": "controlled_alias",
+      "match_confidence": 1.0,
+      "state_ut": "Maharashtra",
+      "coast": "West",
+      "port_class": "Non-major",
+      "operating_status": "Cargo handled in FY2024-25",
+      "latitude": 17.303945,
+      "longitude": 73.208429,
+      "official_website": "https://www.jsw.in/jsw-infrastructure/",
+      "source_as_of": "2025-03-31",
+      "max_documented_draft_m": 17.5,
+      "documented_berth_count": 7,
+      "documented_dry_bulk_berth_count": null,
+      "port_capacity_mtpa": 55,
+      "latest_traffic_mt": 32.735,
+      "latest_traffic_period": "2024-25",
+      "latest_traffic_scope": "Jaigad",
+      "terminal_operating_capacity_mtpa": 60.0,
+      "terminal_expansion_capacity_mtpa": 20.0,
+      "dry_bulk_commodities": [],
+      "berth_facilities": [],
+      "dry_bulk_facilities": [],
+      "specification_note": "JSW reports seven operational berths, 2,319 m total berth length, 17.5 m draft and 55 MTPA installed capacity.",
+      "data_caveat": "Draft and berth values are dated reference snapshots, not navigational limits. Confirm current permissible draft, tide restrictions and berth availability with the port or agent.",
+      "satellite_context": {
+        "provider": "Esri World Imagery",
+        "attribution_url": "https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9",
+        "views": [
+          {
+            "label": "Terminal detail",
+            "span_degrees": 0.018
+          },
+          {
+            "label": "Harbour context",
+            "span_degrees": 0.055
+          },
+          {
+            "label": "Regional approach",
+            "span_degrees": 0.14
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "Basic Port Statistics of India 2024-25",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2025-03-31",
+          "scope": "Official port master and infrastructure snapshot"
+        },
+        {
+          "title": "Workbook traffic source",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2024-25",
+          "scope": "Latest available port traffic"
+        },
+        {
+          "title": "JSW Infrastructure red herring prospectus",
+          "url": "https://www.jsw.in/sites/default/files/assets/industry/infrastructure/Red-Herring-Prospectus_JSW-Infrastructure-Limited.pdf",
+          "as_of": "2023-06-30",
+          "scope": "Port or terminal specifications"
+        }
+      ]
+    },
+    {
+      "asset_id": "india-coal-terminal-kakinada-port",
+      "asset_name": "Kakinada Port",
+      "official_port_id": "NM102",
+      "official_port_name": "Kakinada Anchorage Port / Kakinada Deepwater Port",
+      "match_method": "controlled_alias",
+      "match_confidence": 1.0,
+      "state_ut": "Andhra Pradesh",
+      "coast": "East",
+      "port_class": "Non-major",
+      "operating_status": "Cargo handled in FY2024-25",
+      "latitude": 16.971284,
+      "longitude": 82.281686,
+      "official_website": "https://kakinadaseaports.in/?page_id=169",
+      "source_as_of": "2025-03-31",
+      "max_documented_draft_m": 14,
+      "documented_berth_count": 8,
+      "documented_dry_bulk_berth_count": null,
+      "port_capacity_mtpa": null,
+      "latest_traffic_mt": 21.688,
+      "latest_traffic_period": "2024-25",
+      "latest_traffic_scope": "Kakinada Anchorage Port / Kakinada Deepwater Port",
+      "terminal_operating_capacity_mtpa": 14.0,
+      "terminal_expansion_capacity_mtpa": null,
+      "dry_bulk_commodities": [],
+      "berth_facilities": [],
+      "dry_bulk_facilities": [],
+      "specification_note": "Main jetty has seven cargo berths and one OSV berth; maximum permissible main-jetty draught is 14 m on high tide.",
+      "data_caveat": "Draft and berth values are dated reference snapshots, not navigational limits. Confirm current permissible draft, tide restrictions and berth availability with the port or agent.",
+      "satellite_context": {
+        "provider": "Esri World Imagery",
+        "attribution_url": "https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9",
+        "views": [
+          {
+            "label": "Terminal detail",
+            "span_degrees": 0.018
+          },
+          {
+            "label": "Harbour context",
+            "span_degrees": 0.055
+          },
+          {
+            "label": "Regional approach",
+            "span_degrees": 0.14
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "Basic Port Statistics of India 2024-25",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2025-03-31",
+          "scope": "Official port master and infrastructure snapshot"
+        },
+        {
+          "title": "Workbook traffic source",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2024-25",
+          "scope": "Latest available port traffic"
+        },
+        {
+          "title": "Kakinada Seaports — Port Info",
+          "url": "https://kakinadaseaports.in/?page_id=169",
+          "as_of": "2026-07-24",
+          "scope": "Port or terminal specifications"
+        }
+      ]
+    },
+    {
+      "asset_id": "india-coal-terminal-kamarajar-port",
+      "asset_name": "Kamarajar Port",
+      "official_port_id": "M09",
+      "official_port_name": "Kamarajar Port Limited",
+      "match_method": "controlled_alias",
+      "match_confidence": 1.0,
+      "state_ut": "Tamil Nadu",
+      "coast": "East",
+      "port_class": "Major",
+      "operating_status": "Operational",
+      "latitude": 13.258618,
+      "longitude": 80.340732,
+      "official_website": "https://www.ennoreport.gov.in/",
+      "source_as_of": "2025-03-31",
+      "max_documented_draft_m": 18.5,
+      "documented_berth_count": 12,
+      "documented_dry_bulk_berth_count": 6,
+      "port_capacity_mtpa": 97.0,
+      "latest_traffic_mt": 48.41,
+      "latest_traffic_period": "2024-25",
+      "latest_traffic_scope": "Kamarajar Port Limited",
+      "terminal_operating_capacity_mtpa": 26.0,
+      "terminal_expansion_capacity_mtpa": 24.0,
+      "dry_bulk_commodities": [
+        {
+          "commodity": "Thermal Coal",
+          "fy": "2024-25",
+          "total_mt": 22.976
+        },
+        {
+          "commodity": "Coking Coal",
+          "fy": "2024-25",
+          "total_mt": 2.562
+        },
+        {
+          "commodity": "Cement",
+          "fy": "2024-25",
+          "total_mt": 1.664
+        },
+        {
+          "commodity": "Iron & Steel",
+          "fy": "2024-25",
+          "total_mt": 0.147
+        }
+      ],
+      "berth_facilities": [
+        {
+          "name": "Coal Berth - 1",
+          "draft_m": 14.5,
+          "dry_bulk_relevant": true,
+          "raw_text": "Coal Berth - 1 14.5 280 77000 86 83",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Coal Berth - 2",
+          "draft_m": 14.5,
+          "dry_bulk_relevant": true,
+          "raw_text": "Coal Berth - 2 14.5 280 150000 85 90",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Common user Coal Terminal",
+          "draft_m": 16.5,
+          "dry_bulk_relevant": true,
+          "raw_text": "Common user Coal Terminal 16.5 348 150000 86 87",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Marine Liquid Terminal-1-POL/Chemicals",
+          "draft_m": 13.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "Marine Liquid Terminal-1-POL/Chemicals 13.5 360 70000 80 80",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Multi Cargo Terminal",
+          "draft_m": 16.0,
+          "dry_bulk_relevant": false,
+          "raw_text": "Multi Cargo Terminal 16.0 347 - 28 36",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Container Termina 1 (Phase I)",
+          "draft_m": 14.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "Container Termina 1 (Phase I) 14.5 400 - 58 71",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Genral Cargo Berth No. 1",
+          "draft_m": 10.0,
+          "dry_bulk_relevant": false,
+          "raw_text": "Genral Cargo Berth No. 1 10.0 278 34 12",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Genral Cargo Berth No.2 #",
+          "draft_m": 14.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "Genral Cargo Berth No.2 # 14.5 330 1 34",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Ennor Bulk Teminal",
+          "draft_m": 14.5,
+          "dry_bulk_relevant": true,
+          "raw_text": "Ennor Bulk Teminal 14.5 270 - - -",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Coal Berth-3",
+          "draft_m": 18.5,
+          "dry_bulk_relevant": true,
+          "raw_text": "Coal Berth-3 18.5 354 - - -",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Coal Berth-4",
+          "draft_m": 18.5,
+          "dry_bulk_relevant": true,
+          "raw_text": "Coal Berth-4 18.5 341 - - -",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "LNG Terminal",
+          "draft_m": 13.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "LNG Terminal 13.5 362 5 6",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        }
+      ],
+      "dry_bulk_facilities": [
+        {
+          "name": "Coal Berth - 1",
+          "draft_m": 14.5,
+          "dry_bulk_relevant": true,
+          "raw_text": "Coal Berth - 1 14.5 280 77000 86 83",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Coal Berth - 2",
+          "draft_m": 14.5,
+          "dry_bulk_relevant": true,
+          "raw_text": "Coal Berth - 2 14.5 280 150000 85 90",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Common user Coal Terminal",
+          "draft_m": 16.5,
+          "dry_bulk_relevant": true,
+          "raw_text": "Common user Coal Terminal 16.5 348 150000 86 87",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Ennor Bulk Teminal",
+          "draft_m": 14.5,
+          "dry_bulk_relevant": true,
+          "raw_text": "Ennor Bulk Teminal 14.5 270 - - -",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Coal Berth-3",
+          "draft_m": 18.5,
+          "dry_bulk_relevant": true,
+          "raw_text": "Coal Berth-3 18.5 354 - - -",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Coal Berth-4",
+          "draft_m": 18.5,
+          "dry_bulk_relevant": true,
+          "raw_text": "Coal Berth-4 18.5 341 - - -",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        }
+      ],
+      "specification_note": null,
+      "data_caveat": "Draft and berth values are dated reference snapshots, not navigational limits. Confirm current permissible draft, tide restrictions and berth availability with the port or agent.",
+      "satellite_context": {
+        "provider": "Esri World Imagery",
+        "attribution_url": "https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9",
+        "views": [
+          {
+            "label": "Terminal detail",
+            "span_degrees": 0.018
+          },
+          {
+            "label": "Harbour context",
+            "span_degrees": 0.055
+          },
+          {
+            "label": "Regional approach",
+            "span_degrees": 0.14
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "Basic Port Statistics of India 2024-25",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2025-03-31",
+          "scope": "Official port master and infrastructure snapshot"
+        },
+        {
+          "title": "Workbook traffic source",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2024-25",
+          "scope": "Latest available port traffic"
+        }
+      ]
+    },
+    {
+      "asset_id": "india-coal-terminal-karaikal-port",
+      "asset_name": "Karaikal Port",
+      "official_port_id": "NM215",
+      "official_port_name": "Karaikal",
+      "match_method": "controlled_alias",
+      "match_confidence": 1.0,
+      "state_ut": "Puducherry",
+      "coast": "East",
+      "port_class": "Non-major",
+      "operating_status": "Cargo handled in FY2024-25",
+      "latitude": 10.84241,
+      "longitude": 79.843483,
+      "official_website": "https://www.adaniports.com/",
+      "source_as_of": "2025-03-31",
+      "max_documented_draft_m": null,
+      "documented_berth_count": null,
+      "documented_dry_bulk_berth_count": null,
+      "port_capacity_mtpa": 22,
+      "latest_traffic_mt": 0.045,
+      "latest_traffic_period": "2024-25",
+      "latest_traffic_scope": "Karaikal",
+      "terminal_operating_capacity_mtpa": 20.0,
+      "terminal_expansion_capacity_mtpa": null,
+      "dry_bulk_commodities": [],
+      "berth_facilities": [],
+      "dry_bulk_facilities": [],
+      "specification_note": null,
+      "data_caveat": "Draft and berth values are dated reference snapshots, not navigational limits. Confirm current permissible draft, tide restrictions and berth availability with the port or agent.",
+      "satellite_context": {
+        "provider": "Esri World Imagery",
+        "attribution_url": "https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9",
+        "views": [
+          {
+            "label": "Terminal detail",
+            "span_degrees": 0.018
+          },
+          {
+            "label": "Harbour context",
+            "span_degrees": 0.055
+          },
+          {
+            "label": "Regional approach",
+            "span_degrees": 0.14
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "Basic Port Statistics of India 2024-25",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2025-03-31",
+          "scope": "Official port master and infrastructure snapshot"
+        },
+        {
+          "title": "Workbook traffic source",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2024-25",
+          "scope": "Latest available port traffic"
+        },
+        {
+          "title": "Adani Ports capacity disclosure",
+          "url": "https://www.adaniports.com/-/media/Project/Ports/Investor/corporate-governance/Corporate-Announcement/other-intimation/Press-Release-30_AUG.pdf",
+          "as_of": "2024-08-30",
+          "scope": "Company-reported port capacity"
+        }
+      ]
+    },
+    {
+      "asset_id": "india-coal-terminal-kattupalli-port",
+      "asset_name": "Kattupalli Port",
+      "official_port_id": "NM168",
+      "official_port_name": "Kattupalli",
+      "match_method": "controlled_alias",
+      "match_confidence": 1.0,
+      "state_ut": "Tamil Nadu",
+      "coast": "East",
+      "port_class": "Non-major",
+      "operating_status": "Cargo handled in FY2024-25",
+      "latitude": 13.3145887559,
+      "longitude": 80.3469393426,
+      "official_website": "https://www.adaniports.com/",
+      "source_as_of": "2025-03-31",
+      "max_documented_draft_m": null,
+      "documented_berth_count": null,
+      "documented_dry_bulk_berth_count": null,
+      "port_capacity_mtpa": 25,
+      "latest_traffic_mt": 11.48,
+      "latest_traffic_period": "2024-25",
+      "latest_traffic_scope": "Kattupalli",
+      "terminal_operating_capacity_mtpa": 18.0,
+      "terminal_expansion_capacity_mtpa": 71.0,
+      "dry_bulk_commodities": [],
+      "berth_facilities": [],
+      "dry_bulk_facilities": [],
+      "specification_note": null,
+      "data_caveat": "Draft and berth values are dated reference snapshots, not navigational limits. Confirm current permissible draft, tide restrictions and berth availability with the port or agent.",
+      "satellite_context": {
+        "provider": "Esri World Imagery",
+        "attribution_url": "https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9",
+        "views": [
+          {
+            "label": "Terminal detail",
+            "span_degrees": 0.018
+          },
+          {
+            "label": "Harbour context",
+            "span_degrees": 0.055
+          },
+          {
+            "label": "Regional approach",
+            "span_degrees": 0.14
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "Basic Port Statistics of India 2024-25",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2025-03-31",
+          "scope": "Official port master and infrastructure snapshot"
+        },
+        {
+          "title": "Workbook traffic source",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2024-25",
+          "scope": "Latest available port traffic"
+        },
+        {
+          "title": "Adani Ports capacity disclosure",
+          "url": "https://www.adaniports.com/-/media/Project/Ports/Investor/corporate-governance/Corporate-Announcement/other-intimation/Press-Release-30_AUG.pdf",
+          "as_of": "2024-08-30",
+          "scope": "Company-reported port capacity"
+        }
+      ]
+    },
+    {
+      "asset_id": "india-coal-terminal-kolkata-dock-system-coal-terminal",
+      "asset_name": "Kolkata Dock System Coal Terminal",
+      "official_port_id": "M12",
+      "official_port_name": "Syama Prasad Mookerjee Port, Kolkata",
+      "match_method": "controlled_alias",
+      "match_confidence": 1.0,
+      "state_ut": "West Bengal",
+      "coast": "East",
+      "port_class": "Major",
+      "operating_status": "Operational",
+      "latitude": 22.5325771875,
+      "longitude": 88.3110995753,
+      "official_website": "https://smportkolkata.shipping.gov.in/",
+      "source_as_of": "2025-03-31",
+      "max_documented_draft_m": 13.3,
+      "documented_berth_count": 35,
+      "documented_dry_bulk_berth_count": null,
+      "port_capacity_mtpa": 93.02,
+      "latest_traffic_mt": 63.95,
+      "latest_traffic_period": "2024-25",
+      "latest_traffic_scope": "Syama Prasad Mookerjee Port, Kolkata",
+      "terminal_operating_capacity_mtpa": 3.0,
+      "terminal_expansion_capacity_mtpa": null,
+      "dry_bulk_commodities": [
+        {
+          "commodity": "Coking Coal",
+          "fy": "2024-25",
+          "total_mt": 0.629
+        },
+        {
+          "commodity": "Fertiliser",
+          "fy": "2024-25",
+          "total_mt": 0.528
+        },
+        {
+          "commodity": "Food Grains",
+          "fy": "2024-25",
+          "total_mt": 0.269
+        },
+        {
+          "commodity": "Other Ore",
+          "fy": "2024-25",
+          "total_mt": 0.21
+        },
+        {
+          "commodity": "Iron & Steel",
+          "fy": "2024-25",
+          "total_mt": 0.075
+        }
+      ],
+      "berth_facilities": [
+        {
+          "name": "1 KPD- General",
+          "draft_m": 7.4,
+          "dry_bulk_relevant": false,
+          "raw_text": "1 KPD- General 7.4 133 38 57",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "3 KPD -General",
+          "draft_m": 8.2,
+          "dry_bulk_relevant": false,
+          "raw_text": "3 KPD -General 8.2 128 parcel load + 68 22",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "4 KPD-General",
+          "draft_m": 8.2,
+          "dry_bulk_relevant": false,
+          "raw_text": "4 KPD-General 8.2 136 45 2",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "5/7 KPD- General",
+          "draft_m": 8.4,
+          "dry_bulk_relevant": false,
+          "raw_text": "5/7 KPD- General 8.4/8.8 229 -do- 92 36",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "6 KPD-General",
+          "draft_m": 8.1,
+          "dry_bulk_relevant": false,
+          "raw_text": "6 KPD-General 8.1 118 -do- 26 13",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "8 KPD- General",
+          "draft_m": 8.4,
+          "dry_bulk_relevant": false,
+          "raw_text": "8 KPD- General 8.4 128 -do- 67 69",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "9 KPD- General",
+          "draft_m": 8.8,
+          "dry_bulk_relevant": false,
+          "raw_text": "9 KPD- General 8.8 108 -do- 38 63",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "10 KPD- General",
+          "draft_m": 8.6,
+          "dry_bulk_relevant": false,
+          "raw_text": "10 KPD- General 8.6 161 -do- 75 98",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "11 KPD (Passenger & Coastal)",
+          "draft_m": 8.2,
+          "dry_bulk_relevant": false,
+          "raw_text": "11 KPD (Passenger & Coastal) 8.2 151 -do- 62 53",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "12 KPD( Passenger & Coastal)",
+          "draft_m": 8.4,
+          "dry_bulk_relevant": false,
+          "raw_text": "12 KPD( Passenger & Coastal) 8.4 143 -do- 46 27",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "22 KPD-General",
+          "draft_m": 7.3,
+          "dry_bulk_relevant": false,
+          "raw_text": "22 KPD-General 7.3 151 -do- 69 98",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "23 KPD-General",
+          "draft_m": 8.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "23 KPD-General 8.5 147 -do- 83 89",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "24 KPD-General",
+          "draft_m": 8.0,
+          "dry_bulk_relevant": false,
+          "raw_text": "24 KPD-General 8.0 152 -do- 100 100",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "25 KPD-General",
+          "draft_m": 8.3,
+          "dry_bulk_relevant": false,
+          "raw_text": "25 KPD-General 8.3 169 -do- 95 99",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "26 KPD-General",
+          "draft_m": 8.0,
+          "dry_bulk_relevant": false,
+          "raw_text": "26 KPD-General 8.0 185 -do- 38 81",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "27 KPD-General",
+          "draft_m": 7.1,
+          "dry_bulk_relevant": false,
+          "raw_text": "27 KPD-General 7.1 195 -do- 100 69",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "28 KPD-General",
+          "draft_m": 8.2,
+          "dry_bulk_relevant": false,
+          "raw_text": "28 KPD-General 8.2 195 -do- 100 80",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "29 KPD-General",
+          "draft_m": 8.1,
+          "dry_bulk_relevant": false,
+          "raw_text": "29 KPD-General 8.1 185 -do- 100 63",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "KPD berth drafts are governed by Turning Besin Draft which is",
+          "draft_m": 7.9,
+          "dry_bulk_relevant": false,
+          "raw_text": "KPD berth drafts are governed by Turning Besin Draft which is 7.9 mtrs. At present. Normally KDS dock drafts are governed drafts.",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "1 NSD-General/Heavy Cargo",
+          "draft_m": 7.3,
+          "dry_bulk_relevant": false,
+          "raw_text": "1 NSD-General/Heavy Cargo 7.3 200 -do- 55 60",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "2 NSD-General Cargo",
+          "draft_m": 7.1,
+          "dry_bulk_relevant": false,
+          "raw_text": "2 NSD-General Cargo 7.1 187 -do- 84 73",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "3 NSD-General Cargo",
+          "draft_m": 8.2,
+          "dry_bulk_relevant": false,
+          "raw_text": "3 NSD-General Cargo 8.2 183 -do- 78 87",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "4 NSD-Container",
+          "draft_m": 7.6,
+          "dry_bulk_relevant": false,
+          "raw_text": "4 NSD-Container 7.6 181 Around 21000 79 84",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "5 NSD-Container",
+          "draft_m": 7.4,
+          "dry_bulk_relevant": false,
+          "raw_text": "5 NSD-Container 7.4 182 -do- 81 83",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "7 NSD-Container #",
+          "draft_m": 7.4,
+          "dry_bulk_relevant": false,
+          "raw_text": "7 NSD-Container # 7.4 192 -do- 0 0",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "8 NSD-Container",
+          "draft_m": 7.3,
+          "dry_bulk_relevant": false,
+          "raw_text": "8 NSD-Container 7.3 225 Around 25000 90 84",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "12 NSD-Liquid Cargo",
+          "draft_m": 6.2,
+          "dry_bulk_relevant": false,
+          "raw_text": "12 NSD-Liquid Cargo 6.2 152 depending on parcel 32 54",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "13 NSD-General Cargo",
+          "draft_m": 7.2,
+          "dry_bulk_relevant": false,
+          "raw_text": "13 NSD-General Cargo 7.2 174 28 62",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "14 NSD-General Cargo",
+          "draft_m": 7.1,
+          "dry_bulk_relevant": false,
+          "raw_text": "14 NSD-General Cargo 7.1 174 -do- 38 58",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "1 BB-Liquid Cargo",
+          "draft_m": 13.3,
+          "dry_bulk_relevant": false,
+          "raw_text": "1 BB-Liquid Cargo 13.3 189 Around 38000* 2 18",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "2 BB-Liquid Cargo",
+          "draft_m": 11.3,
+          "dry_bulk_relevant": false,
+          "raw_text": "2 BB-Liquid Cargo 11.3 95 -do- 0 0",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "3 BB-Liquid Cargo",
+          "draft_m": 12.0,
+          "dry_bulk_relevant": false,
+          "raw_text": "3 BB-Liquid Cargo 12.0 146 -do- 2 0",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "5 BB-Liquid Cargo",
+          "draft_m": 11.7,
+          "dry_bulk_relevant": false,
+          "raw_text": "5 BB-Liquid Cargo 11.7 189 -do- 18 19",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "7 BB-Liquid Cargo",
+          "draft_m": 8.4,
+          "dry_bulk_relevant": false,
+          "raw_text": "7 BB-Liquid Cargo 8.4 140 -do- 15 12",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "8 BB-Liquid Cargo",
+          "draft_m": 7.9,
+          "dry_bulk_relevant": false,
+          "raw_text": "8 BB-Liquid Cargo 7.9 177 -do- 13 9",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        }
+      ],
+      "dry_bulk_facilities": [],
+      "specification_note": null,
+      "data_caveat": "Draft and berth values are dated reference snapshots, not navigational limits. Confirm current permissible draft, tide restrictions and berth availability with the port or agent.",
+      "satellite_context": {
+        "provider": "Esri World Imagery",
+        "attribution_url": "https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9",
+        "views": [
+          {
+            "label": "Terminal detail",
+            "span_degrees": 0.018
+          },
+          {
+            "label": "Harbour context",
+            "span_degrees": 0.055
+          },
+          {
+            "label": "Regional approach",
+            "span_degrees": 0.14
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "Basic Port Statistics of India 2024-25",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2025-03-31",
+          "scope": "Official port master and infrastructure snapshot"
+        },
+        {
+          "title": "Workbook traffic source",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2024-25",
+          "scope": "Latest available port traffic"
+        }
+      ]
+    },
+    {
+      "asset_id": "india-coal-terminal-krishnapatnam-port",
+      "asset_name": "Krishnapatnam Port",
+      "official_port_id": "NM105",
+      "official_port_name": "Krishnapatnam Port",
+      "match_method": "controlled_alias",
+      "match_confidence": 1.0,
+      "state_ut": "Andhra Pradesh",
+      "coast": "East",
+      "port_class": "Non-major",
+      "operating_status": "Cargo handled in FY2024-25",
+      "latitude": 14.251926,
+      "longitude": 80.125759,
+      "official_website": "https://www.adaniports.com/",
+      "source_as_of": "2025-03-31",
+      "max_documented_draft_m": null,
+      "documented_berth_count": null,
+      "documented_dry_bulk_berth_count": null,
+      "port_capacity_mtpa": 75,
+      "latest_traffic_mt": 54.991,
+      "latest_traffic_period": "2024-25",
+      "latest_traffic_scope": "Krishnapatnam Port",
+      "terminal_operating_capacity_mtpa": 64.0,
+      "terminal_expansion_capacity_mtpa": 236.0,
+      "dry_bulk_commodities": [
+        {
+          "commodity": "Iron Ore/Pellets",
+          "fy": "2024-25",
+          "total_mt": 11.87
+        },
+        {
+          "commodity": "Coking Coal",
+          "fy": "2024-25",
+          "total_mt": 6.116
+        },
+        {
+          "commodity": "Other Ore",
+          "fy": "2024-25",
+          "total_mt": 3.985
+        },
+        {
+          "commodity": "Fertiliser",
+          "fy": "2024-25",
+          "total_mt": 1.282
+        },
+        {
+          "commodity": "Food Grains",
+          "fy": "2024-25",
+          "total_mt": 1.153
+        },
+        {
+          "commodity": "Iron & Steel",
+          "fy": "2024-25",
+          "total_mt": 0.277
+        },
+        {
+          "commodity": "Salt",
+          "fy": "2024-25",
+          "total_mt": 0.071
+        },
+        {
+          "commodity": "Cement",
+          "fy": "2024-25",
+          "total_mt": 0.065
+        }
+      ],
+      "berth_facilities": [],
+      "dry_bulk_facilities": [],
+      "specification_note": null,
+      "data_caveat": "Draft and berth values are dated reference snapshots, not navigational limits. Confirm current permissible draft, tide restrictions and berth availability with the port or agent.",
+      "satellite_context": {
+        "provider": "Esri World Imagery",
+        "attribution_url": "https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9",
+        "views": [
+          {
+            "label": "Terminal detail",
+            "span_degrees": 0.018
+          },
+          {
+            "label": "Harbour context",
+            "span_degrees": 0.055
+          },
+          {
+            "label": "Regional approach",
+            "span_degrees": 0.14
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "Basic Port Statistics of India 2024-25",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2025-03-31",
+          "scope": "Official port master and infrastructure snapshot"
+        },
+        {
+          "title": "Workbook traffic source",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2024-25",
+          "scope": "Latest available port traffic"
+        },
+        {
+          "title": "Adani Ports capacity disclosure",
+          "url": "https://www.adaniports.com/-/media/Project/Ports/Investor/corporate-governance/Corporate-Announcement/other-intimation/Press-Release-30_AUG.pdf",
+          "as_of": "2024-08-30",
+          "scope": "Company-reported port capacity"
+        }
+      ]
+    },
+    {
+      "asset_id": "india-coal-terminal-magadalla-port",
+      "asset_name": "Magadalla Port",
+      "official_port_id": "NM021",
+      "official_port_name": "Magdalla",
+      "match_method": "controlled_alias",
+      "match_confidence": 1.0,
+      "state_ut": "Gujarat",
+      "coast": "West",
+      "port_class": "Non-major",
+      "operating_status": "Cargo handled in FY2024-25",
+      "latitude": 21.140539,
+      "longitude": 72.736402,
+      "official_website": "https://gmbports.org/gmb-owned-ports",
+      "source_as_of": "2025-03-31",
+      "max_documented_draft_m": null,
+      "documented_berth_count": null,
+      "documented_dry_bulk_berth_count": null,
+      "port_capacity_mtpa": null,
+      "latest_traffic_mt": 35.0,
+      "latest_traffic_period": "2024-25",
+      "latest_traffic_scope": "Magdalla",
+      "terminal_operating_capacity_mtpa": 6.5,
+      "terminal_expansion_capacity_mtpa": null,
+      "dry_bulk_commodities": [],
+      "berth_facilities": [],
+      "dry_bulk_facilities": [],
+      "specification_note": null,
+      "data_caveat": "Draft and berth values are dated reference snapshots, not navigational limits. Confirm current permissible draft, tide restrictions and berth availability with the port or agent.",
+      "satellite_context": {
+        "provider": "Esri World Imagery",
+        "attribution_url": "https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9",
+        "views": [
+          {
+            "label": "Terminal detail",
+            "span_degrees": 0.018
+          },
+          {
+            "label": "Harbour context",
+            "span_degrees": 0.055
+          },
+          {
+            "label": "Regional approach",
+            "span_degrees": 0.14
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "Basic Port Statistics of India 2024-25",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2025-03-31",
+          "scope": "Official port master and infrastructure snapshot"
+        },
+        {
+          "title": "Workbook traffic source",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2024-25",
+          "scope": "Latest available port traffic"
+        },
+        {
+          "title": "Gujarat Maritime Board port network",
+          "url": "https://gmbports.org/gmb-owned-ports",
+          "as_of": "2026-07-28",
+          "scope": "Port ownership and operating context"
+        }
+      ]
+    },
+    {
+      "asset_id": "india-coal-terminal-mormugao-port",
+      "asset_name": "Mormugao Port",
+      "official_port_id": "M04",
+      "official_port_name": "Mormugao Port Authority",
+      "match_method": "controlled_alias",
+      "match_confidence": 1.0,
+      "state_ut": "Goa",
+      "coast": "West",
+      "port_class": "Major",
+      "operating_status": "Operational",
+      "latitude": 15.4131554746,
+      "longitude": 73.7966551931,
+      "official_website": "https://mptgoa.gov.in/",
+      "source_as_of": "2025-03-31",
+      "max_documented_draft_m": 14.0,
+      "documented_berth_count": 17,
+      "documented_dry_bulk_berth_count": 7,
+      "port_capacity_mtpa": 5,
+      "latest_traffic_mt": 18.13,
+      "latest_traffic_period": "2024-25",
+      "latest_traffic_scope": "Mormugao Port Authority",
+      "terminal_operating_capacity_mtpa": 12.5,
+      "terminal_expansion_capacity_mtpa": null,
+      "dry_bulk_commodities": [
+        {
+          "commodity": "Coking Coal",
+          "fy": "2024-25",
+          "total_mt": 6.679
+        },
+        {
+          "commodity": "Iron Ore/Pellets",
+          "fy": "2024-25",
+          "total_mt": 3.94
+        },
+        {
+          "commodity": "Thermal Coal",
+          "fy": "2024-25",
+          "total_mt": 2.713
+        },
+        {
+          "commodity": "Fertiliser",
+          "fy": "2024-25",
+          "total_mt": 0.239
+        }
+      ],
+      "berth_facilities": [
+        {
+          "name": "5 General Cargo(a)",
+          "draft_m": 14.0,
+          "dry_bulk_relevant": false,
+          "raw_text": "5 General Cargo(a) 14.0 210 50000 35 26",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "6. Coal, Coke",
+          "draft_m": 13.0,
+          "dry_bulk_relevant": true,
+          "raw_text": "6. Coal, Coke 13.0 50 70000 76 80",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "7. Coal, Coke",
+          "draft_m": 14.0,
+          "dry_bulk_relevant": true,
+          "raw_text": "7. Coal, Coke 14.0 300 70 68",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "8. Liquid Bulk",
+          "draft_m": 13.0,
+          "dry_bulk_relevant": true,
+          "raw_text": "8. Liquid Bulk 13.0 50 125000 28 23",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "9.General Cargo Iron Ore",
+          "draft_m": 14.0,
+          "dry_bulk_relevant": true,
+          "raw_text": "9.General Cargo Iron Ore 14.0 222 275000 38 27",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "10. General Cargo",
+          "draft_m": 12.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "10. General Cargo 12.5 250 55000 42 52",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "11. General Cargo",
+          "draft_m": 12.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "11. General Cargo 12.5 270 65,000 63 68",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Barge Berth No. 1 to3",
+          "draft_m": 9.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "Barge Berth No. 1 to3 9.5 - - -",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Barge Berth No. 4",
+          "draft_m": 7.0,
+          "dry_bulk_relevant": false,
+          "raw_text": "Barge Berth No. 4 7.0 194.0 - -",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Barge Berth No. 5",
+          "draft_m": 13.0,
+          "dry_bulk_relevant": false,
+          "raw_text": "Barge Berth No. 5 13.0 210.0 - -",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Barge Berth No. 6",
+          "draft_m": 14.0,
+          "dry_bulk_relevant": false,
+          "raw_text": "Barge Berth No. 6 14.0 240.0 - -",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "No.1 Mix Cargo (except Coal)",
+          "draft_m": 13.1,
+          "dry_bulk_relevant": true,
+          "raw_text": "No.1 Mix Cargo (except Coal) 13.1 340 70,000 - -",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "No2. Iron ore /Coal",
+          "draft_m": 13.1,
+          "dry_bulk_relevant": true,
+          "raw_text": "No2. Iron ore /Coal 13.1 340 70,000 - -",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "No.3 Iron ore",
+          "draft_m": 13.1,
+          "dry_bulk_relevant": true,
+          "raw_text": "No.3 Iron ore 13.1 340 70,000 - -",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "No.4 Mooring Dolphins",
+          "draft_m": 13.1,
+          "dry_bulk_relevant": false,
+          "raw_text": "No.4 Mooring Dolphins 13.1 340 70,000 - -",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "No.5 Mooring Dolphins",
+          "draft_m": 13.1,
+          "dry_bulk_relevant": false,
+          "raw_text": "No.5 Mooring Dolphins 13.1 340 70,000 - -",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "No.6 Mooring Dolphins",
+          "draft_m": 13.1,
+          "dry_bulk_relevant": false,
+          "raw_text": "No.6 Mooring Dolphins 13.1 360 70,000 - -",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        }
+      ],
+      "dry_bulk_facilities": [
+        {
+          "name": "6. Coal, Coke",
+          "draft_m": 13.0,
+          "dry_bulk_relevant": true,
+          "raw_text": "6. Coal, Coke 13.0 50 70000 76 80",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "7. Coal, Coke",
+          "draft_m": 14.0,
+          "dry_bulk_relevant": true,
+          "raw_text": "7. Coal, Coke 14.0 300 70 68",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "8. Liquid Bulk",
+          "draft_m": 13.0,
+          "dry_bulk_relevant": true,
+          "raw_text": "8. Liquid Bulk 13.0 50 125000 28 23",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "9.General Cargo Iron Ore",
+          "draft_m": 14.0,
+          "dry_bulk_relevant": true,
+          "raw_text": "9.General Cargo Iron Ore 14.0 222 275000 38 27",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "No.1 Mix Cargo (except Coal)",
+          "draft_m": 13.1,
+          "dry_bulk_relevant": true,
+          "raw_text": "No.1 Mix Cargo (except Coal) 13.1 340 70,000 - -",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "No2. Iron ore /Coal",
+          "draft_m": 13.1,
+          "dry_bulk_relevant": true,
+          "raw_text": "No2. Iron ore /Coal 13.1 340 70,000 - -",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "No.3 Iron ore",
+          "draft_m": 13.1,
+          "dry_bulk_relevant": true,
+          "raw_text": "No.3 Iron ore 13.1 340 70,000 - -",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        }
+      ],
+      "specification_note": null,
+      "data_caveat": "Draft and berth values are dated reference snapshots, not navigational limits. Confirm current permissible draft, tide restrictions and berth availability with the port or agent.",
+      "satellite_context": {
+        "provider": "Esri World Imagery",
+        "attribution_url": "https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9",
+        "views": [
+          {
+            "label": "Terminal detail",
+            "span_degrees": 0.018
+          },
+          {
+            "label": "Harbour context",
+            "span_degrees": 0.055
+          },
+          {
+            "label": "Regional approach",
+            "span_degrees": 0.14
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "Basic Port Statistics of India 2024-25",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2025-03-31",
+          "scope": "Official port master and infrastructure snapshot"
+        },
+        {
+          "title": "Workbook traffic source",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2024-25",
+          "scope": "Latest available port traffic"
+        },
+        {
+          "title": "Adani Ports capacity disclosure",
+          "url": "https://www.adaniports.com/-/media/Project/Ports/Investor/corporate-governance/Corporate-Announcement/other-intimation/Press-Release-30_AUG.pdf",
+          "as_of": "2024-08-30",
+          "scope": "Company-reported port capacity"
+        }
+      ]
+    },
+    {
+      "asset_id": "india-coal-terminal-muldwarka-port",
+      "asset_name": "Muldwarka Port",
+      "official_port_id": "NM027",
+      "official_port_name": "Mul-Dwarka",
+      "match_method": "controlled_alias",
+      "match_confidence": 1.0,
+      "state_ut": "Gujarat",
+      "coast": "West",
+      "port_class": "Non-major",
+      "operating_status": "No cargo marker in FY2024-25",
+      "latitude": 20.77583,
+      "longitude": 70.60861,
+      "official_website": "https://gmbports.org/gmb-owned-ports",
+      "source_as_of": "2025-03-31",
+      "max_documented_draft_m": null,
+      "documented_berth_count": null,
+      "documented_dry_bulk_berth_count": null,
+      "port_capacity_mtpa": null,
+      "latest_traffic_mt": 3.339,
+      "latest_traffic_period": "2024-25",
+      "latest_traffic_scope": "Mul-Dwarka",
+      "terminal_operating_capacity_mtpa": 2.2,
+      "terminal_expansion_capacity_mtpa": null,
+      "dry_bulk_commodities": [],
+      "berth_facilities": [],
+      "dry_bulk_facilities": [],
+      "specification_note": null,
+      "data_caveat": "Draft and berth values are dated reference snapshots, not navigational limits. Confirm current permissible draft, tide restrictions and berth availability with the port or agent.",
+      "satellite_context": {
+        "provider": "Esri World Imagery",
+        "attribution_url": "https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9",
+        "views": [
+          {
+            "label": "Terminal detail",
+            "span_degrees": 0.018
+          },
+          {
+            "label": "Harbour context",
+            "span_degrees": 0.055
+          },
+          {
+            "label": "Regional approach",
+            "span_degrees": 0.14
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "Basic Port Statistics of India 2024-25",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2025-03-31",
+          "scope": "Official port master and infrastructure snapshot"
+        },
+        {
+          "title": "Workbook traffic source",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2024-25",
+          "scope": "Latest available port traffic"
+        },
+        {
+          "title": "Gujarat Maritime Board port network",
+          "url": "https://gmbports.org/gmb-owned-ports",
+          "as_of": "2026-07-28",
+          "scope": "Port ownership and operating context"
+        }
+      ]
+    },
+    {
+      "asset_id": "india-coal-terminal-mundra-port",
+      "asset_name": "Mundra Port",
+      "official_port_id": "NM024",
+      "official_port_name": "Adani Ports & SEZ ltd.(GAPL)",
+      "match_method": "controlled_alias",
+      "match_confidence": 1.0,
+      "state_ut": "Gujarat",
+      "coast": "West",
+      "port_class": "Non-major",
+      "operating_status": "Cargo handled in FY2024-25",
+      "latitude": 22.7548674425,
+      "longitude": 69.5599611872,
+      "official_website": "https://www.adaniports.com/",
+      "source_as_of": "2025-03-31",
+      "max_documented_draft_m": null,
+      "documented_berth_count": null,
+      "documented_dry_bulk_berth_count": null,
+      "port_capacity_mtpa": 264,
+      "latest_traffic_mt": 199.539,
+      "latest_traffic_period": "2024-25",
+      "latest_traffic_scope": "Adani Ports & SEZ ltd.(GAPL)",
+      "terminal_operating_capacity_mtpa": 60.0,
+      "terminal_expansion_capacity_mtpa": null,
+      "dry_bulk_commodities": [],
+      "berth_facilities": [],
+      "dry_bulk_facilities": [],
+      "specification_note": null,
+      "data_caveat": "Draft and berth values are dated reference snapshots, not navigational limits. Confirm current permissible draft, tide restrictions and berth availability with the port or agent.",
+      "satellite_context": {
+        "provider": "Esri World Imagery",
+        "attribution_url": "https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9",
+        "views": [
+          {
+            "label": "Terminal detail",
+            "span_degrees": 0.018
+          },
+          {
+            "label": "Harbour context",
+            "span_degrees": 0.055
+          },
+          {
+            "label": "Regional approach",
+            "span_degrees": 0.14
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "Basic Port Statistics of India 2024-25",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2025-03-31",
+          "scope": "Official port master and infrastructure snapshot"
+        },
+        {
+          "title": "Workbook traffic source",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2024-25",
+          "scope": "Latest available port traffic"
+        },
+        {
+          "title": "Adani Ports capacity disclosure",
+          "url": "https://www.adaniports.com/-/media/Project/Ports/Investor/corporate-governance/Corporate-Announcement/other-intimation/Press-Release-30_AUG.pdf",
+          "as_of": "2024-08-30",
+          "scope": "Company-reported port capacity"
+        }
+      ]
+    },
+    {
+      "asset_id": "india-coal-terminal-navlakhi-port",
+      "asset_name": "Navlakhi Port",
+      "official_port_id": "NM031",
+      "official_port_name": "Navlakhi",
+      "match_method": "controlled_alias",
+      "match_confidence": 1.0,
+      "state_ut": "Gujarat",
+      "coast": "West",
+      "port_class": "Non-major",
+      "operating_status": "Cargo handled in FY2024-25",
+      "latitude": 22.957297,
+      "longitude": 70.449298,
+      "official_website": "https://gmbports.org/gmb-owned-ports",
+      "source_as_of": "2025-03-31",
+      "max_documented_draft_m": null,
+      "documented_berth_count": null,
+      "documented_dry_bulk_berth_count": null,
+      "port_capacity_mtpa": null,
+      "latest_traffic_mt": 7.695,
+      "latest_traffic_period": "2024-25",
+      "latest_traffic_scope": "Navlakhi",
+      "terminal_operating_capacity_mtpa": 8.0,
+      "terminal_expansion_capacity_mtpa": 12.0,
+      "dry_bulk_commodities": [],
+      "berth_facilities": [],
+      "dry_bulk_facilities": [],
+      "specification_note": null,
+      "data_caveat": "Draft and berth values are dated reference snapshots, not navigational limits. Confirm current permissible draft, tide restrictions and berth availability with the port or agent.",
+      "satellite_context": {
+        "provider": "Esri World Imagery",
+        "attribution_url": "https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9",
+        "views": [
+          {
+            "label": "Terminal detail",
+            "span_degrees": 0.018
+          },
+          {
+            "label": "Harbour context",
+            "span_degrees": 0.055
+          },
+          {
+            "label": "Regional approach",
+            "span_degrees": 0.14
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "Basic Port Statistics of India 2024-25",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2025-03-31",
+          "scope": "Official port master and infrastructure snapshot"
+        },
+        {
+          "title": "Workbook traffic source",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2024-25",
+          "scope": "Latest available port traffic"
+        },
+        {
+          "title": "Gujarat Maritime Board port network",
+          "url": "https://gmbports.org/gmb-owned-ports",
+          "as_of": "2026-07-28",
+          "scope": "Port ownership and operating context"
+        }
+      ]
+    },
+    {
+      "asset_id": "india-coal-terminal-new-mangalore-port",
+      "asset_name": "New Mangalore Port",
+      "official_port_id": "M05",
+      "official_port_name": "New Mangalore Port Authority",
+      "match_method": "controlled_alias",
+      "match_confidence": 1.0,
+      "state_ut": "Karnataka",
+      "coast": "West",
+      "port_class": "Major",
+      "operating_status": "Operational",
+      "latitude": 12.922086,
+      "longitude": 74.815178,
+      "official_website": "https://newmangaloreport.gov.in/",
+      "source_as_of": "2025-03-31",
+      "max_documented_draft_m": 14.0,
+      "documented_berth_count": 17,
+      "documented_dry_bulk_berth_count": 7,
+      "port_capacity_mtpa": 114.96,
+      "latest_traffic_mt": 46.01,
+      "latest_traffic_period": "2024-25",
+      "latest_traffic_scope": "New Mangalore Port Authority",
+      "terminal_operating_capacity_mtpa": 21.0,
+      "terminal_expansion_capacity_mtpa": null,
+      "dry_bulk_commodities": [
+        {
+          "commodity": "Thermal Coal",
+          "fy": "2024-25",
+          "total_mt": 6.503
+        },
+        {
+          "commodity": "Iron Ore/Pellets",
+          "fy": "2024-25",
+          "total_mt": 2.086
+        },
+        {
+          "commodity": "Coking Coal",
+          "fy": "2024-25",
+          "total_mt": 0.604
+        },
+        {
+          "commodity": "Fertiliser",
+          "fy": "2024-25",
+          "total_mt": 0.546
+        },
+        {
+          "commodity": "Cement",
+          "fy": "2024-25",
+          "total_mt": 0.25
+        },
+        {
+          "commodity": "Iron & Steel",
+          "fy": "2024-25",
+          "total_mt": 0.185
+        },
+        {
+          "commodity": "Other Ore",
+          "fy": "2024-25",
+          "total_mt": 0.019
+        }
+      ],
+      "berth_facilities": [
+        {
+          "name": "Berth No. 1 General Cargo*",
+          "draft_m": 7.0,
+          "dry_bulk_relevant": false,
+          "raw_text": "Berth No. 1 General Cargo* 7.0 125 4000 - -",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No. 2 General Cargo",
+          "draft_m": 10.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "Berth No. 2 General Cargo 10.5 198 30000 10 10",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No. 3 General Cargo",
+          "draft_m": 10.3,
+          "dry_bulk_relevant": false,
+          "raw_text": "Berth No. 3 General Cargo 10.3 198 30000 24 25",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No. 4 General Cargo/Liq. Amonia/Phos. Acid",
+          "draft_m": 9.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "Berth No. 4 General Cargo/Liq. Amonia/Phos. Acid 9.5 198 30000 13 9",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No. 5 General Cargo/Bulk Cement/Edible Oil",
+          "draft_m": 9.5,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No. 5 General Cargo/Bulk Cement/Edible Oil 9.5 198 30000 37 41",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No. 6 Coal/Bulk Cargo",
+          "draft_m": 9.5,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No. 6 Coal/Bulk Cargo 9.5 198 30000 13 17",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No. 7 Coal/Bulk Cargo",
+          "draft_m": 9.5,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No. 7 Coal/Bulk Cargo 9.5 198 30000 21 14",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No.8 Coal/ Iron Ore (KIOCL)",
+          "draft_m": 12.5,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No.8 Coal/ Iron Ore (KIOCL) 12.5 300 60000 44 23",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No.9 LPG",
+          "draft_m": 10.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "Berth No.9 LPG 10.5 330 45000 56 35",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Birth No.10 Cruid/ POL Product",
+          "draft_m": 14.0,
+          "dry_bulk_relevant": false,
+          "raw_text": "Birth No.10 Cruid/ POL Product 14.0 320 85000 58 63",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Birth No.11 Cruid/ POL Product",
+          "draft_m": 14.0,
+          "dry_bulk_relevant": false,
+          "raw_text": "Birth No.11 Cruid/ POL Product 14.0 320 85000 60 62",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Birth No.12 POL Product/LPG/Chemical",
+          "draft_m": 12.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "Birth No.12 POL Product/LPG/Chemical 12.5 320 50000 74 68",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Birth No.13 POL Product",
+          "draft_m": 14.0,
+          "dry_bulk_relevant": false,
+          "raw_text": "Birth No.13 POL Product 14.0 350 85000 75 83",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No. 14 Coal/Bulk cargo",
+          "draft_m": 14.0,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No. 14 Coal/Bulk cargo 14.0 350 90000 54 49",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No.15 Coal (UPCL)",
+          "draft_m": 14.0,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No.15 Coal (UPCL) 14.0 350 90000 35 27",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No.16 Coal/Bulk Cargo",
+          "draft_m": 14.0,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No.16 Coal/Bulk Cargo 14.0 325 90000 41 50",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Single Point Mooring (SPM) ^",
+          "draft_m": 21.0,
+          "dry_bulk_relevant": false,
+          "raw_text": "Single Point Mooring (SPM) ^ 21.0 - 300000 46 53",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        }
+      ],
+      "dry_bulk_facilities": [
+        {
+          "name": "Berth No. 5 General Cargo/Bulk Cement/Edible Oil",
+          "draft_m": 9.5,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No. 5 General Cargo/Bulk Cement/Edible Oil 9.5 198 30000 37 41",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No. 6 Coal/Bulk Cargo",
+          "draft_m": 9.5,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No. 6 Coal/Bulk Cargo 9.5 198 30000 13 17",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No. 7 Coal/Bulk Cargo",
+          "draft_m": 9.5,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No. 7 Coal/Bulk Cargo 9.5 198 30000 21 14",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No.8 Coal/ Iron Ore (KIOCL)",
+          "draft_m": 12.5,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No.8 Coal/ Iron Ore (KIOCL) 12.5 300 60000 44 23",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No. 14 Coal/Bulk cargo",
+          "draft_m": 14.0,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No. 14 Coal/Bulk cargo 14.0 350 90000 54 49",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No.15 Coal (UPCL)",
+          "draft_m": 14.0,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No.15 Coal (UPCL) 14.0 350 90000 35 27",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No.16 Coal/Bulk Cargo",
+          "draft_m": 14.0,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No.16 Coal/Bulk Cargo 14.0 325 90000 41 50",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        }
+      ],
+      "specification_note": null,
+      "data_caveat": "Draft and berth values are dated reference snapshots, not navigational limits. Confirm current permissible draft, tide restrictions and berth availability with the port or agent.",
+      "satellite_context": {
+        "provider": "Esri World Imagery",
+        "attribution_url": "https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9",
+        "views": [
+          {
+            "label": "Terminal detail",
+            "span_degrees": 0.018
+          },
+          {
+            "label": "Harbour context",
+            "span_degrees": 0.055
+          },
+          {
+            "label": "Regional approach",
+            "span_degrees": 0.14
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "Basic Port Statistics of India 2024-25",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2025-03-31",
+          "scope": "Official port master and infrastructure snapshot"
+        },
+        {
+          "title": "Workbook traffic source",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2024-25",
+          "scope": "Latest available port traffic"
+        }
+      ]
+    },
+    {
+      "asset_id": "india-coal-terminal-okha-port",
+      "asset_name": "Okha Port",
+      "official_port_id": "NM032",
+      "official_port_name": "Okha",
+      "match_method": "controlled_alias",
+      "match_confidence": 1.0,
+      "state_ut": "Gujarat",
+      "coast": "West",
+      "port_class": "Non-major",
+      "operating_status": "Cargo handled in FY2024-25",
+      "latitude": 22.470229,
+      "longitude": 69.081688,
+      "official_website": "https://gmbports.org/gmb-owned-ports",
+      "source_as_of": "2025-03-31",
+      "max_documented_draft_m": null,
+      "documented_berth_count": null,
+      "documented_dry_bulk_berth_count": null,
+      "port_capacity_mtpa": null,
+      "latest_traffic_mt": 4.466,
+      "latest_traffic_period": "2024-25",
+      "latest_traffic_scope": "Okha",
+      "terminal_operating_capacity_mtpa": 5.0,
+      "terminal_expansion_capacity_mtpa": null,
+      "dry_bulk_commodities": [],
+      "berth_facilities": [],
+      "dry_bulk_facilities": [],
+      "specification_note": null,
+      "data_caveat": "Draft and berth values are dated reference snapshots, not navigational limits. Confirm current permissible draft, tide restrictions and berth availability with the port or agent.",
+      "satellite_context": {
+        "provider": "Esri World Imagery",
+        "attribution_url": "https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9",
+        "views": [
+          {
+            "label": "Terminal detail",
+            "span_degrees": 0.018
+          },
+          {
+            "label": "Harbour context",
+            "span_degrees": 0.055
+          },
+          {
+            "label": "Regional approach",
+            "span_degrees": 0.14
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "Basic Port Statistics of India 2024-25",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2025-03-31",
+          "scope": "Official port master and infrastructure snapshot"
+        },
+        {
+          "title": "Workbook traffic source",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2024-25",
+          "scope": "Latest available port traffic"
+        },
+        {
+          "title": "Gujarat Maritime Board port network",
+          "url": "https://gmbports.org/gmb-owned-ports",
+          "as_of": "2026-07-28",
+          "scope": "Port ownership and operating context"
+        }
+      ]
+    },
+    {
+      "asset_id": "india-coal-terminal-paradip-port",
+      "asset_name": "Paradip Port",
+      "official_port_id": "M11",
+      "official_port_name": "Paradip Port Authority",
+      "match_method": "controlled_alias",
+      "match_confidence": 1.0,
+      "state_ut": "Odisha",
+      "coast": "East",
+      "port_class": "Major",
+      "operating_status": "Operational",
+      "latitude": 20.278703,
+      "longitude": 86.671786,
+      "official_website": "https://paradipport.gov.in/berth-specifications/",
+      "source_as_of": "2025-03-31",
+      "max_documented_draft_m": 16,
+      "documented_berth_count": 24,
+      "documented_dry_bulk_berth_count": 6,
+      "port_capacity_mtpa": 289.55,
+      "latest_traffic_mt": 150.41,
+      "latest_traffic_period": "2024-25",
+      "latest_traffic_scope": "Paradip Port Authority",
+      "terminal_operating_capacity_mtpa": 55.0,
+      "terminal_expansion_capacity_mtpa": 35.0,
+      "dry_bulk_commodities": [
+        {
+          "commodity": "Thermal Coal",
+          "fy": "2024-25",
+          "total_mt": 46.074
+        },
+        {
+          "commodity": "Iron Ore/Pellets",
+          "fy": "2024-25",
+          "total_mt": 23.071
+        },
+        {
+          "commodity": "Coking Coal",
+          "fy": "2024-25",
+          "total_mt": 10.889
+        },
+        {
+          "commodity": "Fertiliser",
+          "fy": "2024-25",
+          "total_mt": 2.142
+        },
+        {
+          "commodity": "Iron & Steel",
+          "fy": "2024-25",
+          "total_mt": 1.904
+        },
+        {
+          "commodity": "Other Ore",
+          "fy": "2024-25",
+          "total_mt": 1.326
+        },
+        {
+          "commodity": "Iron Scrap",
+          "fy": "2024-25",
+          "total_mt": 0.079
+        }
+      ],
+      "berth_facilities": [
+        {
+          "name": "Iron Ore Berth-Iron Ore",
+          "draft_m": 13.0,
+          "dry_bulk_relevant": true,
+          "raw_text": "Iron Ore Berth-Iron Ore 13.0 70,000 72 72",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "East Quay - I -General",
+          "draft_m": 14.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "East Quay - I -General 14.5 60000 3 3",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "East Quay - III-General",
+          "draft_m": 12.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "East Quay - III-General 12.5 70000 50 50",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "South Quay-General",
+          "draft_m": 12.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "South Quay-General 12.5 270 60000 69 69",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Central Quay - I-General",
+          "draft_m": 14.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "Central Quay - I-General 14.5 95000 73 87",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Central Quay - II-General",
+          "draft_m": 14.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "Central Quay - II-General 14.5 95000 71 85",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Central Quay - III-General",
+          "draft_m": 14.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "Central Quay - III-General 14.5 95000 42 62",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Fertiliser Berth - I",
+          "draft_m": 14.5,
+          "dry_bulk_relevant": true,
+          "raw_text": "Fertiliser Berth - I 14.5 250 95000 57 71",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Fertiliser Berth - II",
+          "draft_m": 14.5,
+          "dry_bulk_relevant": true,
+          "raw_text": "Fertiliser Berth - II 14.5 230 95000 71 66",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Multipurpose Berth-General ( MPB)",
+          "draft_m": 14.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "Multipurpose Berth-General ( MPB) 14.5 250 95000 74 88",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Coal Berth - I",
+          "draft_m": 14.5,
+          "dry_bulk_relevant": true,
+          "raw_text": "Coal Berth - I 14.5 260 80000 70 67",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Coal Berth - II",
+          "draft_m": 14.5,
+          "dry_bulk_relevant": true,
+          "raw_text": "Coal Berth - II 14.5 260 80000 67 72",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "North Oil Jetty",
+          "draft_m": 13.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "North Oil Jetty 13.5 80000",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "SPM",
+          "draft_m": 21.0,
+          "dry_bulk_relevant": false,
+          "raw_text": "SPM 21.0 - 32000 74 20",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "SPM -II",
+          "draft_m": 23.0,
+          "dry_bulk_relevant": false,
+          "raw_text": "SPM -II 23.0",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "SPM -III",
+          "draft_m": 23.0,
+          "dry_bulk_relevant": false,
+          "raw_text": "SPM -III 23.0",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "South Oil Jetty",
+          "draft_m": 14.0,
+          "dry_bulk_relevant": false,
+          "raw_text": "South Oil Jetty 14.0 - 62 67",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "RO-RO Jetty- P. Cargo",
+          "draft_m": 5.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "RO-RO Jetty- P. Cargo 5.5 50 10000 - -",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "North Quay-I",
+          "draft_m": 5.0,
+          "dry_bulk_relevant": false,
+          "raw_text": "North Quay-I 5.0 - - - -",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "North Quay-II",
+          "draft_m": 7.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "North Quay-II 7.5 130 - - -",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "PICT",
+          "draft_m": 14.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "PICT 14.5 450 78 76.43",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "NIOB",
+          "draft_m": 14.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "NIOB 14.5 370 - 74 68.04",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Mooring berth (off FB-1)",
+          "draft_m": 7.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "Mooring berth (off FB-1) 7.5 130 58 71.34",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "New Coal import berth",
+          "draft_m": 14.5,
+          "dry_bulk_relevant": true,
+          "raw_text": "New Coal import berth 14.5 370",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        }
+      ],
+      "dry_bulk_facilities": [
+        {
+          "name": "Iron Ore Berth-Iron Ore",
+          "draft_m": 13.0,
+          "dry_bulk_relevant": true,
+          "raw_text": "Iron Ore Berth-Iron Ore 13.0 70,000 72 72",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Fertiliser Berth - I",
+          "draft_m": 14.5,
+          "dry_bulk_relevant": true,
+          "raw_text": "Fertiliser Berth - I 14.5 250 95000 57 71",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Fertiliser Berth - II",
+          "draft_m": 14.5,
+          "dry_bulk_relevant": true,
+          "raw_text": "Fertiliser Berth - II 14.5 230 95000 71 66",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Coal Berth - I",
+          "draft_m": 14.5,
+          "dry_bulk_relevant": true,
+          "raw_text": "Coal Berth - I 14.5 260 80000 70 67",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Coal Berth - II",
+          "draft_m": 14.5,
+          "dry_bulk_relevant": true,
+          "raw_text": "Coal Berth - II 14.5 260 80000 67 72",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "New Coal import berth",
+          "draft_m": 14.5,
+          "dry_bulk_relevant": true,
+          "raw_text": "New Coal import berth 14.5 370",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        }
+      ],
+      "specification_note": "The current port-authority berth page supersedes the workbook snapshot for operating limits; always confirm the latest notice.",
+      "data_caveat": "Draft and berth values are dated reference snapshots, not navigational limits. Confirm current permissible draft, tide restrictions and berth availability with the port or agent.",
+      "satellite_context": {
+        "provider": "Esri World Imagery",
+        "attribution_url": "https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9",
+        "views": [
+          {
+            "label": "Terminal detail",
+            "span_degrees": 0.018
+          },
+          {
+            "label": "Harbour context",
+            "span_degrees": 0.055
+          },
+          {
+            "label": "Regional approach",
+            "span_degrees": 0.14
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "Basic Port Statistics of India 2024-25",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2025-03-31",
+          "scope": "Official port master and infrastructure snapshot"
+        },
+        {
+          "title": "Workbook traffic source",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2024-25",
+          "scope": "Latest available port traffic"
+        },
+        {
+          "title": "Paradip Port Authority berth specifications",
+          "url": "https://paradipport.gov.in/berth-specifications/",
+          "as_of": "2026-02-23",
+          "scope": "Port or terminal specifications"
+        }
+      ]
+    },
+    {
+      "asset_id": "india-coal-terminal-pipavav-port",
+      "asset_name": "Pipavav Port",
+      "official_port_id": "NM035",
+      "official_port_name": "Pipavav (GPPL)",
+      "match_method": "controlled_alias",
+      "match_confidence": 1.0,
+      "state_ut": "Gujarat",
+      "coast": "West",
+      "port_class": "Non-major",
+      "operating_status": "Cargo handled in FY2024-25",
+      "latitude": 20.922441,
+      "longitude": 71.507478,
+      "official_website": "https://www.apmterminals.com/en/pipavav/about/dedicated-freight-corridor",
+      "source_as_of": "2025-03-31",
+      "max_documented_draft_m": null,
+      "documented_berth_count": null,
+      "documented_dry_bulk_berth_count": null,
+      "port_capacity_mtpa": null,
+      "latest_traffic_mt": 13.933,
+      "latest_traffic_period": "2024-25",
+      "latest_traffic_scope": "Pipavav (GPPL)",
+      "terminal_operating_capacity_mtpa": 4.0,
+      "terminal_expansion_capacity_mtpa": null,
+      "dry_bulk_commodities": [],
+      "berth_facilities": [],
+      "dry_bulk_facilities": [],
+      "specification_note": "APM Terminals reports 735 m berth length. Maximum operating draft was not safely flattenable from the source used here.",
+      "data_caveat": "Draft and berth values are dated reference snapshots, not navigational limits. Confirm current permissible draft, tide restrictions and berth availability with the port or agent.",
+      "satellite_context": {
+        "provider": "Esri World Imagery",
+        "attribution_url": "https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9",
+        "views": [
+          {
+            "label": "Terminal detail",
+            "span_degrees": 0.018
+          },
+          {
+            "label": "Harbour context",
+            "span_degrees": 0.055
+          },
+          {
+            "label": "Regional approach",
+            "span_degrees": 0.14
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "Basic Port Statistics of India 2024-25",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2025-03-31",
+          "scope": "Official port master and infrastructure snapshot"
+        },
+        {
+          "title": "Workbook traffic source",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2024-25",
+          "scope": "Latest available port traffic"
+        },
+        {
+          "title": "APM Terminals Pipavav",
+          "url": "https://www.apmterminals.com/en/pipavav/about/dedicated-freight-corridor",
+          "as_of": "2026-07-28",
+          "scope": "Port or terminal specifications"
+        }
+      ]
+    },
+    {
+      "asset_id": "india-coal-terminal-porbandar-port",
+      "asset_name": "Porbandar Port",
+      "official_port_id": "NM036",
+      "official_port_name": "Porbandar",
+      "match_method": "controlled_alias",
+      "match_confidence": 1.0,
+      "state_ut": "Gujarat",
+      "coast": "West",
+      "port_class": "Non-major",
+      "operating_status": "Cargo handled in FY2024-25",
+      "latitude": 21.640436,
+      "longitude": 69.593775,
+      "official_website": "https://gmbports.org/gmb-owned-ports",
+      "source_as_of": "2025-03-31",
+      "max_documented_draft_m": null,
+      "documented_berth_count": null,
+      "documented_dry_bulk_berth_count": null,
+      "port_capacity_mtpa": null,
+      "latest_traffic_mt": 1.68,
+      "latest_traffic_period": "2024-25",
+      "latest_traffic_scope": "Porbandar",
+      "terminal_operating_capacity_mtpa": 3.0,
+      "terminal_expansion_capacity_mtpa": null,
+      "dry_bulk_commodities": [],
+      "berth_facilities": [],
+      "dry_bulk_facilities": [],
+      "specification_note": null,
+      "data_caveat": "Draft and berth values are dated reference snapshots, not navigational limits. Confirm current permissible draft, tide restrictions and berth availability with the port or agent.",
+      "satellite_context": {
+        "provider": "Esri World Imagery",
+        "attribution_url": "https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9",
+        "views": [
+          {
+            "label": "Terminal detail",
+            "span_degrees": 0.018
+          },
+          {
+            "label": "Harbour context",
+            "span_degrees": 0.055
+          },
+          {
+            "label": "Regional approach",
+            "span_degrees": 0.14
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "Basic Port Statistics of India 2024-25",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2025-03-31",
+          "scope": "Official port master and infrastructure snapshot"
+        },
+        {
+          "title": "Workbook traffic source",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2024-25",
+          "scope": "Latest available port traffic"
+        },
+        {
+          "title": "Gujarat Maritime Board port network",
+          "url": "https://gmbports.org/gmb-owned-ports",
+          "as_of": "2026-07-28",
+          "scope": "Port ownership and operating context"
+        }
+      ]
+    },
+    {
+      "asset_id": "india-coal-terminal-salaya-port",
+      "asset_name": "Salaya Port",
+      "official_port_id": "NM041",
+      "official_port_name": "Salaya",
+      "match_method": "controlled_alias",
+      "match_confidence": 1.0,
+      "state_ut": "Gujarat",
+      "coast": "West",
+      "port_class": "Non-major",
+      "operating_status": "Cargo handled in FY2024-25",
+      "latitude": 22.367169,
+      "longitude": 69.621535,
+      "official_website": "https://gmbports.org/gmb-owned-ports",
+      "source_as_of": "2025-03-31",
+      "max_documented_draft_m": null,
+      "documented_berth_count": null,
+      "documented_dry_bulk_berth_count": null,
+      "port_capacity_mtpa": null,
+      "latest_traffic_mt": 4.434,
+      "latest_traffic_period": "2024-25",
+      "latest_traffic_scope": "Salaya",
+      "terminal_operating_capacity_mtpa": 7.5,
+      "terminal_expansion_capacity_mtpa": null,
+      "dry_bulk_commodities": [],
+      "berth_facilities": [],
+      "dry_bulk_facilities": [],
+      "specification_note": null,
+      "data_caveat": "Draft and berth values are dated reference snapshots, not navigational limits. Confirm current permissible draft, tide restrictions and berth availability with the port or agent.",
+      "satellite_context": {
+        "provider": "Esri World Imagery",
+        "attribution_url": "https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9",
+        "views": [
+          {
+            "label": "Terminal detail",
+            "span_degrees": 0.018
+          },
+          {
+            "label": "Harbour context",
+            "span_degrees": 0.055
+          },
+          {
+            "label": "Regional approach",
+            "span_degrees": 0.14
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "Basic Port Statistics of India 2024-25",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2025-03-31",
+          "scope": "Official port master and infrastructure snapshot"
+        },
+        {
+          "title": "Workbook traffic source",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2024-25",
+          "scope": "Latest available port traffic"
+        },
+        {
+          "title": "Gujarat Maritime Board port network",
+          "url": "https://gmbports.org/gmb-owned-ports",
+          "as_of": "2026-07-28",
+          "scope": "Port ownership and operating context"
+        }
+      ]
+    },
+    {
+      "asset_id": "india-coal-terminal-sikka-port",
+      "asset_name": "Sikka Port",
+      "official_port_id": "NM042",
+      "official_port_name": "Sikka",
+      "match_method": "controlled_alias",
+      "match_confidence": 1.0,
+      "state_ut": "Gujarat",
+      "coast": "West",
+      "port_class": "Non-major",
+      "operating_status": "Cargo handled in FY2024-25",
+      "latitude": 22.433723,
+      "longitude": 69.820199,
+      "official_website": "https://gmbports.org/gmb-owned-ports",
+      "source_as_of": "2025-03-31",
+      "max_documented_draft_m": null,
+      "documented_berth_count": null,
+      "documented_dry_bulk_berth_count": null,
+      "port_capacity_mtpa": null,
+      "latest_traffic_mt": 136.242,
+      "latest_traffic_period": "2024-25",
+      "latest_traffic_scope": "Sikka",
+      "terminal_operating_capacity_mtpa": 3.0,
+      "terminal_expansion_capacity_mtpa": null,
+      "dry_bulk_commodities": [],
+      "berth_facilities": [],
+      "dry_bulk_facilities": [],
+      "specification_note": null,
+      "data_caveat": "Draft and berth values are dated reference snapshots, not navigational limits. Confirm current permissible draft, tide restrictions and berth availability with the port or agent.",
+      "satellite_context": {
+        "provider": "Esri World Imagery",
+        "attribution_url": "https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9",
+        "views": [
+          {
+            "label": "Terminal detail",
+            "span_degrees": 0.018
+          },
+          {
+            "label": "Harbour context",
+            "span_degrees": 0.055
+          },
+          {
+            "label": "Regional approach",
+            "span_degrees": 0.14
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "Basic Port Statistics of India 2024-25",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2025-03-31",
+          "scope": "Official port master and infrastructure snapshot"
+        },
+        {
+          "title": "Workbook traffic source",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2024-25",
+          "scope": "Latest available port traffic"
+        },
+        {
+          "title": "Gujarat Maritime Board port network",
+          "url": "https://gmbports.org/gmb-owned-ports",
+          "as_of": "2026-07-28",
+          "scope": "Port ownership and operating context"
+        }
+      ]
+    },
+    {
+      "asset_id": "india-coal-terminal-trombay-port",
+      "asset_name": "Trombay Port",
+      "official_port_id": "NM089",
+      "official_port_name": "Trombay",
+      "match_method": "controlled_alias",
+      "match_confidence": 1.0,
+      "state_ut": "Maharashtra",
+      "coast": "West",
+      "port_class": "Non-major",
+      "operating_status": "No cargo marker in FY2024-25",
+      "latitude": 18.991606,
+      "longitude": 72.908227,
+      "official_website": "https://www.mumbaiport.gov.in/showfile.php?lang=1&level=1&lid=1028&ls_id=1287",
+      "source_as_of": "2025-03-31",
+      "max_documented_draft_m": null,
+      "documented_berth_count": null,
+      "documented_dry_bulk_berth_count": null,
+      "port_capacity_mtpa": null,
+      "latest_traffic_mt": 0.0,
+      "latest_traffic_period": "2024-25",
+      "latest_traffic_scope": "Trombay",
+      "terminal_operating_capacity_mtpa": 2.4,
+      "terminal_expansion_capacity_mtpa": null,
+      "dry_bulk_commodities": [],
+      "berth_facilities": [],
+      "dry_bulk_facilities": [],
+      "specification_note": "Mumbai Port Authority publishes a Tata's Trombay facility page. No current maximum draft was safely flattenable from that page.",
+      "data_caveat": "Draft and berth values are dated reference snapshots, not navigational limits. Confirm current permissible draft, tide restrictions and berth availability with the port or agent.",
+      "satellite_context": {
+        "provider": "Esri World Imagery",
+        "attribution_url": "https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9",
+        "views": [
+          {
+            "label": "Terminal detail",
+            "span_degrees": 0.018
+          },
+          {
+            "label": "Harbour context",
+            "span_degrees": 0.055
+          },
+          {
+            "label": "Regional approach",
+            "span_degrees": 0.14
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "Basic Port Statistics of India 2024-25",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2025-03-31",
+          "scope": "Official port master and infrastructure snapshot"
+        },
+        {
+          "title": "Workbook traffic source",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2024-25",
+          "scope": "Latest available port traffic"
+        },
+        {
+          "title": "Mumbai Port Authority — Tata's Trombay",
+          "url": "https://www.mumbaiport.gov.in/showfile.php?lang=1&level=1&lid=1028&ls_id=1287",
+          "as_of": "2026-02-23",
+          "scope": "Port or terminal specifications"
+        }
+      ]
+    },
+    {
+      "asset_id": "india-coal-terminal-tuna-tekra-port",
+      "asset_name": "Tuna Tekra Port",
+      "official_port_id": "M01",
+      "official_port_name": "Deendayal Port Authority",
+      "match_method": "controlled_alias",
+      "match_confidence": 1.0,
+      "state_ut": "Gujarat",
+      "coast": "West",
+      "port_class": "Major",
+      "operating_status": "Operational",
+      "latitude": 22.9076453,
+      "longitude": 70.1043606,
+      "official_website": "https://www.deendayalport.gov.in/",
+      "source_as_of": "2025-03-31",
+      "max_documented_draft_m": null,
+      "documented_berth_count": null,
+      "documented_dry_bulk_berth_count": null,
+      "port_capacity_mtpa": 14,
+      "latest_traffic_mt": 150.16,
+      "latest_traffic_period": "2024-25",
+      "latest_traffic_scope": "Deendayal Port Authority",
+      "terminal_operating_capacity_mtpa": 20.0,
+      "terminal_expansion_capacity_mtpa": null,
+      "dry_bulk_commodities": [
+        {
+          "commodity": "Salt",
+          "fy": "2024-25",
+          "total_mt": 17.484
+        },
+        {
+          "commodity": "Thermal Coal",
+          "fy": "2024-25",
+          "total_mt": 17.034
+        },
+        {
+          "commodity": "Fertiliser",
+          "fy": "2024-25",
+          "total_mt": 4.015
+        },
+        {
+          "commodity": "Food Grains",
+          "fy": "2024-25",
+          "total_mt": 3.779
+        },
+        {
+          "commodity": "Iron Ore/Pellets",
+          "fy": "2024-25",
+          "total_mt": 1.407
+        },
+        {
+          "commodity": "Iron & Steel",
+          "fy": "2024-25",
+          "total_mt": 1.143
+        },
+        {
+          "commodity": "Coking Coal",
+          "fy": "2024-25",
+          "total_mt": 0.672
+        },
+        {
+          "commodity": "Other Ore",
+          "fy": "2024-25",
+          "total_mt": 0.391
+        },
+        {
+          "commodity": "Iron Scrap",
+          "fy": "2024-25",
+          "total_mt": 0.356
+        }
+      ],
+      "berth_facilities": [],
+      "dry_bulk_facilities": [],
+      "specification_note": null,
+      "data_caveat": "Draft and berth values are dated reference snapshots, not navigational limits. Confirm current permissible draft, tide restrictions and berth availability with the port or agent.",
+      "satellite_context": {
+        "provider": "Esri World Imagery",
+        "attribution_url": "https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9",
+        "views": [
+          {
+            "label": "Terminal detail",
+            "span_degrees": 0.018
+          },
+          {
+            "label": "Harbour context",
+            "span_degrees": 0.055
+          },
+          {
+            "label": "Regional approach",
+            "span_degrees": 0.14
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "Basic Port Statistics of India 2024-25",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2025-03-31",
+          "scope": "Official port master and infrastructure snapshot"
+        },
+        {
+          "title": "Workbook traffic source",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2024-25",
+          "scope": "Latest available port traffic"
+        },
+        {
+          "title": "Adani Ports capacity disclosure",
+          "url": "https://www.adaniports.com/-/media/Project/Ports/Investor/corporate-governance/Corporate-Announcement/other-intimation/Press-Release-30_AUG.pdf",
+          "as_of": "2024-08-30",
+          "scope": "Company-reported port capacity"
+        }
+      ]
+    },
+    {
+      "asset_id": "india-coal-terminal-tuticorin-port",
+      "asset_name": "Tuticorin Port",
+      "official_port_id": "M07",
+      "official_port_name": "V.O. Chidambaranar Port Authority",
+      "match_method": "controlled_alias",
+      "match_confidence": 1.0,
+      "state_ut": "Tamil Nadu",
+      "coast": "East",
+      "port_class": "Major",
+      "operating_status": "Operational",
+      "latitude": 8.7567653107,
+      "longitude": 78.2120019419,
+      "official_website": "https://www.vocport.gov.in/",
+      "source_as_of": "2025-03-31",
+      "max_documented_draft_m": 11.5,
+      "documented_berth_count": 12,
+      "documented_dry_bulk_berth_count": 2,
+      "port_capacity_mtpa": 123.46,
+      "latest_traffic_mt": 41.72,
+      "latest_traffic_period": "2024-25",
+      "latest_traffic_scope": "V.O. Chidambaranar Port Authority",
+      "terminal_operating_capacity_mtpa": 29.0,
+      "terminal_expansion_capacity_mtpa": 23.0,
+      "dry_bulk_commodities": [
+        {
+          "commodity": "Thermal Coal",
+          "fy": "2024-25",
+          "total_mt": 9.818
+        },
+        {
+          "commodity": "Fertiliser",
+          "fy": "2024-25",
+          "total_mt": 0.587
+        },
+        {
+          "commodity": "Food Grains",
+          "fy": "2024-25",
+          "total_mt": 0.414
+        },
+        {
+          "commodity": "Salt",
+          "fy": "2024-25",
+          "total_mt": 0.164
+        },
+        {
+          "commodity": "Cement",
+          "fy": "2024-25",
+          "total_mt": 0.064
+        },
+        {
+          "commodity": "Iron & Steel",
+          "fy": "2024-25",
+          "total_mt": 0.035
+        },
+        {
+          "commodity": "Other Ore",
+          "fy": "2024-25",
+          "total_mt": 0.035
+        }
+      ],
+      "berth_facilities": [
+        {
+          "name": "Berth No.1 - General Cargo",
+          "draft_m": 9.3,
+          "dry_bulk_relevant": false,
+          "raw_text": "Berth No.1 - General Cargo 9.3 210 45269 56 65",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No.2 - General Cargo",
+          "draft_m": 9.3,
+          "dry_bulk_relevant": false,
+          "raw_text": "Berth No.2 - General Cargo 9.3 210 57809 57 65",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No.3- Bulk Cargo",
+          "draft_m": 11.5,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No.3- Bulk Cargo 11.5 210 58642 83 83",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No.4 - Bulk & Ph.Acid",
+          "draft_m": 11.5,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No.4 - Bulk & Ph.Acid 11.5 210 70101 80 82",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No.5 - Passenger & GC",
+          "draft_m": 8.6,
+          "dry_bulk_relevant": false,
+          "raw_text": "Berth No.5 - Passenger & GC 8.6 183 57196 84 87",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No. 6 - General Cargo",
+          "draft_m": 9.3,
+          "dry_bulk_relevant": false,
+          "raw_text": "Berth No. 6 - General Cargo 9.3 200 56842 74 88",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No.9- Genral Cargo **",
+          "draft_m": 11.7,
+          "dry_bulk_relevant": false,
+          "raw_text": "Berth No.9- Genral Cargo ** 11.7 370 28966 88 51",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No.7 - Container **",
+          "draft_m": 14.2,
+          "dry_bulk_relevant": false,
+          "raw_text": "Berth No.7 - Container ** 14.2 345 60429 41 27",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No.8- Container",
+          "draft_m": 14.2,
+          "dry_bulk_relevant": false,
+          "raw_text": "Berth No.8- Container 14.2 335 82962 41 75",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No.1 - General Cargo SBW I",
+          "draft_m": 5.9,
+          "dry_bulk_relevant": false,
+          "raw_text": "Berth No.1 - General Cargo SBW I 5.9 140 5400 - -",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "North Cargo Berth -1 (NCB-I)",
+          "draft_m": 7.4,
+          "dry_bulk_relevant": false,
+          "raw_text": "North Cargo Berth -1 (NCB-I) 7.4 140 6298 62 62",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Eastern Arm",
+          "draft_m": 7.4,
+          "dry_bulk_relevant": false,
+          "raw_text": "Eastern Arm 7.4 140 - - -",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        }
+      ],
+      "dry_bulk_facilities": [
+        {
+          "name": "Berth No.3- Bulk Cargo",
+          "draft_m": 11.5,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No.3- Bulk Cargo 11.5 210 58642 83 83",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Berth No.4 - Bulk & Ph.Acid",
+          "draft_m": 11.5,
+          "dry_bulk_relevant": true,
+          "raw_text": "Berth No.4 - Bulk & Ph.Acid 11.5 210 70101 80 82",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        }
+      ],
+      "specification_note": null,
+      "data_caveat": "Draft and berth values are dated reference snapshots, not navigational limits. Confirm current permissible draft, tide restrictions and berth availability with the port or agent.",
+      "satellite_context": {
+        "provider": "Esri World Imagery",
+        "attribution_url": "https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9",
+        "views": [
+          {
+            "label": "Terminal detail",
+            "span_degrees": 0.018
+          },
+          {
+            "label": "Harbour context",
+            "span_degrees": 0.055
+          },
+          {
+            "label": "Regional approach",
+            "span_degrees": 0.14
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "Basic Port Statistics of India 2024-25",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2025-03-31",
+          "scope": "Official port master and infrastructure snapshot"
+        },
+        {
+          "title": "Workbook traffic source",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2024-25",
+          "scope": "Latest available port traffic"
+        }
+      ]
+    },
+    {
+      "asset_id": "india-coal-terminal-visakhapatnam-port",
+      "asset_name": "Visakhapatnam Port",
+      "official_port_id": "M10",
+      "official_port_name": "Visakhapatnam Port Authority",
+      "match_method": "controlled_alias",
+      "match_confidence": 1.0,
+      "state_ut": "Andhra Pradesh",
+      "coast": "East",
+      "port_class": "Major",
+      "operating_status": "Operational",
+      "latitude": 17.68333,
+      "longitude": 83.2833,
+      "official_website": "https://vpt.shipping.gov.in/",
+      "source_as_of": "2025-03-31",
+      "max_documented_draft_m": 18.1,
+      "documented_berth_count": 31,
+      "documented_dry_bulk_berth_count": 3,
+      "port_capacity_mtpa": 154.71,
+      "latest_traffic_mt": 82.62,
+      "latest_traffic_period": "2024-25",
+      "latest_traffic_scope": "Visakhapatnam Port Authority",
+      "terminal_operating_capacity_mtpa": 19.7,
+      "terminal_expansion_capacity_mtpa": null,
+      "dry_bulk_commodities": [
+        {
+          "commodity": "Iron Ore/Pellets",
+          "fy": "2024-25",
+          "total_mt": 11.87
+        },
+        {
+          "commodity": "Coking Coal",
+          "fy": "2024-25",
+          "total_mt": 6.116
+        },
+        {
+          "commodity": "Other Ore",
+          "fy": "2024-25",
+          "total_mt": 3.985
+        },
+        {
+          "commodity": "Fertiliser",
+          "fy": "2024-25",
+          "total_mt": 1.282
+        },
+        {
+          "commodity": "Food Grains",
+          "fy": "2024-25",
+          "total_mt": 1.153
+        },
+        {
+          "commodity": "Iron & Steel",
+          "fy": "2024-25",
+          "total_mt": 0.277
+        },
+        {
+          "commodity": "Salt",
+          "fy": "2024-25",
+          "total_mt": 0.071
+        },
+        {
+          "commodity": "Cement",
+          "fy": "2024-25",
+          "total_mt": 0.065
+        }
+      ],
+      "berth_facilities": [
+        {
+          "name": "East Quay - I",
+          "draft_m": 14.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "East Quay - I 14.5 280.0 … 23 26",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "East Quay - 3",
+          "draft_m": 14.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "East Quay - 3 14.5 … 75 86",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "East Quay - 5",
+          "draft_m": 11.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "East Quay - 5 11.5 … 0 0",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "East Quay - 6",
+          "draft_m": 11.0,
+          "dry_bulk_relevant": false,
+          "raw_text": "East Quay - 6 11.0 185 … 75 87",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "East Quay - 7",
+          "draft_m": 14.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "East Quay - 7 14.5 255 … 88 87",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "East Quay - 8",
+          "draft_m": 14.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "East Quay - 8 14.5 255 … 60 57",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "East Quay - 9",
+          "draft_m": 14.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "East Quay - 9 14.5 255 69 60",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "East Quay -10",
+          "draft_m": 11.0,
+          "dry_bulk_relevant": false,
+          "raw_text": "East Quay -10 11.0 180 … 8 6",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "West Quay - 1",
+          "draft_m": 13.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "West Quay - 1 13.5 212 … 83 71",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "West Quay - 2",
+          "draft_m": 13.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "West Quay - 2 13.5 227 … 75 65",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "West Quay - 3",
+          "draft_m": 13.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "West Quay - 3 13.5 201 … 82 73",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "West Quay - 4",
+          "draft_m": 11.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "West Quay - 4 11.5 243 … 53 53",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "West Quay - 5",
+          "draft_m": 11.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "West Quay - 5 11.5 242 … 35 27",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "West Quay -6",
+          "draft_m": 13.0,
+          "dry_bulk_relevant": false,
+          "raw_text": "West Quay -6 13.0 255 … 73 68",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "RE WQ-I -POL and small Jatties",
+          "draft_m": 11.0,
+          "dry_bulk_relevant": false,
+          "raw_text": "RE WQ-I -POL and small Jatties 11.0 163 … - -",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "West Quay -7",
+          "draft_m": 14.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "West Quay -7 14.5 280 … 72 72",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "West Quay -8",
+          "draft_m": 14.5,
+          "dry_bulk_relevant": false,
+          "raw_text": "West Quay -8 14.5 280 77 68",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "O R - 1*",
+          "draft_m": 11.0,
+          "dry_bulk_relevant": false,
+          "raw_text": "O R - 1* 11.0 243 … 89 81",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "* OR 1 berth operational w.e.f",
+          "draft_m": 7.1,
+          "dry_bulk_relevant": false,
+          "raw_text": "* OR 1 berth operational w.e.f 7.10.2023 and OR-2 berth de- commissioned w.e.f 17.10.2023.",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "OR2*",
+          "draft_m": 9.8,
+          "dry_bulk_relevant": false,
+          "raw_text": "OR2* 9.8 183 75 -",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "OR3",
+          "draft_m": 10.1,
+          "dry_bulk_relevant": false,
+          "raw_text": "OR3 10.1 180 32 42",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "1. VGCB - General cum Bulk Cargo@-Multipurpose",
+          "draft_m": 18.1,
+          "dry_bulk_relevant": true,
+          "raw_text": "1. VGCB - General cum Bulk Cargo@-Multipurpose 18.1 356 … 73 62",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "OB -Iron Ore/Coking Coal/Steam coal",
+          "draft_m": 16.5,
+          "dry_bulk_relevant": true,
+          "raw_text": "OB -Iron Ore/Coking Coal/Steam coal 16.5 333 … 76 65",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "OB -2 Iron Ore/Coking Coal/Steam coal",
+          "draft_m": 17.0,
+          "dry_bulk_relevant": true,
+          "raw_text": "OB -2 Iron Ore/Coking Coal/Steam coal 17.0 333",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "OSTT - Crude Oil *",
+          "draft_m": 17.0,
+          "dry_bulk_relevant": false,
+          "raw_text": "OSTT - Crude Oil * 17.0 408 … 35 44",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "LPG -POL/LPG",
+          "draft_m": 14.0,
+          "dry_bulk_relevant": false,
+          "raw_text": "LPG -POL/LPG 14.0 371 … 63 75",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "VCTPL- 1",
+          "draft_m": 16.0,
+          "dry_bulk_relevant": false,
+          "raw_text": "VCTPL- 1 16.0 451 57 58",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "VCTPL-2",
+          "draft_m": 16.0,
+          "dry_bulk_relevant": false,
+          "raw_text": "VCTPL-2 16.0 395 49 50",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "FB",
+          "draft_m": 10.1,
+          "dry_bulk_relevant": false,
+          "raw_text": "FB 10.1 173 - 36 29",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "REWQ I *",
+          "draft_m": 11.0,
+          "dry_bulk_relevant": false,
+          "raw_text": "REWQ I * 11.0 163 - - -",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "Green Channnel Berth",
+          "draft_m": 8.2,
+          "dry_bulk_relevant": false,
+          "raw_text": "Green Channnel Berth 8.2 180 - -",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        }
+      ],
+      "dry_bulk_facilities": [
+        {
+          "name": "1. VGCB - General cum Bulk Cargo@-Multipurpose",
+          "draft_m": 18.1,
+          "dry_bulk_relevant": true,
+          "raw_text": "1. VGCB - General cum Bulk Cargo@-Multipurpose 18.1 356 … 73 62",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "OB -Iron Ore/Coking Coal/Steam coal",
+          "draft_m": 16.5,
+          "dry_bulk_relevant": true,
+          "raw_text": "OB -Iron Ore/Coking Coal/Steam coal 16.5 333 … 76 65",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        },
+        {
+          "name": "OB -2 Iron Ore/Coking Coal/Steam coal",
+          "draft_m": 17.0,
+          "dry_bulk_relevant": true,
+          "raw_text": "OB -2 Iron Ore/Coking Coal/Steam coal 17.0 333",
+          "source_table": "BPS 2024-25 Table 1.4",
+          "as_of": "2025-03-31"
+        }
+      ],
+      "specification_note": null,
+      "data_caveat": "Draft and berth values are dated reference snapshots, not navigational limits. Confirm current permissible draft, tide restrictions and berth availability with the port or agent.",
+      "satellite_context": {
+        "provider": "Esri World Imagery",
+        "attribution_url": "https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9",
+        "views": [
+          {
+            "label": "Terminal detail",
+            "span_degrees": 0.018
+          },
+          {
+            "label": "Harbour context",
+            "span_degrees": 0.055
+          },
+          {
+            "label": "Regional approach",
+            "span_degrees": 0.14
+          }
+        ]
+      },
+      "sources": [
+        {
+          "title": "Basic Port Statistics of India 2024-25",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2025-03-31",
+          "scope": "Official port master and infrastructure snapshot"
+        },
+        {
+          "title": "Workbook traffic source",
+          "url": "https://shipmin.gov.in/sites/default/files/BPS%202024-25_compressed.pdf",
+          "as_of": "2024-25",
+          "scope": "Latest available port traffic"
+        }
+      ]
+    }
+  ]
+}

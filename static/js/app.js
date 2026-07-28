@@ -377,6 +377,10 @@ function renderCoalAssetViews() {
   const table = document.getElementById("coal-assets-table");
   const cards = document.getElementById("coal-assets-cards");
   const visibleRows = rows.slice(0, 1000);
+  const cardRows = [...rows].sort((left, right) =>
+    Number(right.asset_kind === "coal_trade_terminals") -
+    Number(left.asset_kind === "coal_trade_terminals")
+  );
   table.innerHTML = visibleRows.length
     ? `<table><thead><tr><th>Asset</th><th>Type</th><th>Status / role</th><th>Capacity</th><th>Source</th></tr></thead><tbody>` +
       visibleRows.map(item => `<tr><td><strong>${escapeHtml(item.name || "Unnamed")}</strong><small>${escapeHtml(item.country || "India")}</small></td>` +
@@ -387,11 +391,21 @@ function renderCoalAssetViews() {
       `</tbody></table>${rows.length > visibleRows.length ? `<p class="table-limit">Showing first ${visibleRows.length.toLocaleString()} of ${rows.length.toLocaleString()} assets.</p>` : ""}`
     : `<div class="coal-empty">Select at least one verified map layer.</div>`;
   cards.innerHTML = rows.length
-    ? rows.slice(0, 120).map(item => `<article><span>${escapeHtml(item.asset_label || labelize(item.asset_kind))}</span>` +
+    ? cardRows.slice(0, 120).map(item => `<article class="${item.port_specification_available ? "coal-port-card" : ""}"><span>${escapeHtml(item.asset_label || labelize(item.asset_kind))}</span>` +
         `<h3>${escapeHtml(item.name || "Unnamed asset")}</h3>` +
         `<p>${escapeHtml(item.status || item.asset_type || "Status unknown")}</p>` +
-        `<small>${item.capacity == null ? "Capacity unknown" : escapeHtml(Number(item.capacity).toLocaleString() + " " + (item.capacity_unit || ""))}${item.expansion_capacity == null ? "" : `<br>Expansion +${escapeHtml(Number(item.expansion_capacity).toLocaleString() + " " + (item.capacity_unit || "Mtpa"))}`}</small></article>`).join("")
+        `<small>${item.capacity == null ? "Capacity unknown" : escapeHtml(Number(item.capacity).toLocaleString() + " " + (item.capacity_unit || ""))}${item.expansion_capacity == null ? "" : `<br>Expansion +${escapeHtml(Number(item.expansion_capacity).toLocaleString() + " " + (item.capacity_unit || "Mtpa"))}`}</small>` +
+        (item.port_specification_available
+          ? `<button type="button" class="coal-card-action" data-port-spec-id="${escapeAttr(item.id)}">View port details</button>`
+          : "") +
+        `</article>`).join("")
     : `<div class="coal-empty">Select at least one verified map layer.</div>`;
+  cards.querySelectorAll("[data-port-spec-id]").forEach(button => {
+    button.addEventListener("click", () => {
+      const asset = state.coalAssets.find(item => item.id === button.dataset.portSpecId);
+      if (asset) showCoalPortDetails(asset);
+    });
+  });
 }
 
 async function uploadCoalDataset() {
@@ -943,6 +957,7 @@ async function showPortCard(port) {
   const response = await fetch("/api/ports/" + encodeURIComponent(port.id));
   const detail = response.ok ? await response.json() : port;
   const card = document.getElementById("port-card");
+  card.classList.remove("port-spec-card");
   document.getElementById("port-card-content").innerHTML =
     `<span class="detail-eyebrow">Port</span><h2>${escapeHtml(detail.name)}</h2>` +
     `<p class="detail-meta">${escapeHtml(detail.country || "Country unknown")}${detail.unlocode ? " · " + escapeHtml(detail.unlocode) : ""}</p>` +
@@ -956,7 +971,12 @@ async function showPortCard(port) {
 }
 
 function showAssetCard(config, point) {
+  if (point.asset_kind === "coal_trade_terminals" && point.port_specification_available) {
+    showCoalPortDetails(point);
+    return;
+  }
   const card = document.getElementById("port-card");
+  card.classList.remove("port-spec-card");
   document.getElementById("port-card-content").innerHTML =
     `<span class="detail-eyebrow">${escapeHtml(config.label)}</span><h2>${escapeHtml(point.name || config.label)}</h2>` +
     `<p class="detail-meta">${escapeHtml(point.country || "Country unknown")}</p>` +
@@ -985,9 +1005,116 @@ function showAssetCard(config, point) {
   card.setAttribute("aria-hidden", "false");
 }
 
+async function showCoalPortDetails(point) {
+  const card = document.getElementById("port-card");
+  const content = document.getElementById("port-card-content");
+  card.classList.add("port-spec-card", "open");
+  card.setAttribute("aria-hidden", "false");
+  content.innerHTML =
+    `<span class="detail-eyebrow">India coal port</span>` +
+    `<h2>${escapeHtml(point.name || "Port")}</h2>` +
+    `<p class="detail-meta">Loading consolidated port specifications…</p>`;
+  try {
+    const response = await fetch(
+      `/api/coal/port-specifications/${encodeURIComponent(point.id)}`
+    );
+    const detail = await response.json();
+    if (!response.ok) throw new Error(detail.detail || "Port specifications are unavailable");
+    const draft = detail.max_documented_draft_m == null
+      ? "Not published"
+      : `${formatNumber(detail.max_documented_draft_m, 1)} m`;
+    const berthCount = detail.documented_berth_count == null
+      ? "Not published"
+      : formatNumber(detail.documented_berth_count, 0);
+    const dryBulkCount = detail.documented_dry_bulk_berth_count == null
+      ? "Not classified"
+      : formatNumber(detail.documented_dry_bulk_berth_count, 0);
+    const portCapacity = detail.port_capacity_mtpa == null
+      ? "Not published"
+      : `${formatNumber(detail.port_capacity_mtpa, 1)} MTPA`;
+    const traffic = detail.latest_traffic_mt == null
+      ? "Not available"
+      : `${formatNumber(detail.latest_traffic_mt, 3)} MT`;
+    const facilityRows = (detail.dry_bulk_facilities?.length
+      ? detail.dry_bulk_facilities
+      : detail.berth_facilities || []).slice(0, 14);
+    const commodities = (detail.dry_bulk_commodities || []).slice(0, 8);
+    const sources = detail.sources || [];
+    const lat = Number(detail.latitude);
+    const lon = Number(detail.longitude);
+    const satelliteViews = Number.isFinite(lat) && Number.isFinite(lon)
+      ? (detail.satellite_context?.views || []).map(view =>
+          `<figure><img loading="lazy" alt="${escapeAttr(`${view.label} satellite view of ${detail.asset_name}`)}" src="${escapeAttr(satelliteImageUrl(lat, lon, Number(view.span_degrees)))}">` +
+          `<figcaption>${escapeHtml(view.label)}</figcaption></figure>`
+        ).join("")
+      : `<div class="coal-empty">Coordinates unavailable for satellite context.</div>`;
+    content.innerHTML =
+      `<span class="detail-eyebrow">India coal port</span>` +
+      `<h2>${escapeHtml(detail.asset_name)}</h2>` +
+      `<p class="detail-meta">${escapeHtml(detail.official_port_name || "Official port match unavailable")} · ${escapeHtml(detail.state_ut || "India")} · ${escapeHtml(detail.port_class || "Port class unavailable")}</p>` +
+      `<div class="detail-grid port-spec-grid">` +
+      detailCell("Max documented draft", draft) +
+      detailCell("Documented berths", berthCount) +
+      detailCell("Dry-bulk facilities", dryBulkCount) +
+      detailCell("Port capacity", portCapacity) +
+      detailCell("Latest port traffic", traffic) +
+      detailCell("Traffic period", detail.latest_traffic_period) +
+      detailCell("Terminal operating capacity", detail.terminal_operating_capacity_mtpa == null ? null : `${formatNumber(detail.terminal_operating_capacity_mtpa, 1)} MTPA`) +
+      detailCell("Terminal expansion", detail.terminal_expansion_capacity_mtpa == null ? null : `+${formatNumber(detail.terminal_expansion_capacity_mtpa, 1)} MTPA`) +
+      `</div>` +
+      (detail.specification_note ? `<p class="port-spec-note">${escapeHtml(detail.specification_note)}</p>` : "") +
+      `<section class="port-spec-section"><h3>Satellite context</h3><div class="satellite-grid">${satelliteViews}</div>` +
+      `<small>Imagery: <a href="${escapeAttr(detail.satellite_context?.attribution_url || "https://www.arcgis.com/")}" target="_blank" rel="noopener noreferrer">Esri World Imagery</a>. Images provide geographic context and are not navigational charts.</small></section>` +
+      `<section class="port-spec-section"><h3>Berths and terminal facilities</h3>` +
+      (facilityRows.length
+        ? `<ul class="facility-list">${facilityRows.map(item =>
+            `<li><strong>${escapeHtml(item.name || "Documented facility")}</strong>` +
+            `<span>${item.draft_m == null ? "Draft not flattened" : `${formatNumber(item.draft_m, 1)} m documented draft`} · as of ${escapeHtml(item.as_of || "source date unavailable")}</span></li>`
+          ).join("")}</ul>`
+        : `<div class="coal-empty">No berth-level specification was safely flattenable from the supplied workbook or current official source.</div>`) +
+      (detail.berth_facilities?.length > facilityRows.length
+        ? `<p class="port-spec-more">Showing ${facilityRows.length} dry-bulk-relevant records from ${detail.berth_facilities.length} documented berth/facility rows.</p>`
+        : "") +
+      `</section>` +
+      (commodities.length
+        ? `<section class="port-spec-section"><h3>Latest documented dry-bulk flows</h3><div class="commodity-chips">${commodities.map(item =>
+            `<span><strong>${escapeHtml(item.commodity)}</strong>${formatNumber(item.total_mt, 3)} MT · FY ${escapeHtml(item.fy || "")}</span>`
+          ).join("")}</div></section>`
+        : "") +
+      `<section class="port-spec-section"><h3>Sources and verification</h3>` +
+      (detail.official_website
+        ? `<a class="official-port-link" href="${escapeAttr(detail.official_website)}" target="_blank" rel="noopener noreferrer">Open official port website ↗</a>`
+        : "") +
+      `<a class="official-port-link secondary" href="/api/coal/port-specifications/export">Download consolidated CSV</a>` +
+      `<ul class="source-list">${sources.map(source =>
+        `<li><a href="${escapeAttr(source.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(source.title)}</a>` +
+        `<span>${escapeHtml(source.scope || "")}${source.as_of ? ` · ${escapeHtml(String(source.as_of))}` : ""}</span></li>`
+      ).join("")}</ul></section>` +
+      `<p class="detail-note">${escapeHtml(detail.data_caveat || "Confirm current marine restrictions with the port or vessel agent.")}</p>`;
+  } catch (error) {
+    content.innerHTML =
+      `<span class="detail-eyebrow">India coal port</span><h2>${escapeHtml(point.name || "Port")}</h2>` +
+      `<p class="detail-note">${escapeHtml(error.message)}</p>`;
+  }
+}
+
+function satelliteImageUrl(lat, lon, span) {
+  const latitudeSpan = span * 0.7;
+  const params = new URLSearchParams({
+    bbox: `${lon - span},${lat - latitudeSpan},${lon + span},${lat + latitudeSpan}`,
+    bboxSR: "4326",
+    imageSR: "4326",
+    size: "520,260",
+    format: "jpg",
+    f: "image"
+  });
+  return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?${params}`;
+}
+
 function closePortCard() {
   const card = document.getElementById("port-card");
   card.classList.remove("open");
+  card.classList.remove("port-spec-card");
   card.setAttribute("aria-hidden", "true");
 }
 

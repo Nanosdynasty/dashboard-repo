@@ -279,10 +279,22 @@ button, summary, label, select { -webkit-tap-highlight-color: transparent; }
 .table-limit { margin: 0; padding: 10px; color: var(--muted); font-size: 9px; }
 .coal-assets-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
 .coal-assets-cards article { padding: 14px; background: #fff; border-left: 3px solid var(--hrp-red); box-shadow: 0 4px 15px rgba(28,41,74,.06); }
+.coal-assets-cards article.coal-port-card { border-left-color: var(--hrp-blue); }
 .coal-assets-cards span { color: var(--hrp-red); font-size: 8px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 .coal-assets-cards h3 { margin: 6px 0 4px; color: var(--hrp-navy); font-size: 13px; }
 .coal-assets-cards p { margin: 0; color: #596671; font-size: 10px; }
 .coal-assets-cards small { display: block; margin-top: 10px; color: #87919a; font-size: 9px; }
+.coal-card-action {
+  width: 100%;
+  margin-top: 12px;
+  padding: 7px 9px;
+  color: #fff;
+  background: var(--hrp-navy);
+  border: 0;
+  cursor: pointer;
+  font-size: 9px;
+}
+.coal-card-action:hover, .coal-card-action:focus { background: var(--hrp-blue); }
 .coal-empty { padding: 30px; color: var(--muted); background: #fff; text-align: center; }
 
 .npp-power-surface {
@@ -377,6 +389,7 @@ button, summary, label, select { -webkit-tap-highlight-color: transparent; }
   transition: transform .2s ease;
 }
 .port-card.open { transform: translateX(0); }
+.port-card.port-spec-card { width: min(720px, calc(100% - 24px)); }
 .close-button { position: absolute; top: 8px; right: 10px; padding: 0; color: #65717c; background: transparent; border: 0; cursor: pointer; font-size: 21px; }
 .detail-eyebrow { color: var(--hrp-red); font-size: 8px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
 .port-card h2 { margin: 4px 24px 2px 0; color: var(--hrp-navy); font-size: 18px; }
@@ -386,6 +399,27 @@ button, summary, label, select { -webkit-tap-highlight-color: transparent; }
 .detail-grid span { display: block; color: #7b8791; font-size: 8px; text-transform: uppercase; }
 .detail-grid strong { display: block; margin-top: 3px; color: var(--hrp-navy); font-size: 10px; }
 .detail-note { margin: 12px 0 0; padding-top: 10px; color: #727e88; border-top: 1px solid var(--line); font-size: 9px; }
+.port-spec-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.port-spec-note { margin: 12px 0; padding: 10px; color: #485866; background: #edf3f7; border-left: 3px solid var(--hrp-blue); font-size: 10px; }
+.port-spec-section { margin-top: 16px; padding-top: 13px; border-top: 1px solid var(--line); }
+.port-spec-section h3 { margin: 0 0 9px; color: var(--hrp-navy); font-size: 12px; }
+.port-spec-section > small { display: block; margin-top: 7px; color: #7c8790; font-size: 8px; }
+.port-spec-section a { color: var(--hrp-blue); }
+.satellite-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+.satellite-grid figure { min-width: 0; margin: 0; background: #eef2f4; }
+.satellite-grid img { display: block; width: 100%; aspect-ratio: 2 / 1; object-fit: cover; background: #d8dee2; }
+.satellite-grid figcaption { padding: 6px 7px; color: #586773; font-size: 8px; font-weight: 700; }
+.facility-list, .source-list { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin: 0; padding: 0; list-style: none; }
+.facility-list li, .source-list li { min-width: 0; padding: 8px; background: #f3f5f6; }
+.facility-list strong, .facility-list span, .source-list a, .source-list span { display: block; }
+.facility-list strong, .source-list a { color: var(--hrp-navy); font-size: 9px; }
+.facility-list span, .source-list span { margin-top: 3px; color: #7c8790; font-size: 8px; }
+.port-spec-more { margin: 8px 0 0; color: #7c8790; font-size: 8px; }
+.commodity-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.commodity-chips span { padding: 7px 9px; color: #68747e; background: #f3f5f6; font-size: 8px; }
+.commodity-chips strong { display: block; margin-bottom: 2px; color: var(--hrp-navy); font-size: 8px; }
+.official-port-link { display: inline-block; margin-bottom: 8px; padding: 7px 9px; color: #fff !important; background: var(--hrp-navy); text-decoration: none; font-size: 9px; }
+.official-port-link.secondary { margin-left: 5px; color: var(--hrp-navy) !important; background: #e8eef3; }
 
 .asset-tooltip, .port-tooltip {
   padding: 8px 10px !important;
@@ -455,6 +489,7 @@ button, summary, label, select { -webkit-tap-highlight-color: transparent; }
   .coal-analysis-grid { grid-template-columns: 1fr; }
   .npp-grid, .npp-hero-grid { grid-template-columns: 1fr; }
   .npp-grid > article.npp-wide { grid-column: auto; }
+  .port-spec-grid, .satellite-grid, .facility-list, .source-list { grid-template-columns: 1fr; }
   .coal-workspace-header { padding-left: 50px; }
   .coal-header-meta { display: none; }
 }

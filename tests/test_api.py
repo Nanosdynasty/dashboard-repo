@@ -162,6 +162,55 @@ class PortApiTests(unittest.TestCase):
             )
         )
 
+    def test_india_coal_ports_have_consolidated_specifications(self):
+        response = self.client.get("/api/coal/port-specifications")
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["quality_summary"]["asset_rows"], 31)
+        self.assertEqual(
+            payload["quality_summary"]["matched_to_port_master"], 31
+        )
+        self.assertEqual(
+            payload["quality_summary"]["with_official_website"], 31
+        )
+        self.assertEqual(
+            len({item["asset_id"] for item in payload["ports"]}), 31
+        )
+        self.assertTrue(
+            all(len(item["satellite_context"]["views"]) == 3 for item in payload["ports"])
+        )
+        paradip = next(
+            item for item in payload["ports"]
+            if item["asset_name"] == "Paradip Port"
+        )
+        detail = self.client.get(
+            f"/api/coal/port-specifications/{paradip['asset_id']}"
+        )
+        self.assertEqual(detail.status_code, 200)
+        self.assertEqual(detail.json()["max_documented_draft_m"], 16)
+        self.assertGreater(detail.json()["documented_berth_count"], 0)
+        self.assertTrue(detail.json()["sources"])
+
+        terminals = self.client.get(
+            "/api/coal/assets",
+            params={
+                "asset_kind": "coal_trade_terminals",
+                "status_group": "operating",
+            },
+        ).json()["data"]
+        self.assertEqual(len(terminals), 31)
+        self.assertTrue(
+            all(item["port_specification_available"] for item in terminals)
+        )
+
+        export = self.client.get("/api/coal/port-specifications/export")
+        self.assertEqual(export.status_code, 200)
+        self.assertIn(
+            "india_coal_port_specifications.csv",
+            export.headers["content-disposition"],
+        )
+        self.assertIn("Max documented draft (m)", export.text)
+
     def test_port_ui_does_not_advertise_unsupported_zero_categories(self):
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
@@ -180,6 +229,7 @@ class PortApiTests(unittest.TestCase):
         self.assertIn("Coal stock availability", html)
         self.assertIn("Cumulative generation", html)
         self.assertIn("Sector-wise PLF", html)
+        self.assertIn("app.js?v=20260728-4", html)
 
     def test_map_uses_only_explicit_english_labels(self):
         response = self.client.get("/static/js/app.js")
@@ -191,6 +241,8 @@ class PortApiTests(unittest.TestCase):
         self.assertNotIn("event.preventDefault()", javascript)
         self.assertIn("npp-history-point", javascript)
         self.assertIn("formatRefreshInterval", javascript)
+        self.assertIn("showCoalPortDetails", javascript)
+        self.assertIn("satelliteImageUrl", javascript)
 
     def test_npp_transform_reconciles_requested_power_visuals(self):
         reporting_date = 1_720_000_000_000
