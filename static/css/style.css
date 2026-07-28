@@ -146,7 +146,7 @@ button, summary, label, select { -webkit-tap-highlight-color: transparent; }
 }
 
 .workspace-intro { margin: 10px 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
-.view-switch { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid #ccd3d8; }
+.view-switch { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid #ccd3d8; }
 .view-switch button {
   padding: 7px 4px;
   color: var(--hrp-navy);
@@ -169,6 +169,8 @@ button, summary, label, select { -webkit-tap-highlight-color: transparent; }
   font-weight: 700;
 }
 .coal-actions button:disabled { color: #949da5; background: #f1f3f4; border-color: #d7dce0; cursor: not-allowed; }
+.layer-list label.disabled-layer { color: #8a949d; cursor: not-allowed; }
+.layer-list label.disabled-layer:hover { background: transparent; }
 
 .voyage-section[open] { color: #fff; background: var(--hrp-navy); border-color: var(--hrp-navy); }
 .voyage-section[open] summary { color: #fff; border-bottom: 1px solid rgba(255,255,255,.12); }
@@ -283,6 +285,64 @@ button, summary, label, select { -webkit-tap-highlight-color: transparent; }
 .coal-assets-cards small { display: block; margin-top: 10px; color: #87919a; font-size: 9px; }
 .coal-empty { padding: 30px; color: var(--muted); background: #fff; text-align: center; }
 
+.npp-power-surface {
+  position: absolute;
+  z-index: 500;
+  inset: 66px 0 0;
+  overflow: auto;
+  padding: 20px;
+  background: #eef2f4;
+}
+.npp-source-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: -20px -20px 18px;
+  padding: 12px 20px;
+  color: #fff;
+  background: #253456;
+}
+.npp-source-bar span, .npp-source-bar strong { display: block; }
+.npp-source-bar span { color: #bac6d5; font-size: 8px; font-weight: 700; letter-spacing: .12em; }
+.npp-source-bar strong { margin-top: 3px; font-size: 10px; }
+.npp-source-bar strong.stale { color: #ffd18a; }
+.npp-source-bar button {
+  padding: 8px 11px;
+  color: #fff;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,.5);
+  cursor: pointer;
+  font-size: 9px;
+}
+.npp-source-bar button:disabled { opacity: .5; cursor: wait; }
+.npp-hero-grid { display: grid; grid-template-columns: 1.25fr 1fr; gap: 10px; }
+.npp-hero-grid article { padding: 17px; color: #fff; box-shadow: 0 5px 18px rgba(28,41,74,.12); }
+.npp-hero { background: var(--hrp-blue); }
+.npp-demand-hero { background: var(--hrp-red); }
+.npp-hero-grid span { display: block; color: rgba(255,255,255,.75); font-size: 9px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.npp-hero-grid strong { display: block; margin-top: 5px; font-size: 29px; }
+.npp-hero-grid small { display: block; margin-top: 3px; color: rgba(255,255,255,.75); font-size: 9px; }
+.npp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.npp-grid > article { min-width: 0; padding: 15px; background: #fff; box-shadow: 0 4px 16px rgba(28,41,74,.06); }
+.npp-grid > article.npp-wide { grid-column: 1 / -1; }
+.npp-grid header { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; margin-bottom: 14px; }
+.npp-grid h3 { margin: 0; color: var(--hrp-navy); font-size: 13px; }
+.npp-grid header small { color: #87919a; font-size: 8px; text-align: right; }
+.npp-chart { min-height: 164px; }
+.npp-bar-row { margin-bottom: 11px; }
+.npp-bar-row > div:first-child { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 4px; font-size: 9px; }
+.npp-bar-row span { color: #596671; }
+.npp-bar-row strong { color: var(--hrp-navy); font-size: 9px; }
+.npp-bar-track { height: 8px; overflow: hidden; background: #edf1f3; border-radius: 5px; }
+.npp-bar-track i { display: block; height: 100%; border-radius: 5px; }
+.npp-history-chart { min-height: 270px; overflow: hidden; }
+.npp-history-chart svg { display: block; width: 100%; height: 245px; }
+.npp-history-legend { display: flex; flex-wrap: wrap; gap: 12px; color: #596671; font-size: 9px; }
+.npp-history-legend span { display: flex; align-items: center; gap: 5px; }
+.npp-history-legend i { width: 13px; height: 3px; }
+.npp-quality-note { margin: 10px 0 0; padding: 10px; color: #596671; background: #fff; border-left: 3px solid var(--hrp-blue); font-size: 9px; }
+
 .port-card {
   position: absolute;
   z-index: 750;
@@ -375,6 +435,8 @@ button, summary, label, select { -webkit-tap-highlight-color: transparent; }
   .brand img { width: 190px; }
   .coal-kpis { grid-template-columns: 1fr 1fr; }
   .coal-analysis-grid { grid-template-columns: 1fr; }
+  .npp-grid, .npp-hero-grid { grid-template-columns: 1fr; }
+  .npp-grid > article.npp-wide { grid-column: auto; }
   .coal-workspace-header { padding-left: 50px; }
   .coal-header-meta { display: none; }
 }

@@ -61,11 +61,21 @@ Status: planned.
 
 ## India Coal intelligence workspace
 
-Status: foundation implemented; analytical metrics await user uploads.
+Status: operational map and NPP power foundation implemented; coal trade and
+production analytics await user uploads.
 
 - Add a dedicated, collapsible Coal workspace with map, table, and card views.
 - Use India-only GEM coal mines and coal trade terminals plus WPI-classified
   dry-bulk ports as the verified geographic context.
+- Default every mine, plant and terminal layer to operating assets. Allow
+  under-construction and proposed views explicitly; never expose retired,
+  cancelled, shelved or mothballed records in the application.
+- Add optional coal-consuming industry overlays for operating coal power,
+  steel and cement plants. Other industrial consumers remain unavailable until
+  a reviewed location/status source is supplied.
+- Treat a coal terminal with existing operating capacity and a pipeline
+  project as an operating terminal with separately reported construction and
+  proposed expansion capacity. Do not relabel the whole port as proposed.
 - Do not show placeholder operational numbers. Production, imports, power use,
   stocks, renewables, monsoon, and heat series remain visibly unavailable until
   a source dataset is uploaded.
@@ -85,6 +95,14 @@ Status: foundation implemented; analytical metrics await user uploads.
   scope. Retain inventory tonnes as a supporting measure.
 - Correlation outputs must report overlap, missingness, lag assumptions, and
   confidence, and must never be described as causal evidence.
+- Mirror the requested National Power Portal views in the Howe Robinson theme:
+  installed capacity, all-India capacity status, category and sector splits,
+  daily demand, and historical growth of installed capacity. Explicitly exclude
+  historical electricity-consumption growth.
+- Refresh the official NPP JSON feeds every 15 minutes on demand, reconcile
+  category and sector totals before publishing, retain the last validated
+  snapshot for source outages, and label stale data rather than silently
+  substituting values.
 
 ## Phase 4 — Voyage intelligence
 

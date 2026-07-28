@@ -21,7 +21,10 @@ const WORKSPACE_LAYERS = {
 const COAL_ASSET_CONFIG = {
   coal_mines: { label: "Coal mine", color: "#242b38", radius: 3 },
   coal_trade_terminals: { label: "Coal trade terminal", color: "#db2f34", radius: 4 },
-  dry_bulk_ports: { label: "Dry-bulk port", color: "#003671", radius: 3 }
+  dry_bulk_ports: { label: "Dry-bulk port", color: "#003671", radius: 3 },
+  power_consumers: { label: "Coal-fired power plant", color: "#6f7782", radius: 3 },
+  steel_consumers: { label: "Steel plant", color: "#536a7a", radius: 3 },
+  cement_consumers: { label: "Cement plant", color: "#9a8a73", radius: 3 }
 };
 
 const ENGLISH_MAP_LABELS = {
@@ -62,11 +65,13 @@ const state = {
   coalAssets: [],
   coalSummary: null,
   coalView: "map",
+  nppLoaded: false,
+  nppRefreshTimer: null,
   continentLabels: null,
   countryLabels: null,
   filters: {
-    energy: { country: "", status: "" },
-    commodities: { country: "", status: "" }
+    energy: { country: "", status: "operating" },
+    commodities: { country: "", status: "operating" }
   }
 };
 
@@ -104,9 +109,10 @@ function bindControls() {
   document.getElementById("show-ports").addEventListener("change", renderPorts);
   document.getElementById("energy-show-ports").addEventListener("change", renderPorts);
   document.getElementById("commodity-show-ports").addEventListener("change", renderPorts);
-  document.querySelectorAll("#coal-workspace-layers input").forEach(input => {
+  document.querySelectorAll("#coal-workspace-layers input, #coal-consumer-layers input").forEach(input => {
     input.addEventListener("change", renderCoalLayers);
   });
+  document.getElementById("coal-asset-status").addEventListener("change", loadCoalWorkspace);
   document.querySelectorAll("[data-coal-view]").forEach(button => {
     button.addEventListener("click", () => setCoalView(button.dataset.coalView));
   });
@@ -127,6 +133,7 @@ function bindControls() {
     document.getElementById("coal-upload-message").textContent =
       "Analysis is enabled only when the required uploaded series pass period, unit and overlap validation. No result has been inferred.";
   });
+  document.getElementById("npp-refresh").addEventListener("click", () => loadNppPower(true));
   document.getElementById("port-country").addEventListener("change", loadPorts);
   document.getElementById("port-size").addEventListener("change", loadPorts);
   document.querySelectorAll("#port-categories input").forEach(input => input.addEventListener("change", loadPorts));
@@ -165,6 +172,7 @@ function activateMode(mode) {
   } else {
     state.coalLayer.clearLayers();
     document.getElementById("coal-data-surface").hidden = true;
+    document.getElementById("npp-power-surface").hidden = true;
     document.getElementById("map").hidden = false;
     document.querySelector(".map-topbar").hidden = false;
     document.querySelector(".map-key").hidden = false;
@@ -236,24 +244,30 @@ async function loadWorkspaceFacets() {
     if (!response.ok) return;
     const facets = await response.json();
     populateSelect(`${mode === "energy" ? "energy" : "commodity"}-country`, "All countries", facets.countries || []);
-    populateSelect(`${mode === "energy" ? "energy" : "commodity"}-status`, "All statuses", facets.statuses || []);
   }));
 }
 
 async function loadCoalWorkspace() {
   try {
+    const statusGroup = document.getElementById("coal-asset-status").value;
     const [summaryResponse, assetsResponse] = await Promise.all([
       fetch("/api/coal/summary"),
-      fetch("/api/coal/assets?limit=5000")
+      fetch(`/api/coal/assets?status_group=${encodeURIComponent(statusGroup)}&limit=20000`)
     ]);
     if (!summaryResponse.ok || !assetsResponse.ok) throw new Error("Coal workspace data could not be loaded");
     state.coalSummary = await summaryResponse.json();
     const assetPayload = await assetsResponse.json();
     state.coalAssets = assetPayload.data || [];
-    const counts = state.coalSummary.map_assets || {};
+    const counts = {};
+    state.coalAssets.forEach(item => {
+      counts[item.asset_kind] = (counts[item.asset_kind] || 0) + 1;
+    });
     document.getElementById("coal-mine-count").textContent = Number(counts.coal_mines || 0).toLocaleString();
     document.getElementById("coal-terminal-count").textContent = Number(counts.coal_trade_terminals || 0).toLocaleString();
     document.getElementById("coal-port-count").textContent = Number(counts.dry_bulk_ports || 0).toLocaleString();
+    document.getElementById("coal-power-count").textContent = Number(counts.power_consumers || 0).toLocaleString();
+    document.getElementById("coal-steel-count").textContent = Number(counts.steel_consumers || 0).toLocaleString();
+    document.getElementById("coal-cement-count").textContent = Number(counts.cement_consumers || 0).toLocaleString();
     const hasDatasets = (state.coalSummary.datasets || []).length > 0;
     document.getElementById("coal-data-status").textContent = hasDatasets
       ? `${state.coalSummary.datasets.length} dataset${state.coalSummary.datasets.length === 1 ? "" : "s"}`
@@ -267,6 +281,7 @@ async function loadCoalWorkspace() {
         "Uploaded data is stored separately from GEM/WPI map context. Review its detected date and numeric fields before analysis.";
     }
     renderCoalAssetViews();
+    renderCoalLayers();
   } catch (error) {
     document.getElementById("coal-upload-message").textContent = error.message;
   }
@@ -282,7 +297,7 @@ function refreshCoalActionState() {
 
 function selectedCoalKinds() {
   return new Set(
-    Array.from(document.querySelectorAll("#coal-workspace-layers input:checked"))
+    Array.from(document.querySelectorAll("#coal-workspace-layers input:checked, #coal-consumer-layers input:checked"))
       .map(input => input.value)
   );
 }
@@ -326,9 +341,12 @@ function setCoalView(view) {
     button.classList.toggle("active", button.dataset.coalView === view);
   });
   const dataSurface = document.getElementById("coal-data-surface");
+  const nppSurface = document.getElementById("npp-power-surface");
   const mapElement = document.getElementById("map");
   const isMap = view === "map";
-  dataSurface.hidden = isMap || state.mode !== "coal";
+  const isPower = view === "power";
+  dataSurface.hidden = isMap || isPower || state.mode !== "coal";
+  nppSurface.hidden = !isPower || state.mode !== "coal";
   mapElement.hidden = !isMap && state.mode === "coal";
   document.querySelector(".map-topbar").hidden = !isMap && state.mode === "coal";
   document.querySelector(".map-key").hidden = !isMap && state.mode === "coal";
@@ -336,6 +354,7 @@ function setCoalView(view) {
   document.getElementById("coal-assets-cards").hidden = view !== "cards";
   document.getElementById("coal-surface-title").textContent =
     view === "cards" ? "India coal asset cards" : "India coal asset table";
+  if (isPower && state.mode === "coal") loadNppPower();
   if (isMap) {
     setTimeout(() => {
       state.map.invalidateSize();
@@ -362,8 +381,8 @@ function renderCoalAssetViews() {
     ? `<table><thead><tr><th>Asset</th><th>Type</th><th>Status / role</th><th>Capacity</th><th>Source</th></tr></thead><tbody>` +
       visibleRows.map(item => `<tr><td><strong>${escapeHtml(item.name || "Unnamed")}</strong><small>${escapeHtml(item.country || "India")}</small></td>` +
         `<td>${escapeHtml(item.asset_label || labelize(item.asset_kind))}</td>` +
-        `<td>${escapeHtml(item.status || item.asset_type || "Unknown")}</td>` +
-        `<td>${item.capacity == null ? "Unknown" : escapeHtml(Number(item.capacity).toLocaleString() + " " + (item.capacity_unit || ""))}</td>` +
+        `<td>${escapeHtml(item.status || item.asset_type || "Unknown")}${item.project_status && item.project_status !== item.status ? `<small>${escapeHtml(item.project_status)}</small>` : ""}</td>` +
+        `<td>${item.capacity == null ? "Unknown" : escapeHtml(Number(item.capacity).toLocaleString() + " " + (item.capacity_unit || ""))}${item.expansion_capacity == null ? "" : `<small>Expansion +${escapeHtml(Number(item.expansion_capacity).toLocaleString() + " " + (item.capacity_unit || "Mtpa"))}</small>`}</td>` +
         `<td>${escapeHtml(item.source_text || "GEM / WPI")}</td></tr>`).join("") +
       `</tbody></table>${rows.length > visibleRows.length ? `<p class="table-limit">Showing first ${visibleRows.length.toLocaleString()} of ${rows.length.toLocaleString()} assets.</p>` : ""}`
     : `<div class="coal-empty">Select at least one verified map layer.</div>`;
@@ -371,7 +390,7 @@ function renderCoalAssetViews() {
     ? rows.slice(0, 120).map(item => `<article><span>${escapeHtml(item.asset_label || labelize(item.asset_kind))}</span>` +
         `<h3>${escapeHtml(item.name || "Unnamed asset")}</h3>` +
         `<p>${escapeHtml(item.status || item.asset_type || "Status unknown")}</p>` +
-        `<small>${item.capacity == null ? "Capacity unknown" : escapeHtml(Number(item.capacity).toLocaleString() + " " + (item.capacity_unit || ""))}</small></article>`).join("")
+        `<small>${item.capacity == null ? "Capacity unknown" : escapeHtml(Number(item.capacity).toLocaleString() + " " + (item.capacity_unit || ""))}${item.expansion_capacity == null ? "" : `<br>Expansion +${escapeHtml(Number(item.expansion_capacity).toLocaleString() + " " + (item.capacity_unit || "Mtpa"))}`}</small></article>`).join("")
     : `<div class="coal-empty">Select at least one verified map layer.</div>`;
 }
 
@@ -413,6 +432,140 @@ async function exportCoalData() {
   link.download = `india_coal_${datasetType}.xlsx`;
   link.click();
   URL.revokeObjectURL(link.href);
+}
+
+async function loadNppPower(force = false) {
+  const refreshButton = document.getElementById("npp-refresh");
+  const freshness = document.getElementById("npp-freshness");
+  refreshButton.disabled = true;
+  freshness.textContent = force ? "Refreshing from official NPP source…" : "Loading latest validated NPP snapshot…";
+  try {
+    const response = await fetch(`/api/npp/power-dashboard${force ? "?force=true" : ""}`);
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.detail || "NPP data is unavailable");
+    document.getElementById("npp-installed-capacity").textContent =
+      `${formatNumber(data.installed_capacity_mw / 1000, 1)} GW`;
+    document.getElementById("npp-reported-date").textContent =
+      `NPP source date ${humanDate(data.source_reported_date)}`;
+    const demand = data.daily_demand?.[0];
+    document.getElementById("npp-demand-met").textContent = demand
+      ? `${formatNumber(demand.demand_met_mw / 1000, 1)} GW`
+      : "Unavailable";
+    document.getElementById("npp-demand-date").textContent = demand
+      ? `Reported ${escapeHtml(demand.date || "")}`
+      : "No daily-demand row supplied";
+    const status = data.all_india_status || {};
+    renderNppBars("npp-status-chart", [
+      { label: "Online", value: status.online_capacity_mw, color: "#2c8a63" },
+      { label: "Under maintenance", value: status.under_maintenance_capacity_mw, color: "#e9a823" },
+      { label: "Shutdown", value: status.shutdown_capacity_mw, color: "#db2f34" },
+      { label: "Unscheduled", value: status.unscheduled_capacity_mw, color: "#8b65b6" }
+    ], "MW");
+    const categoryColors = ["#6f7782", "#296fba", "#8b65b6", "#629c4d"];
+    renderNppBars(
+      "npp-category-chart",
+      (data.category_capacity || []).map((item, index) => ({
+        label: item.label, value: item.mw, color: categoryColors[index] || "#003671"
+      })),
+      "MW"
+    );
+    const sectorColors = ["#003671", "#55a6c8", "#db2f34"];
+    renderNppBars(
+      "npp-sector-chart",
+      (data.sector_capacity || []).map((item, index) => ({
+        label: item.label, value: item.mw, color: sectorColors[index] || "#003671"
+      })),
+      "MW"
+    );
+    renderNppBars("npp-demand-chart", demand ? [
+      { label: "Peak requirement", value: demand.peak_requirement_mw, color: "#1c294a" },
+      { label: "Demand met", value: demand.demand_met_mw, color: "#2c8a63" },
+      { label: "Reported deficit", value: Math.abs(demand.deficit_mw), color: "#db2f34" }
+    ] : [], "MW");
+    renderNppHistory(data.historical_installed_capacity || []);
+    const fetchedAt = data.fetched_at ? new Date(data.fetched_at).toLocaleString() : "unknown";
+    freshness.textContent = data.stale
+      ? `Showing last validated cache · refresh failed · fetched ${fetchedAt}`
+      : `Validated from NPP · fetched ${fetchedAt} · auto-refresh every ${Math.round((data.refresh_interval_seconds || 900) / 60)} min`;
+    freshness.classList.toggle("stale", Boolean(data.stale));
+    document.getElementById("npp-quality-note").textContent =
+      "Category and sector totals reconcile to the NPP installed-capacity headline. Shutdown and unscheduled values are supporting status measures and are not added to the capacity total.";
+    state.nppLoaded = true;
+    if (!state.nppRefreshTimer) {
+      state.nppRefreshTimer = setInterval(
+        () => loadNppPower(false),
+        Math.max(60, Number(data.refresh_interval_seconds || 900)) * 1000
+      );
+    }
+  } catch (error) {
+    freshness.textContent = error.message;
+    freshness.classList.add("stale");
+    document.getElementById("npp-quality-note").textContent =
+      "No unvalidated fallback values are displayed. Retry when the official NPP source is available.";
+  } finally {
+    refreshButton.disabled = false;
+  }
+}
+
+function renderNppBars(id, rows, unit) {
+  const container = document.getElementById(id);
+  if (!rows.length) {
+    container.innerHTML = `<div class="coal-empty">Official source row unavailable.</div>`;
+    return;
+  }
+  const max = Math.max(...rows.map(row => Number(row.value || 0)), 1);
+  container.innerHTML = rows.map(row =>
+    `<div class="npp-bar-row"><div><span>${escapeHtml(row.label)}</span><strong>${formatNumber(row.value, 0)} ${escapeHtml(unit)}</strong></div>` +
+    `<div class="npp-bar-track"><i style="width:${Math.max(0.5, Number(row.value || 0) / max * 100)}%;background:${escapeAttr(row.color)}"></i></div></div>`
+  ).join("");
+}
+
+function renderNppHistory(rows) {
+  const container = document.getElementById("npp-history-chart");
+  if (rows.length < 2) {
+    container.innerHTML = `<div class="coal-empty">Historical installed-capacity series unavailable.</div>`;
+    return;
+  }
+  const width = 920;
+  const height = 250;
+  const pad = { left: 42, right: 14, top: 18, bottom: 28 };
+  const series = [
+    ["Thermal", "thermal_mw", "#6f7782"],
+    ["Hydro", "hydro_mw", "#296fba"],
+    ["Nuclear", "nuclear_mw", "#8b65b6"],
+    ["Renewables", "renewables_mw", "#629c4d"]
+  ];
+  const max = Math.max(...rows.flatMap(row => series.map(item => Number(row[item[1]] || 0))), 1);
+  const x = index => pad.left + index / (rows.length - 1) * (width - pad.left - pad.right);
+  const y = value => height - pad.bottom - Number(value || 0) / max * (height - pad.top - pad.bottom);
+  const polylines = series.map(item => {
+    const points = rows.map((row, index) => `${x(index).toFixed(1)},${y(row[item[1]]).toFixed(1)}`).join(" ");
+    return `<polyline points="${points}" fill="none" stroke="${item[2]}" stroke-width="2.5" vector-effect="non-scaling-stroke"></polyline>`;
+  }).join("");
+  const firstYear = rows[0].date?.slice(0, 4) || "";
+  const lastYear = rows[rows.length - 1].date?.slice(0, 4) || "";
+  container.innerHTML =
+    `<div class="npp-history-legend">${series.map(item => `<span><i style="background:${item[2]}"></i>${item[0]}</span>`).join("")}</div>` +
+    `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Historical growth of installed capacity">` +
+    `<line x1="${pad.left}" y1="${height - pad.bottom}" x2="${width - pad.right}" y2="${height - pad.bottom}" stroke="#cfd6db"></line>` +
+    `<text x="${pad.left}" y="${height - 8}" font-size="11" fill="#6c7883">${escapeHtml(firstYear)}</text>` +
+    `<text x="${width - pad.right}" y="${height - 8}" text-anchor="end" font-size="11" fill="#6c7883">${escapeHtml(lastYear)}</text>` +
+    polylines + `</svg>`;
+}
+
+function formatNumber(value, digits = 0) {
+  return Number(value || 0).toLocaleString(undefined, {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits
+  });
+}
+
+function humanDate(value) {
+  if (!value) return "unavailable";
+  const date = new Date(`${value}T00:00:00Z`);
+  return Number.isNaN(date.getTime())
+    ? value
+    : date.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 }
 
 function populateSelect(id, defaultLabel, items) {
@@ -602,9 +755,11 @@ function buildAssetLayer(id, points) {
 function assetTooltip(config, point) {
   const capacity = point.capacity == null ? "" :
     `<br>${Number(point.capacity).toLocaleString()} ${escapeHtml(point.capacity_unit || "MW")}`;
+  const expansion = point.expansion_capacity == null ? "" :
+    `<br>Expansion: +${Number(point.expansion_capacity).toLocaleString()} ${escapeHtml(point.capacity_unit || "Mtpa")} (${escapeHtml((point.expansion_status || []).join(" + "))})`;
   const role = point.asset_type ? `<br>${escapeHtml(point.asset_type)}` : "";
   return `<strong>${escapeHtml(point.name || config.label)}</strong>` +
-    `${escapeHtml(point.country || "")}${point.status ? " · " + escapeHtml(point.status) : ""}${role}${capacity}`;
+    `${escapeHtml(point.country || "")}${point.status ? " · " + escapeHtml(point.status) : ""}${role}${capacity}${expansion}`;
 }
 
 function handlePortClick(port) {
@@ -716,6 +871,19 @@ function showAssetCard(config, point) {
     detailCell("Capacity", point.capacity == null ? "Unknown" : Number(point.capacity).toLocaleString() + " " + (point.capacity_unit || "MW")) +
     detailCell("Trade role", point.asset_type) +
     detailCell("Parent port", point.parent_port) +
+    detailCell("Project status", point.project_status) +
+    detailCell(
+      "Expansion",
+      point.expansion_capacity == null
+        ? null
+        : `+${Number(point.expansion_capacity).toLocaleString()} ${point.capacity_unit || "Mtpa"} · ${(point.expansion_status || []).join(" + ")}`
+    ) +
+    detailCell(
+      "Potential capacity",
+      point.potential_capacity == null
+        ? null
+        : `${Number(point.potential_capacity).toLocaleString()} ${point.capacity_unit || "Mtpa"}`
+    ) +
     detailCell("Product", point.product_type) +
     detailCell("Supply source", point.source_text) +
     `</div><p class="detail-note">Source: Global Energy Monitor workbook layer.</p>`;

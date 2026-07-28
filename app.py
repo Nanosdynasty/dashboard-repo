@@ -3,7 +3,7 @@ from __future__ import annotations
 import os, json, io, uuid, asyncio, logging, re, zipfile
 from pathlib import Path
 from typing import Optional, Dict, List, Any
-from datetime import datetime
+from datetime import datetime, timezone
 import pandas as pd
 import duckdb
 from fastapi import FastAPI, UploadFile, File, Query, HTTPException, WebSocket, WebSocketDisconnect
@@ -30,6 +30,12 @@ COAL_UPLOAD_DIR = UPLOAD_DIR / "coal"
 COAL_UPLOAD_DIR.mkdir(exist_ok=True)
 BUNDLED_DATA_DIR = UPLOAD_DIR / "_bundled_data"
 BUNDLED_DATA_DIR.mkdir(exist_ok=True)
+NPP_CACHE_DIR = UPLOAD_DIR / "_npp_cache"
+NPP_CACHE_DIR.mkdir(exist_ok=True)
+NPP_CACHE_PATH = NPP_CACHE_DIR / "power_dashboard.json"
+NPP_CACHE_TTL_SECONDS = int(os.getenv("NPP_CACHE_TTL_SECONDS", "900"))
+NPP_ALL_INDIA_URL = "https://npp.gov.in/dashBoard/getAllZone"
+NPP_HISTORY_URL = "https://npp.gov.in/dashBoard/get_installed_capacity_list"
 
 AISSTREAM_API_KEY = os.getenv("AISSTREAM_API_KEY", "").strip()
 
@@ -74,6 +80,26 @@ COAL_DATASET_TYPES = {
     "weather": "Weather, monsoon and heat",
 }
 
+STATUS_GROUPS = {
+    "operating": {"operating", "operating pre-retirement"},
+    "construction": {"construction", "under construction"},
+    "proposed": {
+        "proposed",
+        "pre-construction",
+        "announced",
+        "permitted",
+        "pre-permit",
+    },
+}
+
+
+def _status_values(value: Optional[str]) -> List[str]:
+    output: List[str] = []
+    for item in _csv_values(value):
+        canonical = item.strip().lower()
+        output.extend(sorted(STATUS_GROUPS.get(canonical, {canonical})))
+    return list(dict.fromkeys(output))
+
 
 def _coal_dataset_metadata() -> List[Dict[str, Any]]:
     datasets: List[Dict[str, Any]] = []
@@ -87,50 +113,400 @@ def _coal_dataset_metadata() -> List[Dict[str, Any]]:
     return sorted(datasets, key=lambda item: item.get("uploaded_at", ""), reverse=True)
 
 
-def _coal_asset_rows() -> List[Dict[str, Any]]:
+def _coal_asset_rows(status_group: str = "operating") -> List[Dict[str, Any]]:
+    if status_group not in STATUS_GROUPS:
+        raise ValueError("Status must be operating, construction or proposed")
+    allowed_statuses = STATUS_GROUPS[status_group]
+    table_names = {
+        row[0]
+        for row in con.execute(
+            "SELECT table_name FROM information_schema.tables"
+        ).fetchall()
+    }
     rows: List[Dict[str, Any]] = []
-    for tracker_id, label in (
-        ("coal_mines", "Coal mine"),
-        ("coal_trade_terminals", "Coal trade terminal"),
+    for tracker_id, label, asset_kind in (
+        ("coal_mines", "Coal mine", "coal_mines"),
+        ("steel_plants", "Steel plant", "steel_consumers"),
+        ("cement_plants", "Cement plant", "cement_consumers"),
     ):
-        if tracker_id not in {
-            row[0]
-            for row in con.execute(
-                "SELECT table_name FROM information_schema.tables"
-            ).fetchall()
-        }:
+        if tracker_id not in table_names:
             continue
+        placeholders = ",".join(["?"] * len(allowed_statuses))
         frame = con.execute(
             "SELECT asset_id AS id, name, status, capacity, capacity_unit, "
             "lat, lon, country, asset_type, parent_port, source_text "
-            f"FROM {tracker_id} WHERE LOWER(CAST(country AS VARCHAR)) = 'india'"
+            f"FROM {tracker_id} WHERE LOWER(CAST(country AS VARCHAR)) = 'india' "
+            f"AND LOWER(TRIM(CAST(status AS VARCHAR))) IN ({placeholders})",
+            sorted(allowed_statuses),
         ).fetchdf()
         for record in json.loads(frame.to_json(orient="records")):
-            record["asset_kind"] = tracker_id
+            record["source_status"] = record.get("status")
+            record["status"] = (
+                "Operating"
+                if status_group == "operating"
+                else (
+                    "Under construction"
+                    if status_group == "construction"
+                    else "Proposed"
+                )
+            )
+            record["asset_kind"] = asset_kind
             record["asset_label"] = label
+            record["project_status"] = (
+                "Under construction" if status_group == "construction"
+                else status_group.title()
+            )
             rows.append(record)
-    for port in ports.filtered(
-        categories=["dry_bulk"], countries=["IN"]
-    ):
-        compact = ports.compact(port)
-        rows.append(
-            {
-                "id": compact["id"],
-                "name": compact["name"],
-                "status": None,
-                "capacity": None,
-                "capacity_unit": None,
-                "lat": compact["lat"],
-                "lon": compact["lon"],
-                "country": "India",
-                "asset_type": "Coal-linked" if "coal" in compact["categories"] else "Dry bulk",
-                "parent_port": None,
-                "source_text": "NGA World Port Index; port role is source-classified only",
-                "asset_kind": "dry_bulk_ports",
-                "asset_label": "Dry-bulk port",
-            }
-        )
+
+    if "coal_plants" in table_names:
+        placeholders = ",".join(["?"] * len(allowed_statuses))
+        frame = con.execute(
+            'SELECT "Plant name" AS name, LOWER(TRIM(CAST("Status" AS VARCHAR))) '
+            'AS source_status, SUM(TRY_CAST("Capacity (MW)" AS DOUBLE)) AS capacity, '
+            'AVG(TRY_CAST("Latitude" AS DOUBLE)) AS lat, '
+            'AVG(TRY_CAST("Longitude" AS DOUBLE)) AS lon, '
+            'MAX(CAST("Country/Area" AS VARCHAR)) AS country '
+            'FROM coal_plants WHERE LOWER(CAST("Country/Area" AS VARCHAR)) = ? '
+            f'AND LOWER(TRIM(CAST("Status" AS VARCHAR))) IN ({placeholders}) '
+            'GROUP BY 1, 2',
+            ["india", *sorted(allowed_statuses)],
+        ).fetchdf()
+        for index, record in enumerate(
+            json.loads(frame.to_json(orient="records"))
+        ):
+            record.update(
+                {
+                    "id": f"india-coal-power-{index + 1}",
+                    "status": (
+                        "Under construction"
+                        if status_group == "construction"
+                        else status_group.title()
+                    ),
+                    "project_status": (
+                        "Under construction"
+                        if status_group == "construction"
+                        else status_group.title()
+                    ),
+                    "capacity_unit": "MW",
+                    "asset_type": "Coal-fired power",
+                    "parent_port": None,
+                    "source_text": "Global Energy Monitor coal plant tracker",
+                    "asset_kind": "power_consumers",
+                    "asset_label": "Coal-fired power plant",
+                }
+            )
+            rows.append(record)
+
+    if "coal_trade_terminals" in table_names:
+        terminal_frame = con.execute(
+            "SELECT asset_id AS id, name, status, capacity, capacity_unit, "
+            "lat, lon, country, asset_type, parent_port, source_text "
+            "FROM coal_trade_terminals "
+            "WHERE LOWER(CAST(country AS VARCHAR)) = 'india' "
+            "AND LOWER(TRIM(CAST(status AS VARCHAR))) IN "
+            "('operating','construction','proposed')"
+        ).fetchdf()
+        terminals = json.loads(terminal_frame.to_json(orient="records"))
+        by_parent: Dict[str, List[Dict[str, Any]]] = {}
+        for terminal in terminals:
+            key = str(
+                terminal.get("parent_port")
+                or terminal.get("name")
+                or terminal.get("id")
+            ).strip()
+            by_parent.setdefault(key, []).append(terminal)
+        for parent, group in by_parent.items():
+            operating = [
+                item for item in group
+                if str(item.get("status") or "").lower() == "operating"
+            ]
+            expansion = [
+                item for item in group
+                if str(item.get("status") or "").lower()
+                in {"construction", "proposed"}
+            ]
+            selected = (
+                operating if status_group == "operating"
+                else [
+                    item for item in group
+                    if str(item.get("status") or "").lower()
+                    in allowed_statuses
+                ]
+            )
+            if not selected:
+                continue
+            representative = selected[0]
+            operating_capacity = sum(
+                float(item.get("capacity") or 0) for item in operating
+            )
+            expansion_capacity = sum(
+                float(item.get("capacity") or 0) for item in expansion
+            )
+            project_status = (
+                "Operating" if status_group == "operating"
+                else (
+                    "Under construction"
+                    if status_group == "construction"
+                    else "Proposed"
+                )
+            )
+            display_status = (
+                "Operating"
+                if operating
+                else project_status
+            )
+            rows.append(
+                {
+                    **representative,
+                    "id": f"india-coal-terminal-{re.sub(r'[^a-z0-9]+', '-', parent.lower()).strip('-')}",
+                    "name": parent,
+                    "status": display_status,
+                    "project_status": project_status,
+                    "capacity": (
+                        operating_capacity
+                        if operating
+                        else sum(float(item.get("capacity") or 0) for item in selected)
+                    ),
+                    "operating_capacity": operating_capacity or None,
+                    "expansion_capacity": expansion_capacity or None,
+                    "expansion_status": sorted(
+                        {
+                            (
+                                "Under construction"
+                                if str(item.get("status") or "").lower()
+                                == "construction"
+                                else "Proposed"
+                            )
+                            for item in expansion
+                        }
+                    ),
+                    "potential_capacity": (
+                        operating_capacity + expansion_capacity
+                        if operating_capacity or expansion_capacity
+                        else None
+                    ),
+                    "asset_kind": "coal_trade_terminals",
+                    "asset_label": "Coal trade terminal",
+                }
+            )
+
+    if status_group == "operating":
+        for port in ports.filtered(
+            categories=["dry_bulk"], countries=["IN"]
+        ):
+            compact = ports.compact(port)
+            rows.append(
+                {
+                    "id": compact["id"],
+                    "name": compact["name"],
+                    "status": "Operating",
+                    "project_status": "Operating",
+                    "capacity": None,
+                    "capacity_unit": None,
+                    "lat": compact["lat"],
+                    "lon": compact["lon"],
+                    "country": "India",
+                    "asset_type": (
+                        "Coal-linked"
+                        if "coal" in compact["categories"]
+                        else "Dry bulk"
+                    ),
+                    "parent_port": None,
+                    "source_text": (
+                        "NGA World Port Index; port role is source-classified "
+                        "only and no project pipeline status is inferred"
+                    ),
+                    "asset_kind": "dry_bulk_ports",
+                    "asset_label": "Dry-bulk port",
+                }
+            )
     return rows
+
+
+_npp_cache_lock = asyncio.Lock()
+_npp_memory_cache: Optional[Dict[str, Any]] = None
+
+
+def _npp_iso_date(value: Any) -> Optional[str]:
+    try:
+        return datetime.fromtimestamp(
+            float(value) / 1000, tz=timezone.utc
+        ).date().isoformat()
+    except (TypeError, ValueError, OSError):
+        return None
+
+
+def _transform_npp_power(
+    all_india: Dict[str, Any],
+    history: Dict[str, Any],
+) -> Dict[str, Any]:
+    installed = all_india.get("installed_Capacity") or {}
+    status = all_india.get("monthlyAllIndiaGen") or {}
+    category = [
+        {"id": "thermal", "label": "Thermal", "mw": installed.get("installed_capacity_thermal")},
+        {"id": "hydro", "label": "Hydro", "mw": installed.get("installed_capacity_hydro")},
+        {"id": "nuclear", "label": "Nuclear", "mw": installed.get("installed_capacity_nuclear")},
+        {"id": "renewables", "label": "Renewable energy", "mw": installed.get("installed_capacity_res")},
+    ]
+    category = [
+        {**item, "mw": float(item["mw"] or 0)}
+        for item in category
+    ]
+    sector = [
+        {
+            "id": re.sub(
+                r"[^a-z0-9]+",
+                "_",
+                str(item.get("sector_name") or "").lower(),
+            ).strip("_"),
+            "label": str(item.get("sector_name") or "").title(),
+            "mw": float(item.get("installed_capacity") or 0),
+        }
+        for item in (all_india.get("installed_Capacity_List") or [])
+        if item.get("sector_name")
+    ]
+    daily_demand = [
+        {
+            "date": item.get("reporting_date"),
+            "peak_requirement_mw": float(item.get("peak_requirement") or 0),
+            "demand_met_mw": float(item.get("max_demand_met") or 0),
+            "deficit_mw": float(item.get("surplus_deficit") or 0),
+        }
+        for item in (all_india.get("dailyDemmandCp") or [])
+    ]
+    historical = []
+    for item in history.get("linechartforCapacity") or []:
+        row = {
+            "date": _npp_iso_date(item.get("reporting_date")),
+            "thermal_mw": float(item.get("installed_capacity_thermal") or 0),
+            "hydro_mw": float(item.get("installed_capacity_hydro") or 0),
+            "nuclear_mw": float(item.get("installed_capacity_nuclear") or 0),
+            "renewables_mw": float(item.get("installed_capacity_res") or 0),
+        }
+        row["total_mw"] = sum(
+            row[key]
+            for key in ("thermal_mw", "hydro_mw", "nuclear_mw", "renewables_mw")
+        )
+        historical.append(row)
+    historical = sorted(
+        [row for row in historical if row["date"]],
+        key=lambda row: row["date"],
+    )
+    installed_total = float(
+        status.get("installed_capacity")
+        or sum(item["mw"] for item in category)
+    )
+    category_total = sum(item["mw"] for item in category)
+    sector_total = sum(item["mw"] for item in sector)
+    tolerance = max(1.0, installed_total * 0.001)
+    quality_checks = {
+        "category_reconciles": abs(category_total - installed_total) <= tolerance,
+        "sector_reconciles": abs(sector_total - installed_total) <= tolerance,
+        "daily_demand_available": bool(daily_demand),
+        "history_available": bool(historical),
+    }
+    return {
+        "source": {
+            "name": "National Power Portal, Government of India",
+            "dashboard_url": "https://npp.gov.in/dashBoard/cp-map-dashboard",
+            "all_india_endpoint": NPP_ALL_INDIA_URL,
+            "history_endpoint": NPP_HISTORY_URL,
+        },
+        "source_reported_date": _npp_iso_date(
+            installed.get("reporting_date") or status.get("reporting_date")
+        ),
+        "installed_capacity_mw": installed_total,
+        "category_capacity": category,
+        "sector_capacity": sector,
+        "all_india_status": {
+            "monitored_capacity_mw": float(status.get("monitored_capacity") or 0),
+            "online_capacity_mw": float(status.get("online_capacity") or 0),
+            "under_maintenance_capacity_mw": float(
+                status.get("under_maintenance_capacity") or 0
+            ),
+            "shutdown_capacity_mw": float(status.get("shutdown_capacity") or 0),
+            "unscheduled_capacity_mw": float(
+                status.get("unscheduled_capacity") or 0
+            ),
+            "note": (
+                "Shutdown and unscheduled capacity are NPP-reported supporting "
+                "status measures and are not added to the installed-capacity total."
+            ),
+        },
+        "daily_demand": daily_demand,
+        "historical_installed_capacity": historical,
+        "quality_checks": quality_checks,
+        "excluded_visuals": ["Historical growth of electricity consumption"],
+    }
+
+
+async def _get_npp_power_dashboard(force: bool = False) -> Dict[str, Any]:
+    global _npp_memory_cache
+    now = datetime.now(timezone.utc)
+    if _npp_memory_cache and not force:
+        fetched = datetime.fromisoformat(
+            str(_npp_memory_cache["fetched_at"]).replace("Z", "+00:00")
+        )
+        if (now - fetched).total_seconds() < NPP_CACHE_TTL_SECONDS:
+            return _npp_memory_cache
+    async with _npp_cache_lock:
+        if _npp_memory_cache and not force:
+            fetched = datetime.fromisoformat(
+                str(_npp_memory_cache["fetched_at"]).replace("Z", "+00:00")
+            )
+            if (now - fetched).total_seconds() < NPP_CACHE_TTL_SECONDS:
+                return _npp_memory_cache
+        try:
+            async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+                all_response, history_response = await asyncio.gather(
+                    client.get(NPP_ALL_INDIA_URL),
+                    client.get(NPP_HISTORY_URL),
+                )
+            all_response.raise_for_status()
+            history_response.raise_for_status()
+            all_india = all_response.json()
+            if isinstance(all_india, str):
+                all_india = json.loads(all_india)
+            history = history_response.json()
+            if isinstance(history, str):
+                history = json.loads(history)
+            payload = _transform_npp_power(all_india, history)
+            if not all(payload["quality_checks"].values()):
+                raise ValueError(
+                    "NPP response failed one or more reconciliation/freshness checks"
+                )
+            payload.update(
+                {
+                    "fetched_at": now.isoformat().replace("+00:00", "Z"),
+                    "refresh_interval_seconds": NPP_CACHE_TTL_SECONDS,
+                    "stale": False,
+                }
+            )
+            NPP_CACHE_PATH.write_text(
+                json.dumps(payload, indent=2), encoding="utf-8"
+            )
+            _npp_memory_cache = payload
+            return payload
+        except Exception as exc:
+            log.warning("NPP refresh failed: %s", exc)
+            cached = _npp_memory_cache
+            if cached is None and NPP_CACHE_PATH.exists():
+                try:
+                    cached = json.loads(
+                        NPP_CACHE_PATH.read_text(encoding="utf-8")
+                    )
+                except (OSError, json.JSONDecodeError):
+                    cached = None
+            if cached:
+                fallback = dict(cached)
+                fallback["stale"] = True
+                fallback["refresh_error"] = str(exc)
+                _npp_memory_cache = fallback
+                return fallback
+            raise HTTPException(
+                502,
+                "Official NPP data is temporarily unavailable and no validated cache exists.",
+            )
 
 def _ensure_bundled_trackers() -> None:
     """Extract optional prototype datasets into the ignored runtime directory."""
@@ -460,7 +836,7 @@ async def get_map_points(
         clauses = ["lat IS NOT NULL", "lon IS NOT NULL"]
         params: List[Any] = []
         if status:
-            values = _csv_values(status)
+            values = _status_values(status)
             if values:
                 clauses.append(
                     "LOWER(CAST(status AS VARCHAR)) IN ("
@@ -493,7 +869,7 @@ async def get_map_points(
     clauses = ['"Latitude" IS NOT NULL', '"Longitude" IS NOT NULL']
     params = []
     if status and "Status" in columns:
-        values = _csv_values(status)
+        values = _status_values(status)
         clauses.append(
             'LOWER(CAST("Status" AS VARCHAR)) IN ('
             + ",".join(["?"] * len(values))
@@ -662,7 +1038,14 @@ async def coal_summary():
     assets = _coal_asset_rows()
     counts = {
         key: sum(row["asset_kind"] == key for row in assets)
-        for key in ("coal_mines", "coal_trade_terminals", "dry_bulk_ports")
+        for key in (
+            "coal_mines",
+            "coal_trade_terminals",
+            "dry_bulk_ports",
+            "power_consumers",
+            "steel_consumers",
+            "cement_consumers",
+        )
     }
     available_types = sorted(
         {item.get("dataset_type") for item in datasets if item.get("dataset_type")}
@@ -708,15 +1091,24 @@ async def coal_summary():
             "Map assets use GEM and WPI sources. Operational production, trade, "
             "use, stocks and driver metrics are shown only after user data is uploaded."
         ),
+        "status_policy": {
+            "default": "operating",
+            "available": ["operating", "construction", "proposed"],
+            "excluded": ["retired", "cancelled", "shelved", "mothballed"],
+        },
     }
 
 
 @app.get("/api/coal/assets")
 async def coal_assets(
     asset_kind: Optional[str] = None,
+    status_group: str = Query("operating"),
     limit: int = Query(5000, ge=1, le=20_000),
 ):
-    rows = _coal_asset_rows()
+    try:
+        rows = _coal_asset_rows(status_group=status_group)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
     if asset_kind:
         allowed = set(_csv_values(asset_kind))
         rows = [row for row in rows if row["asset_kind"] in allowed]
@@ -726,6 +1118,11 @@ async def coal_assets(
 @app.get("/api/coal/datasets")
 async def coal_datasets():
     return {"data": _coal_dataset_metadata()}
+
+
+@app.get("/api/npp/power-dashboard")
+async def npp_power_dashboard(force: bool = Query(False)):
+    return await _get_npp_power_dashboard(force=force)
 
 
 @app.post("/api/coal/upload")

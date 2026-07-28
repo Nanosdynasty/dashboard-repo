@@ -2,7 +2,7 @@ import unittest
 
 from fastapi.testclient import TestClient
 
-from app import app
+from app import app, _transform_npp_power
 
 
 class PortApiTests(unittest.TestCase):
@@ -133,6 +133,35 @@ class PortApiTests(unittest.TestCase):
             all(row["country"] == "India" for row in asset_payload["data"])
         )
 
+        operating = self.client.get(
+            "/api/coal/assets", params={"status_group": "operating"}
+        ).json()["data"]
+        self.assertTrue(operating)
+        self.assertTrue(all(row["status"] == "Operating" for row in operating))
+        dhamra = next(
+            row for row in operating
+            if row["asset_kind"] == "coal_trade_terminals"
+            and row["name"] == "Dhamra Port"
+        )
+        self.assertEqual(dhamra["status"], "Operating")
+        self.assertGreater(dhamra["expansion_capacity"], 0)
+        self.assertIn("Under construction", dhamra["expansion_status"])
+
+        construction = self.client.get(
+            "/api/coal/assets", params={"status_group": "construction"}
+        ).json()["data"]
+        self.assertTrue(construction)
+        self.assertTrue(
+            all(row["project_status"] == "Under construction" for row in construction)
+        )
+        self.assertFalse(
+            any(
+                str(row.get("source_status", "")).lower()
+                in {"retired", "cancelled", "shelved", "mothballed"}
+                for row in construction
+            )
+        )
+
     def test_port_ui_does_not_advertise_unsupported_zero_categories(self):
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
@@ -144,6 +173,9 @@ class PortApiTests(unittest.TestCase):
         self.assertNotIn("<span>LNG</span>", html)
         self.assertIn("Stock cover", html)
         self.assertIn("Trade flows", html)
+        self.assertIn('<option value="operating" selected>Operating</option>', html)
+        self.assertIn("Coal-consuming industries", html)
+        self.assertIn("India power", html)
 
     def test_map_uses_only_explicit_english_labels(self):
         response = self.client.get("/static/js/app.js")
@@ -153,6 +185,66 @@ class PortApiTests(unittest.TestCase):
         self.assertIn('["South America", -18, -59]', javascript)
         self.assertNotIn("World_Light_Gray_Reference", javascript)
         self.assertNotIn("event.preventDefault()", javascript)
+
+    def test_npp_transform_reconciles_requested_power_visuals(self):
+        reporting_date = 1_720_000_000_000
+        all_india = {
+            "installed_Capacity": {
+                "installed_capacity_thermal": 60,
+                "installed_capacity_hydro": 20,
+                "installed_capacity_nuclear": 5,
+                "installed_capacity_res": 15,
+                "reporting_date": reporting_date,
+            },
+            "monthlyAllIndiaGen": {
+                "installed_capacity": 100,
+                "monitored_capacity": 80,
+                "online_capacity": 70,
+                "under_maintenance_capacity": 10,
+                "shutdown_capacity": 6,
+                "unscheduled_capacity": 4,
+                "reporting_date": reporting_date,
+            },
+            "installed_Capacity_List": [
+                {"sector_name": "CENTRAL SECTOR", "installed_capacity": 30},
+                {"sector_name": "STATE SECTOR", "installed_capacity": 25},
+                {"sector_name": "PVT SECTOR", "installed_capacity": 45},
+            ],
+            "dailyDemmandCp": [
+                {
+                    "reporting_date": "01/07/2024",
+                    "peak_requirement": 90,
+                    "max_demand_met": 88,
+                    "surplus_deficit": -2,
+                }
+            ],
+        }
+        history = {
+            "linechartforCapacity": [
+                {
+                    "reporting_date": 1_600_000_000_000,
+                    "installed_capacity_thermal": 50,
+                    "installed_capacity_hydro": 18,
+                    "installed_capacity_nuclear": 4,
+                    "installed_capacity_res": 8,
+                },
+                {
+                    "reporting_date": reporting_date,
+                    "installed_capacity_thermal": 60,
+                    "installed_capacity_hydro": 20,
+                    "installed_capacity_nuclear": 5,
+                    "installed_capacity_res": 15,
+                },
+            ]
+        }
+        payload = _transform_npp_power(all_india, history)
+        self.assertTrue(all(payload["quality_checks"].values()))
+        self.assertEqual(payload["installed_capacity_mw"], 100)
+        self.assertEqual(payload["daily_demand"][0]["demand_met_mw"], 88)
+        self.assertIn(
+            "Historical growth of electricity consumption",
+            payload["excluded_visuals"],
+        )
 
 
 if __name__ == "__main__":

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Howe Robinson | Global Assets Map</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="/static/css/style.css?v=20260728-2" />
+  <link rel="stylesheet" href="/static/css/style.css?v=20260728-3" />
 </head>
 <body>
   <div class="app-shell">
@@ -29,7 +29,11 @@
               </div>
               <div class="field">
                 <label for="energy-status">Status</label>
-                <select id="energy-status"><option value="">All statuses</option></select>
+                <select id="energy-status">
+                  <option value="operating" selected>Operating</option>
+                  <option value="construction">Under construction</option>
+                  <option value="proposed">Proposed</option>
+                </select>
               </div>
             </div>
             <button type="button" class="filter-button" id="energy-apply">Apply energy filters</button>
@@ -98,6 +102,15 @@
               <button type="button" class="active" data-coal-view="map">Map</button>
               <button type="button" data-coal-view="table">Table</button>
               <button type="button" data-coal-view="cards">Cards</button>
+              <button type="button" data-coal-view="power">India power</button>
+            </div>
+            <div class="field">
+              <label for="coal-asset-status">Asset status</label>
+              <select id="coal-asset-status">
+                <option value="operating" selected>Operating</option>
+                <option value="construction">Under construction</option>
+                <option value="proposed">Proposed</option>
+              </select>
             </div>
             <p class="group-label">Map context</p>
             <div class="layer-list" id="coal-workspace-layers">
@@ -105,6 +118,14 @@
               <label><input type="checkbox" value="coal_trade_terminals" checked /><i style="--dot:#db2f34"></i><span>India coal terminals</span><small id="coal-terminal-count">—</small></label>
               <label><input type="checkbox" value="dry_bulk_ports" checked /><i style="--dot:#003671"></i><span>India dry-bulk ports</span><small id="coal-port-count">—</small></label>
             </div>
+            <p class="group-label">Coal-consuming industries</p>
+            <div class="layer-list" id="coal-consumer-layers">
+              <label><input type="checkbox" value="power_consumers" /><i style="--dot:#6f7782"></i><span>Power plants</span><small id="coal-power-count">—</small></label>
+              <label><input type="checkbox" value="steel_consumers" /><i style="--dot:#536a7a"></i><span>Steel plants</span><small id="coal-steel-count">—</small></label>
+              <label><input type="checkbox" value="cement_consumers" /><i style="--dot:#9a8a73"></i><span>Cement plants</span><small id="coal-cement-count">—</small></label>
+              <label class="disabled-layer"><input type="checkbox" value="other_consumers" disabled /><i style="--dot:#89939d"></i><span>Other industries</span><small>awaiting source</small></label>
+            </div>
+            <p class="source-note">Industry overlays are optional and status-matched. Retired, cancelled, shelved and mothballed assets are always excluded.</p>
             <div class="filter-grid">
               <div class="field">
                 <label for="coal-metric">Dataset</label>
@@ -173,7 +194,11 @@
               </div>
               <div class="field">
                 <label for="commodity-status">Status</label>
-                <select id="commodity-status"><option value="">All statuses</option></select>
+                <select id="commodity-status">
+                  <option value="operating" selected>Operating</option>
+                  <option value="construction">Under construction</option>
+                  <option value="proposed">Proposed</option>
+                </select>
               </div>
             </div>
             <button type="button" class="filter-button" id="commodity-apply">Apply commodity filters</button>
@@ -290,6 +315,35 @@
         <div id="coal-assets-table" class="coal-assets-table"></div>
         <div id="coal-assets-cards" class="coal-assets-cards" hidden></div>
       </section>
+      <section id="npp-power-surface" class="npp-power-surface" hidden>
+        <div class="npp-source-bar">
+          <div>
+            <span>OFFICIAL SOURCE / NATIONAL POWER PORTAL</span>
+            <strong id="npp-freshness">Loading latest validated snapshot…</strong>
+          </div>
+          <button type="button" id="npp-refresh">Refresh from NPP</button>
+        </div>
+        <div class="npp-hero-grid">
+          <article class="npp-hero">
+            <span>Installed capacity</span>
+            <strong id="npp-installed-capacity">—</strong>
+            <small id="npp-reported-date">Source date unavailable</small>
+          </article>
+          <article class="npp-demand-hero">
+            <span>Daily demand met</span>
+            <strong id="npp-demand-met">—</strong>
+            <small id="npp-demand-date">Source date unavailable</small>
+          </article>
+        </div>
+        <div class="npp-grid">
+          <article><header><h3>All India status</h3><small>Category-wise capacity status</small></header><div id="npp-status-chart" class="npp-chart"></div></article>
+          <article><header><h3>Category-wise installed capacity</h3><small>Thermal, hydro, nuclear and renewables</small></header><div id="npp-category-chart" class="npp-chart"></div></article>
+          <article><header><h3>Sector-wise installed capacity</h3><small>Central, state and private sector</small></header><div id="npp-sector-chart" class="npp-chart"></div></article>
+          <article><header><h3>Daily demand — All India</h3><small>Requirement, met and reported deficit</small></header><div id="npp-demand-chart" class="npp-chart"></div></article>
+          <article class="npp-wide"><header><h3>Growth of installed capacity of India</h3><small>Historical NPP series; electricity-consumption history excluded</small></header><div id="npp-history-chart" class="npp-history-chart"></div></article>
+        </div>
+        <p id="npp-quality-note" class="npp-quality-note">Values display only after category and sector totals reconcile to the NPP installed-capacity headline.</p>
+      </section>
       <div class="map-topbar">
         <div class="map-status"><span></span><strong id="map-status">Loading ports…</strong></div>
         <button type="button" id="fit-world" class="map-button" title="Fit world">World view</button>
@@ -308,6 +362,6 @@
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/static/js/app.js?v=20260728-2"></script>
+  <script src="/static/js/app.js?v=20260728-3"></script>
 </body>
 </html>
