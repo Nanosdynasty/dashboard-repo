@@ -56,6 +56,8 @@ An expansion value being empty does not prove that an expansion exists. Record e
 
 ### Authoritative source order
 
+Do not limit research to Indian port websites, Indian government domains or India-based publications. Search globally. Data may be used from any official or reputable domestic or international source when it clearly refers to the correct Indian port, terminal and reporting period and provides traceable evidence for the field being collected.
+
 Use sources in this order:
 
 1. Current official port or terminal marine documents:
@@ -71,8 +73,16 @@ Use sources in this order:
 3. Ministry of Ports, Shipping and Waterways, particularly the latest *Basic Port Statistics of India* and monthly cargo publications.
 4. Indian Ports Association publications or dashboards.
 5. State maritime boards, especially Gujarat Maritime Board for Bedi, Magadalla, Muldwarka, Navlakhi, Okha, Porbandar, Salaya and Sikka.
-6. Environmental-clearance or concession documents from an official government portal, but only for project scope, planned capacity and expansion status—not as proof of current permissible navigational draft.
-7. A reputable secondary source only when no primary source exists. Mark it `secondary` and do not use Wikipedia, generic port directories, search-result snippets, MarineTraffic or commercial aggregators as the final evidence for a specification.
+6. Official international and foreign-government sources, including hydrographic offices, customs authorities, trade ministries, maritime administrations and embassy or trade-agency reports, when they directly document the Indian port or terminal.
+7. Stock-exchange filings, audited annual reports, lender disclosures, bond documents and official investor presentations issued by the port owner, terminal operator, concessionaire, captive user or its listed parent company.
+8. Multilateral and bilateral development institutions such as the World Bank, International Finance Corporation, Asian Development Bank, Asian Infrastructure Investment Bank, Japan International Cooperation Agency and other official export-credit or development-finance institutions. Use their appraisal, due-diligence and completion documents when the scope and date are clear.
+9. International maritime organisations, recognised hydrographic publications, classification societies and protection-and-indemnity or navigation circulars when they provide attributable port particulars. Distinguish charted depth from permissible draft and verify time-sensitive operating limits with a newer port or harbour-master source whenever possible.
+10. Environmental-clearance, concession, court, regulator or project documents from an official portal, but only for the field their evidence supports. A design document may support project scope or planned capacity but does not, by itself, prove current operating status or permissible navigational draft.
+11. Reputable specialist maritime, engineering, commodity or financial research sources when no primary source is accessible. Prefer sources with a named publisher, methodology, publication date and direct document link. Mark these records `secondary` and retain any uncertainty.
+
+Country of publication is not a quality criterion. Authority, relevance to the exact facility, recency, methodology and traceability determine whether the source can be used.
+
+Do not use Wikipedia, anonymous blogs, generic port directories, AI-generated summaries, search-result snippets, unattributed social-media posts, user-edited databases, MarineTraffic or commercial aggregators as the final evidence for a specification. These may be used only to discover a lead that is then verified through a citable source. A paid reputable database may be used only when its licence permits this use, its methodology and observation date are available, and the record is labelled with the database name and access limitations.
 
 Start with these official source collections:
 
@@ -102,6 +112,8 @@ Start with these official source collections:
   `https://www.mumbaiport.gov.in/`
 
 Search within each official site for the port name plus: `port information booklet`, `draft declaration`, `berth`, `terminal`, `marine`, `tariff`, `BPTS`, `capacity`, `coal`, `dry bulk`, `annual report`, `cargo statistics`, `expansion`, and `environment clearance`.
+
+Also search international sources using the official port name, common aliases, terminal operator and UN/LOCODE together with terms such as `terminal particulars`, `port limits`, `maximum permissible draft`, `berth characteristics`, `due diligence`, `project appraisal`, `lender presentation`, `bond prospectus`, `hydrographic`, `sailing directions`, `coal terminal capacity`, and `commodity throughput`. An international source must still be matched to the correct physical facility; a reference to the port group, city, anchorage or neighbouring terminal is not sufficient.
 
 ### What to collect
 
@@ -237,7 +249,9 @@ Create a source record for every document used:
 - `accessed_date`
 - `page_or_table`
 - `scope`
-- `source_tier`: `official_port`, `official_company`, `government`, `maritime_board`, or `secondary`.
+- `source_tier`: `official_port`, `official_company`, `government`, `foreign_government`, `maritime_board`, `multilateral`, `hydrographic`, `classification_society`, `regulated_filing`, or `secondary`.
+- `source_country`
+- `source_scope`: `domestic`, `international`, or `multilateral`.
 - `evidence_excerpt`: short exact passage or table-cell description supporting the value.
 - `archived_file_name`: local file name if the PDF/XLSX was downloaded.
 
@@ -355,6 +369,8 @@ Return this structure:
       "page_or_table": "Page 18",
       "scope": "Operating berth and marine specifications",
       "source_tier": "official_port",
+      "source_country": "India",
+      "source_scope": "domestic",
       "evidence_excerpt": "Coal Berth 1: permissible draft 14.5 m.",
       "archived_file_name": "example_port_information_booklet_2026.pdf"
     }
