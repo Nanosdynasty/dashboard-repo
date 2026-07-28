@@ -59,6 +59,26 @@ Status: planned.
 - Introduce a documented port taxonomy covering dry bulk, liquid bulk, oil,
   LNG, container, breakbulk, Ro-Ro, anchorage, and unclassified records.
 
+## India Coal intelligence workspace
+
+Status: foundation implemented; analytical metrics await user uploads.
+
+- Add a dedicated, collapsible Coal workspace with map, table, and card views.
+- Use India-only GEM coal mines and coal trade terminals plus WPI-classified
+  dry-bulk ports as the verified geographic context.
+- Do not show placeholder operational numbers. Production, imports, power use,
+  stocks, renewables, monsoon, and heat series remain visibly unavailable until
+  a source dataset is uploaded.
+- Accept separate Excel, CSV, or JSON uploads for each analytical dataset type,
+  profile likely period and numeric columns, and retain quality warnings.
+- Export uploaded raw datasets to Excel with a methodology sheet; never insert
+  inferred values into the workbook.
+- Next analytical increment: normalize compatible period/unit schemas, then add
+  monthly production-versus-import charts, YoY comparisons, configurable
+  weekly/monthly/quarterly/yearly power-use views, and lagged driver analysis.
+- Correlation outputs must report overlap, missingness, lag assumptions, and
+  confidence, and must never be described as causal evidence.
+
 ## Phase 4 — Voyage intelligence
 
 Status: planned.

@@ -110,6 +110,36 @@ class PortApiTests(unittest.TestCase):
         self.assertTrue(all(row["country"] == "India" for row in rows))
         self.assertTrue(all(row["status"].lower() == "operating" for row in rows))
 
+    def test_india_coal_workspace_uses_verified_assets_without_fake_metrics(self):
+        summary = self.client.get("/api/coal/summary")
+        self.assertEqual(summary.status_code, 200)
+        payload = summary.json()
+        self.assertEqual(payload["country"], "India")
+        self.assertGreater(payload["map_assets"]["coal_mines"], 0)
+        self.assertGreater(payload["map_assets"]["coal_trade_terminals"], 0)
+        self.assertIn(payload["status"], {"awaiting_data", "ready"})
+        self.assertIn("quality_note", payload)
+
+        assets = self.client.get(
+            "/api/coal/assets", params={"asset_kind": "coal_mines"}
+        )
+        self.assertEqual(assets.status_code, 200)
+        asset_payload = assets.json()
+        self.assertTrue(asset_payload["data"])
+        self.assertTrue(
+            all(row["country"] == "India" for row in asset_payload["data"])
+        )
+
+    def test_port_ui_does_not_advertise_unsupported_zero_categories(self):
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, 200)
+        html = response.text
+        self.assertIn('data-mode="coal"', html)
+        self.assertNotIn("<span>Oil terminal</span>", html)
+        self.assertNotIn("<span>Container</span>", html)
+        self.assertNotIn("<span>Liquid bulk</span>", html)
+        self.assertNotIn("<span>LNG</span>", html)
+
 
 if __name__ == "__main__":
     unittest.main()

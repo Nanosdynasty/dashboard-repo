@@ -26,6 +26,8 @@ BASE_DIR = Path(__file__).parent
 DATA_DIR = BASE_DIR / "data"
 UPLOAD_DIR = BASE_DIR / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
+COAL_UPLOAD_DIR = UPLOAD_DIR / "coal"
+COAL_UPLOAD_DIR.mkdir(exist_ok=True)
 BUNDLED_DATA_DIR = UPLOAD_DIR / "_bundled_data"
 BUNDLED_DATA_DIR.mkdir(exist_ok=True)
 
@@ -62,6 +64,73 @@ NORMALIZED_MAP_TRACKERS = {
 }
 user_datasets: Dict[str, Path] = {}
 con = duckdb.connect(database=":memory:")
+
+COAL_DATASET_TYPES = {
+    "production": "Coal production",
+    "imports": "Coal imports",
+    "power_use": "Coal used in power generation",
+    "power_stocks": "Power-sector coal stocks",
+    "renewables": "Renewable generation",
+    "weather": "Weather, monsoon and heat",
+}
+
+
+def _coal_dataset_metadata() -> List[Dict[str, Any]]:
+    datasets: List[Dict[str, Any]] = []
+    for path in sorted(COAL_UPLOAD_DIR.glob("*.json")):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(payload, dict):
+                datasets.append(payload)
+        except (OSError, json.JSONDecodeError):
+            log.warning("Skipping unreadable coal dataset metadata: %s", path)
+    return sorted(datasets, key=lambda item: item.get("uploaded_at", ""), reverse=True)
+
+
+def _coal_asset_rows() -> List[Dict[str, Any]]:
+    rows: List[Dict[str, Any]] = []
+    for tracker_id, label in (
+        ("coal_mines", "Coal mine"),
+        ("coal_trade_terminals", "Coal trade terminal"),
+    ):
+        if tracker_id not in {
+            row[0]
+            for row in con.execute(
+                "SELECT table_name FROM information_schema.tables"
+            ).fetchall()
+        }:
+            continue
+        frame = con.execute(
+            "SELECT asset_id AS id, name, status, capacity, capacity_unit, "
+            "lat, lon, country, asset_type, parent_port, source_text "
+            f"FROM {tracker_id} WHERE LOWER(CAST(country AS VARCHAR)) = 'india'"
+        ).fetchdf()
+        for record in json.loads(frame.to_json(orient="records")):
+            record["asset_kind"] = tracker_id
+            record["asset_label"] = label
+            rows.append(record)
+    for port in ports.filtered(
+        categories=["dry_bulk"], countries=["IN"]
+    ):
+        compact = ports.compact(port)
+        rows.append(
+            {
+                "id": compact["id"],
+                "name": compact["name"],
+                "status": None,
+                "capacity": None,
+                "capacity_unit": None,
+                "lat": compact["lat"],
+                "lon": compact["lon"],
+                "country": "India",
+                "asset_type": "Coal-linked" if "coal" in compact["categories"] else "Dry bulk",
+                "parent_port": None,
+                "source_text": "NGA World Port Index; port role is source-classified only",
+                "asset_kind": "dry_bulk_ports",
+                "asset_label": "Dry-bulk port",
+            }
+        )
+    return rows
 
 def _ensure_bundled_trackers() -> None:
     """Extract optional prototype datasets into the ignored runtime directory."""
@@ -584,6 +653,180 @@ async def port_detail(port_id: str):
     if not port:
         raise HTTPException(404, "Unknown port")
     return port
+
+
+@app.get("/api/coal/summary")
+async def coal_summary():
+    """Describe verified India map coverage and uploaded analytical datasets."""
+    datasets = _coal_dataset_metadata()
+    assets = _coal_asset_rows()
+    counts = {
+        key: sum(row["asset_kind"] == key for row in assets)
+        for key in ("coal_mines", "coal_trade_terminals", "dry_bulk_ports")
+    }
+    available_types = sorted(
+        {item.get("dataset_type") for item in datasets if item.get("dataset_type")}
+    )
+    return {
+        "status": "ready" if datasets else "awaiting_data",
+        "country": "India",
+        "map_assets": counts,
+        "datasets": datasets,
+        "available_dataset_types": available_types,
+        "dataset_types": [
+            {"id": key, "label": label}
+            for key, label in COAL_DATASET_TYPES.items()
+        ],
+        "supported_analysis": [
+            "Monthly production versus imports",
+            "Year-on-year production and imports",
+            "Coal used in power generation by week, month, quarter and year",
+            "Aligned-series correlation with renewables, monsoon and heat",
+        ],
+        "quality_note": (
+            "Map assets use GEM and WPI sources. Operational production, trade, "
+            "use, stocks and driver metrics are shown only after user data is uploaded."
+        ),
+    }
+
+
+@app.get("/api/coal/assets")
+async def coal_assets(
+    asset_kind: Optional[str] = None,
+    limit: int = Query(5000, ge=1, le=20_000),
+):
+    rows = _coal_asset_rows()
+    if asset_kind:
+        allowed = set(_csv_values(asset_kind))
+        rows = [row for row in rows if row["asset_kind"] in allowed]
+    return {"data": rows[:limit], "total": len(rows)}
+
+
+@app.get("/api/coal/datasets")
+async def coal_datasets():
+    return {"data": _coal_dataset_metadata()}
+
+
+@app.post("/api/coal/upload")
+async def upload_coal_dataset(
+    dataset_type: str = Query(...),
+    file: UploadFile = File(...),
+):
+    if dataset_type not in COAL_DATASET_TYPES:
+        raise HTTPException(400, "Unknown coal dataset type")
+    original_name = Path(file.filename or "coal-data")
+    ext = original_name.suffix.lower()
+    if ext not in {".xlsx", ".xls", ".csv", ".json"}:
+        raise HTTPException(400, "Supported: Excel, CSV, JSON")
+    content = await file.read()
+    if len(content) > 50 * 1024 * 1024:
+        raise HTTPException(400, "File too large (max 50 MB)")
+    try:
+        if ext in {".xlsx", ".xls"}:
+            frame = pd.read_excel(io.BytesIO(content), engine="openpyxl")
+        elif ext == ".csv":
+            frame = pd.read_csv(io.BytesIO(content))
+        else:
+            frame = pd.read_json(io.BytesIO(content))
+    except Exception as exc:
+        raise HTTPException(400, f"Parse error: {exc}")
+    if frame.empty:
+        raise HTTPException(400, "The uploaded dataset has no rows")
+    frame.columns = [str(column).strip() for column in frame.columns]
+    uid = uuid.uuid4().hex[:12]
+    safe_stem = re.sub(
+        r"[^A-Za-z0-9_-]+", "_", original_name.stem
+    ).strip("_") or "coal_data"
+    csv_path = COAL_UPLOAD_DIR / f"{dataset_type}_{safe_stem}_{uid}.csv"
+    meta_path = csv_path.with_suffix(".json")
+    frame.to_csv(csv_path, index=False)
+    date_candidates = [
+        column for column in frame.columns
+        if any(token in column.lower() for token in ("date", "month", "week", "year", "period"))
+    ]
+    numeric_candidates = [
+        column for column in frame.columns
+        if pd.to_numeric(frame[column], errors="coerce").notna().sum()
+        >= max(1, int(len(frame) * 0.5))
+    ]
+    metadata = {
+        "id": csv_path.stem,
+        "dataset_type": dataset_type,
+        "dataset_label": COAL_DATASET_TYPES[dataset_type],
+        "original_name": original_name.name,
+        "rows": int(len(frame)),
+        "columns": list(frame.columns),
+        "date_candidates": date_candidates,
+        "numeric_candidates": numeric_candidates,
+        "uploaded_at": datetime.utcnow().isoformat() + "Z",
+        "quality_status": (
+            "review_needed" if not date_candidates or not numeric_candidates else "profiled"
+        ),
+        "quality_issues": [
+            issue
+            for condition, issue in (
+                (not date_candidates, "No obvious date or period column was detected."),
+                (not numeric_candidates, "No mostly numeric measure column was detected."),
+            )
+            if condition
+        ],
+        "csv_file": csv_path.name,
+    }
+    meta_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+    return metadata
+
+
+@app.get("/api/coal/export")
+async def export_coal_data(dataset_type: Optional[str] = None):
+    datasets = _coal_dataset_metadata()
+    if dataset_type:
+        datasets = [
+            item for item in datasets
+            if item.get("dataset_type") == dataset_type
+        ]
+    if not datasets:
+        raise HTTPException(
+            409,
+            "No matching coal dataset has been uploaded; no workbook was generated.",
+        )
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        used_sheets: set[str] = set()
+        for index, metadata in enumerate(datasets):
+            csv_path = COAL_UPLOAD_DIR / str(metadata.get("csv_file", ""))
+            if not csv_path.exists():
+                continue
+            frame = pd.read_csv(csv_path)
+            base = str(metadata.get("dataset_type") or f"data_{index + 1}")[:27]
+            sheet = base
+            suffix = 2
+            while sheet in used_sheets:
+                sheet = f"{base[:27]}_{suffix}"
+                suffix += 1
+            used_sheets.add(sheet)
+            frame.to_excel(writer, index=False, sheet_name=sheet)
+        methodology = pd.DataFrame(
+            [
+                {
+                    "note": (
+                        "Raw uploaded data only. No inferred or synthetic values. "
+                        "Correlation analysis must align compatible periods and "
+                        "does not establish causation."
+                    )
+                }
+            ]
+        )
+        methodology.to_excel(writer, index=False, sheet_name="Methodology")
+    output.seek(0)
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": (
+                'attachment; filename="india_coal_workspace_export.xlsx"'
+            )
+        },
+    )
 
 @app.get("/api/zones")
 async def get_zones():

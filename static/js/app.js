@@ -18,6 +18,12 @@ const WORKSPACE_LAYERS = {
   commodities: ["coal_mines", "coal_trade_terminals", "iron_ore_mines", "steel_plants", "cement_plants"]
 };
 
+const COAL_ASSET_CONFIG = {
+  coal_mines: { label: "Coal mine", color: "#242b38", radius: 3 },
+  coal_trade_terminals: { label: "Coal trade terminal", color: "#db2f34", radius: 4 },
+  dry_bulk_ports: { label: "Dry-bulk port", color: "#003671", radius: 3 }
+};
+
 const state = {
   map: null,
   mode: "ports",
@@ -30,6 +36,10 @@ const state = {
   routeLayer: null,
   routeMode: false,
   routePorts: [],
+  coalLayer: null,
+  coalAssets: [],
+  coalSummary: null,
+  coalView: "map",
   filters: {
     energy: { country: "", status: "" },
     commodities: { country: "", status: "" }
@@ -45,22 +55,31 @@ async function init() {
     zoomControl: true,
     minZoom: 2
   }).setView([18, 10], 2);
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-    maxZoom: 18,
-    attribution: "&copy; OpenStreetMap &copy; CARTO"
+  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}", {
+    maxZoom: 16,
+    attribution: "Tiles &copy; Esri"
+  }).addTo(state.map);
+  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}", {
+    maxZoom: 16,
+    attribution: "Labels &copy; Esri"
   }).addTo(state.map);
   state.portLayer = L.layerGroup().addTo(state.map);
+  state.coalLayer = L.layerGroup().addTo(state.map);
   state.routeLayer = L.layerGroup().addTo(state.map);
   bindControls();
-  await Promise.all([loadPortFacets(), loadWorkspaceFacets()]);
+  await Promise.all([loadPortFacets(), loadWorkspaceFacets(), loadCoalWorkspace()]);
   await loadPorts();
   activateMode("ports");
 }
 
 function bindControls() {
-  document.querySelectorAll(".filter-section").forEach(section => {
+  document.querySelectorAll(".filter-section[data-mode]").forEach(section => {
     section.querySelector("summary").addEventListener("click", event => {
       event.preventDefault();
+      if (section.open && state.mode === section.dataset.mode) {
+        section.open = false;
+        return;
+      }
       activateMode(section.dataset.mode);
     });
   });
@@ -69,6 +88,22 @@ function bindControls() {
   document.getElementById("show-ports").addEventListener("change", renderPorts);
   document.getElementById("energy-show-ports").addEventListener("change", renderPorts);
   document.getElementById("commodity-show-ports").addEventListener("change", renderPorts);
+  document.querySelectorAll("#coal-workspace-layers input").forEach(input => {
+    input.addEventListener("change", renderCoalLayers);
+  });
+  document.querySelectorAll("[data-coal-view]").forEach(button => {
+    button.addEventListener("click", () => setCoalView(button.dataset.coalView));
+  });
+  document.getElementById("coal-upload").addEventListener("click", () => {
+    document.getElementById("coal-upload-input").click();
+  });
+  document.getElementById("coal-upload-input").addEventListener("change", uploadCoalDataset);
+  document.getElementById("coal-export").addEventListener("click", exportCoalData);
+  document.getElementById("coal-metric").addEventListener("change", refreshCoalActionState);
+  document.getElementById("coal-run-analysis").addEventListener("click", () => {
+    document.getElementById("coal-upload-message").textContent =
+      "Analysis is enabled only when the required uploaded series pass period, unit and overlap validation. No result has been inferred.";
+  });
   document.getElementById("port-country").addEventListener("change", loadPorts);
   document.getElementById("port-size").addEventListener("change", loadPorts);
   document.querySelectorAll("#port-categories input").forEach(input => input.addEventListener("change", loadPorts));
@@ -86,17 +121,31 @@ function bindControls() {
 
 function activateMode(mode) {
   state.mode = mode;
-  document.querySelectorAll(".filter-section").forEach(section => {
+  document.querySelectorAll(".filter-section[data-mode]").forEach(section => {
     section.open = section.dataset.mode === mode;
   });
   state.assetLayers.forEach((layer, id) => {
     if (LAYER_CONFIG[id].mode !== mode && state.map.hasLayer(layer)) state.map.removeLayer(layer);
   });
-  if (mode !== "ports") {
+  if (mode === "energy" || mode === "commodities") {
     WORKSPACE_LAYERS[mode].forEach(id => {
       const input = document.querySelector(`input[value="${id}"]`);
       if (input?.checked) toggleAssetLayer(input);
     });
+  }
+  const coalHeader = document.getElementById("coal-workspace-header");
+  coalHeader.hidden = mode !== "coal";
+  if (mode === "coal") {
+    setCoalView(state.coalView);
+    renderCoalLayers();
+    state.map.fitBounds([[6, 68], [37, 98]], { padding: [25, 25] });
+  } else {
+    state.coalLayer.clearLayers();
+    document.getElementById("coal-data-surface").hidden = true;
+    document.getElementById("map").hidden = false;
+    document.querySelector(".map-topbar").hidden = false;
+    document.querySelector(".map-key").hidden = false;
+    setTimeout(() => state.map.invalidateSize(), 0);
   }
   renderPorts();
   updateActiveCounts();
@@ -105,7 +154,8 @@ function activateMode(mode) {
 function portsAllowedForMode() {
   if (state.mode === "ports") return document.getElementById("show-ports").checked;
   if (state.mode === "energy") return document.getElementById("energy-show-ports").checked;
-  return document.getElementById("commodity-show-ports").checked;
+  if (state.mode === "commodities") return document.getElementById("commodity-show-ports").checked;
+  return false;
 }
 
 async function loadPortFacets() {
@@ -115,9 +165,12 @@ async function loadPortFacets() {
   populateSelect("port-country", "All countries", facets.countries || []);
   populateSelect("port-size", "All sizes", facets.harbor_sizes || []);
   const counts = Object.fromEntries((facets.categories || []).map(item => [item.id, item.count]));
-  ["dry_bulk", "coal", "oil", "container", "liquid_bulk", "lng"].forEach(key => {
+  ["dry_bulk", "coal"].forEach(key => {
     const el = document.getElementById("count-" + key.replaceAll("_", "-"));
-    if (el) el.textContent = Number(counts[key] || 0).toLocaleString();
+    const label = document.querySelector(`[data-category="${key}"]`);
+    const count = Number(counts[key] || 0);
+    if (el) el.textContent = count.toLocaleString();
+    if (label) label.hidden = count <= 0;
   });
 }
 
@@ -129,6 +182,181 @@ async function loadWorkspaceFacets() {
     populateSelect(`${mode === "energy" ? "energy" : "commodity"}-country`, "All countries", facets.countries || []);
     populateSelect(`${mode === "energy" ? "energy" : "commodity"}-status`, "All statuses", facets.statuses || []);
   }));
+}
+
+async function loadCoalWorkspace() {
+  try {
+    const [summaryResponse, assetsResponse] = await Promise.all([
+      fetch("/api/coal/summary"),
+      fetch("/api/coal/assets?limit=5000")
+    ]);
+    if (!summaryResponse.ok || !assetsResponse.ok) throw new Error("Coal workspace data could not be loaded");
+    state.coalSummary = await summaryResponse.json();
+    const assetPayload = await assetsResponse.json();
+    state.coalAssets = assetPayload.data || [];
+    const counts = state.coalSummary.map_assets || {};
+    document.getElementById("coal-mine-count").textContent = Number(counts.coal_mines || 0).toLocaleString();
+    document.getElementById("coal-terminal-count").textContent = Number(counts.coal_trade_terminals || 0).toLocaleString();
+    document.getElementById("coal-port-count").textContent = Number(counts.dry_bulk_ports || 0).toLocaleString();
+    const hasDatasets = (state.coalSummary.datasets || []).length > 0;
+    document.getElementById("coal-data-status").textContent = hasDatasets
+      ? `${state.coalSummary.datasets.length} dataset${state.coalSummary.datasets.length === 1 ? "" : "s"}`
+      : "India workspace";
+    document.getElementById("coal-header-status").textContent = hasDatasets
+      ? `${state.coalSummary.datasets.length} uploaded dataset${state.coalSummary.datasets.length === 1 ? "" : "s"}`
+      : "Awaiting operational data";
+    refreshCoalActionState();
+    if (hasDatasets) {
+      document.getElementById("coal-upload-message").textContent =
+        "Uploaded data is stored separately from GEM/WPI map context. Review its detected date and numeric fields before analysis.";
+    }
+    renderCoalAssetViews();
+  } catch (error) {
+    document.getElementById("coal-upload-message").textContent = error.message;
+  }
+}
+
+function refreshCoalActionState() {
+  const available = new Set(state.coalSummary?.available_dataset_types || []);
+  const selected = document.getElementById("coal-metric").value;
+  document.getElementById("coal-export").disabled = !available.has(selected);
+  document.getElementById("coal-run-analysis").disabled =
+    !(available.has("production") && available.has("imports"));
+}
+
+function selectedCoalKinds() {
+  return new Set(
+    Array.from(document.querySelectorAll("#coal-workspace-layers input:checked"))
+      .map(input => input.value)
+  );
+}
+
+function renderCoalLayers() {
+  state.coalLayer.clearLayers();
+  if (state.mode !== "coal" || state.coalView !== "map") {
+    updateMapStatus();
+    return;
+  }
+  const selected = selectedCoalKinds();
+  const renderer = L.canvas({ padding: 0.5 });
+  state.coalAssets.forEach(point => {
+    if (!selected.has(point.asset_kind)) return;
+    const config = COAL_ASSET_CONFIG[point.asset_kind];
+    const lat = Number(point.lat);
+    const lon = Number(point.lon);
+    if (!config || !Number.isFinite(lat) || !Number.isFinite(lon)) return;
+    const marker = L.circleMarker([lat, lon], {
+      renderer,
+      radius: config.radius,
+      color: "#ffffff",
+      weight: 0.55,
+      fillColor: config.color,
+      fillOpacity: 0.9
+    });
+    marker.bindTooltip(assetTooltip(config, point), {
+      className: "asset-tooltip", direction: "top", opacity: 1
+    });
+    marker.on("click", () => showAssetCard(config, point));
+    marker.addTo(state.coalLayer);
+  });
+  state.coalLayer._pointCount = state.coalLayer.getLayers().length;
+  renderCoalAssetViews();
+  updateMapStatus();
+}
+
+function setCoalView(view) {
+  state.coalView = view;
+  document.querySelectorAll("[data-coal-view]").forEach(button => {
+    button.classList.toggle("active", button.dataset.coalView === view);
+  });
+  const dataSurface = document.getElementById("coal-data-surface");
+  const mapElement = document.getElementById("map");
+  const isMap = view === "map";
+  dataSurface.hidden = isMap || state.mode !== "coal";
+  mapElement.hidden = !isMap && state.mode === "coal";
+  document.querySelector(".map-topbar").hidden = !isMap && state.mode === "coal";
+  document.querySelector(".map-key").hidden = !isMap && state.mode === "coal";
+  document.getElementById("coal-assets-table").hidden = view !== "table";
+  document.getElementById("coal-assets-cards").hidden = view !== "cards";
+  document.getElementById("coal-surface-title").textContent =
+    view === "cards" ? "India coal asset cards" : "India coal asset table";
+  if (isMap) {
+    setTimeout(() => {
+      state.map.invalidateSize();
+      state.map.fitBounds([[6, 68], [37, 98]], { padding: [25, 25] });
+      renderCoalLayers();
+    }, 0);
+  } else {
+    state.coalLayer.clearLayers();
+    renderCoalAssetViews();
+  }
+}
+
+function filteredCoalAssets() {
+  const selected = selectedCoalKinds();
+  return state.coalAssets.filter(item => selected.has(item.asset_kind));
+}
+
+function renderCoalAssetViews() {
+  const rows = filteredCoalAssets();
+  const table = document.getElementById("coal-assets-table");
+  const cards = document.getElementById("coal-assets-cards");
+  const visibleRows = rows.slice(0, 1000);
+  table.innerHTML = visibleRows.length
+    ? `<table><thead><tr><th>Asset</th><th>Type</th><th>Status / role</th><th>Capacity</th><th>Source</th></tr></thead><tbody>` +
+      visibleRows.map(item => `<tr><td><strong>${escapeHtml(item.name || "Unnamed")}</strong><small>${escapeHtml(item.country || "India")}</small></td>` +
+        `<td>${escapeHtml(item.asset_label || labelize(item.asset_kind))}</td>` +
+        `<td>${escapeHtml(item.status || item.asset_type || "Unknown")}</td>` +
+        `<td>${item.capacity == null ? "Unknown" : escapeHtml(Number(item.capacity).toLocaleString() + " " + (item.capacity_unit || ""))}</td>` +
+        `<td>${escapeHtml(item.source_text || "GEM / WPI")}</td></tr>`).join("") +
+      `</tbody></table>${rows.length > visibleRows.length ? `<p class="table-limit">Showing first ${visibleRows.length.toLocaleString()} of ${rows.length.toLocaleString()} assets.</p>` : ""}`
+    : `<div class="coal-empty">Select at least one verified map layer.</div>`;
+  cards.innerHTML = rows.length
+    ? rows.slice(0, 120).map(item => `<article><span>${escapeHtml(item.asset_label || labelize(item.asset_kind))}</span>` +
+        `<h3>${escapeHtml(item.name || "Unnamed asset")}</h3>` +
+        `<p>${escapeHtml(item.status || item.asset_type || "Status unknown")}</p>` +
+        `<small>${item.capacity == null ? "Capacity unknown" : escapeHtml(Number(item.capacity).toLocaleString() + " " + (item.capacity_unit || ""))}</small></article>`).join("")
+    : `<div class="coal-empty">Select at least one verified map layer.</div>`;
+}
+
+async function uploadCoalDataset() {
+  const input = document.getElementById("coal-upload-input");
+  const file = input.files?.[0];
+  if (!file) return;
+  const message = document.getElementById("coal-upload-message");
+  const datasetType = document.getElementById("coal-metric").value;
+  const form = new FormData();
+  form.append("file", file);
+  message.textContent = `Uploading ${file.name}…`;
+  try {
+    const response = await fetch(`/api/coal/upload?dataset_type=${encodeURIComponent(datasetType)}`, {
+      method: "POST", body: form
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.detail || "Upload failed");
+    message.textContent = `${payload.dataset_label}: ${Number(payload.rows).toLocaleString()} rows uploaded. Quality status: ${labelize(payload.quality_status)}.`;
+    await loadCoalWorkspace();
+  } catch (error) {
+    message.textContent = error.message;
+  } finally {
+    input.value = "";
+  }
+}
+
+async function exportCoalData() {
+  const datasetType = document.getElementById("coal-metric").value;
+  const response = await fetch(`/api/coal/export?dataset_type=${encodeURIComponent(datasetType)}`);
+  if (!response.ok) {
+    const payload = await response.json();
+    document.getElementById("coal-upload-message").textContent = payload.detail || "Export failed";
+    return;
+  }
+  const blob = await response.blob();
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `india_coal_${datasetType}.xlsx`;
+  link.click();
+  URL.revokeObjectURL(link.href);
 }
 
 function populateSelect(id, defaultLabel, items) {
@@ -462,6 +690,9 @@ function updateMapStatus() {
   state.assetLayers.forEach(layer => {
     if (state.map.hasLayer(layer)) assets += Number(layer._pointCount || 0);
   });
+  if (state.mode === "coal" && state.map.hasLayer(state.coalLayer)) {
+    assets += Number(state.coalLayer._pointCount || 0);
+  }
   const parts = [];
   if (ports) parts.push(`${ports.toLocaleString()} ports`);
   if (assets) parts.push(`${assets.toLocaleString()} assets`);

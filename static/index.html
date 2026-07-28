@@ -80,14 +80,61 @@
             </div>
             <p class="field-label">Port category</p>
             <div class="layer-list compact" id="port-categories">
-              <label><input type="checkbox" value="dry_bulk" /><i style="--dot:#b52a2a"></i><span>Dry bulk</span><small id="count-dry-bulk">386</small></label>
-              <label><input type="checkbox" value="coal" /><i style="--dot:#db2f34"></i><span>Coal terminal</span><small id="count-coal">386</small></label>
-              <label><input type="checkbox" value="oil" /><i style="--dot:#b36b3f"></i><span>Oil terminal</span><small id="count-oil">0</small></label>
-              <label><input type="checkbox" value="container" /><i style="--dot:#258aa5"></i><span>Container</span><small id="count-container">0</small></label>
-              <label><input type="checkbox" value="liquid_bulk" /><i style="--dot:#825c7d"></i><span>Liquid bulk</span><small id="count-liquid-bulk">0</small></label>
-              <label><input type="checkbox" value="lng" /><i style="--dot:#6855a4"></i><span>LNG</span><small id="count-lng">0</small></label>
+              <label data-category="dry_bulk"><input type="checkbox" value="dry_bulk" /><i style="--dot:#b52a2a"></i><span>Dry bulk</span><small id="count-dry-bulk">—</small></label>
+              <label data-category="coal"><input type="checkbox" value="coal" /><i style="--dot:#db2f34"></i><span>Coal terminal</span><small id="count-coal">—</small></label>
             </div>
-            <p class="source-note">Port types reflect fields available in the loaded WPI extract. Zero means not classified, not confirmed absent.</p>
+            <p class="source-note">Only port categories classified by the loaded WPI and GEM sources are shown. Unknown values are not treated as zero.</p>
+          </div>
+        </details>
+
+        <details class="filter-section coal-section" data-mode="coal">
+          <summary>
+            <span><i class="section-icon coal-icon"></i>Coal</span>
+            <span class="section-count" id="coal-data-status">India workspace</span>
+          </summary>
+          <div class="section-body">
+            <p class="workspace-intro">Indian coal production, seaborne imports, power use and stocks—with verified map context.</p>
+            <div class="view-switch" aria-label="Coal workspace view">
+              <button type="button" class="active" data-coal-view="map">Map</button>
+              <button type="button" data-coal-view="table">Table</button>
+              <button type="button" data-coal-view="cards">Cards</button>
+            </div>
+            <p class="group-label">Map context</p>
+            <div class="layer-list" id="coal-workspace-layers">
+              <label><input type="checkbox" value="coal_mines" checked /><i style="--dot:#242b38"></i><span>India coal mines</span><small id="coal-mine-count">—</small></label>
+              <label><input type="checkbox" value="coal_trade_terminals" checked /><i style="--dot:#db2f34"></i><span>India coal terminals</span><small id="coal-terminal-count">—</small></label>
+              <label><input type="checkbox" value="dry_bulk_ports" checked /><i style="--dot:#003671"></i><span>India dry-bulk ports</span><small id="coal-port-count">—</small></label>
+            </div>
+            <div class="filter-grid">
+              <div class="field">
+                <label for="coal-metric">Dataset</label>
+                <select id="coal-metric">
+                  <option value="production">Production</option>
+                  <option value="imports">Imports</option>
+                  <option value="power_use">Power use</option>
+                  <option value="power_stocks">Power stocks</option>
+                  <option value="renewables">Renewables</option>
+                  <option value="weather">Monsoon &amp; heat</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="coal-frequency">Frequency</label>
+                <select id="coal-frequency">
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly" selected>Monthly</option>
+                  <option value="quarterly">Quarterly</option>
+                  <option value="yearly">Yearly</option>
+                </select>
+              </div>
+            </div>
+            <input id="coal-upload-input" type="file" accept=".xlsx,.xls,.csv,.json" hidden />
+            <button type="button" class="filter-button" id="coal-upload">Upload selected dataset</button>
+            <p id="coal-upload-message" class="source-note">No operational time series uploaded yet. Production, imports, use and stock figures will remain blank until data is supplied.</p>
+            <div class="coal-actions">
+              <button type="button" id="coal-run-analysis" disabled>Run analysis</button>
+              <button type="button" id="coal-export" disabled>Download Excel</button>
+            </div>
+            <p class="data-gap"><strong>Analysis guardrail:</strong> correlations will use aligned time periods and will be labelled as association, not causation.</p>
           </div>
         </details>
 
@@ -140,30 +187,60 @@
           </div>
         </details>
 
-        <section class="voyage-card">
-          <div class="voyage-heading">
-            <div>
-              <span class="eyebrow">Port-to-port</span>
-              <h2>Voyage distance</h2>
+        <details class="filter-section voyage-section">
+          <summary>
+            <span><i class="section-icon voyage-icon"></i>Voyage distance</span>
+            <span class="section-count">Port-to-port</span>
+          </summary>
+          <div class="voyage-card">
+            <div class="voyage-heading">
+              <h2>Distance calculator</h2>
+              <button type="button" class="text-button" id="route-reset">Reset</button>
             </div>
-            <button type="button" class="text-button" id="route-reset">Reset</button>
+            <button type="button" id="route-pick" class="primary-button">Select two ports on map</button>
+            <div class="route-ports">
+              <div><span>From</span><strong id="route-from-name">Select origin</strong></div>
+              <div><span>To</span><strong id="route-to-name">Select destination</strong></div>
+            </div>
+            <label class="speed-field" for="route-speed">
+              <span>Vessel speed</span>
+              <span><input id="route-speed" type="number" value="12" min="4" max="30" step="0.5" /> kn</span>
+            </label>
+            <div id="route-result" class="route-result">Click the button, then choose two port dots.</div>
           </div>
-          <button type="button" id="route-pick" class="primary-button">Select two ports on map</button>
-          <div class="route-ports">
-            <div><span>From</span><strong id="route-from-name">Select origin</strong></div>
-            <div><span>To</span><strong id="route-to-name">Select destination</strong></div>
-          </div>
-          <label class="speed-field" for="route-speed">
-            <span>Vessel speed</span>
-            <span><input id="route-speed" type="number" value="12" min="4" max="30" step="0.5" /> kn</span>
-          </label>
-          <div id="route-result" class="route-result">Click the button, then choose two port dots.</div>
-        </section>
+        </details>
       </div>
     </aside>
 
     <main class="map-panel">
       <div id="map"></div>
+      <header id="coal-workspace-header" class="coal-workspace-header" hidden>
+        <div>
+          <span>INDIA / COAL INTELLIGENCE</span>
+          <h1>Supply, trade &amp; power demand</h1>
+        </div>
+        <div class="coal-header-meta">
+          <strong id="coal-header-status">Awaiting operational data</strong>
+          <small>GEM + WPI map context</small>
+        </div>
+      </header>
+      <section id="coal-data-surface" class="coal-data-surface" hidden>
+        <div class="coal-kpis">
+          <article><span>Production</span><strong>Awaiting data</strong><small>Upload production series</small></article>
+          <article><span>Seaborne imports</span><strong>Awaiting data</strong><small>Upload import series</small></article>
+          <article><span>Power use</span><strong>Awaiting data</strong><small>Upload consumption series</small></article>
+          <article><span>Power stocks</span><strong>Awaiting data</strong><small>Upload stock series</small></article>
+        </div>
+        <div class="coal-surface-heading">
+          <div>
+            <span class="eyebrow">Verified map context</span>
+            <h2 id="coal-surface-title">India coal assets</h2>
+          </div>
+          <p>Operational metrics remain blank until uploaded.</p>
+        </div>
+        <div id="coal-assets-table" class="coal-assets-table"></div>
+        <div id="coal-assets-cards" class="coal-assets-cards" hidden></div>
+      </section>
       <div class="map-topbar">
         <div class="map-status"><span></span><strong id="map-status">Loading ports…</strong></div>
         <button type="button" id="fit-world" class="map-button" title="Fit world">World view</button>
