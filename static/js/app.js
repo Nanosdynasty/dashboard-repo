@@ -24,6 +24,28 @@ const COAL_ASSET_CONFIG = {
   dry_bulk_ports: { label: "Dry-bulk port", color: "#003671", radius: 3 }
 };
 
+const ENGLISH_MAP_LABELS = {
+  continents: [
+    ["North America", 47, -105],
+    ["South America", -18, -59],
+    ["Europe", 52, 16],
+    ["Africa", 7, 20],
+    ["Asia", 43, 88],
+    ["Oceania", -24, 135]
+  ],
+  countries: [
+    ["India", 22, 79], ["China", 36, 104], ["Australia", -25, 134],
+    ["Indonesia", -3, 118], ["South Africa", -29, 24], ["Brazil", -11, -52],
+    ["United States", 39, -99], ["Canada", 58, -107], ["Russia", 61, 94],
+    ["Japan", 37, 138], ["South Korea", 36, 128], ["Vietnam", 16, 107],
+    ["Bangladesh", 24, 90], ["Pakistan", 30, 69], ["Türkiye", 39, 35],
+    ["United Kingdom", 55, -3], ["Germany", 51, 10], ["France", 47, 2],
+    ["Spain", 40, -4], ["Italy", 42, 12], ["Egypt", 27, 30],
+    ["Saudi Arabia", 24, 45], ["United Arab Emirates", 24, 54],
+    ["Colombia", 4, -73], ["Chile", -30, -71], ["Argentina", -38, -64]
+  ]
+};
+
 const state = {
   map: null,
   mode: "ports",
@@ -40,6 +62,8 @@ const state = {
   coalAssets: [],
   coalSummary: null,
   coalView: "map",
+  continentLabels: null,
+  countryLabels: null,
   filters: {
     energy: { country: "", status: "" },
     commodities: { country: "", status: "" }
@@ -59,10 +83,7 @@ async function init() {
     maxZoom: 16,
     attribution: "Tiles &copy; Esri"
   }).addTo(state.map);
-  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}", {
-    maxZoom: 16,
-    attribution: "Labels &copy; Esri"
-  }).addTo(state.map);
+  addEnglishMapLabels();
   state.portLayer = L.layerGroup().addTo(state.map);
   state.coalLayer = L.layerGroup().addTo(state.map);
   state.routeLayer = L.layerGroup().addTo(state.map);
@@ -74,13 +95,8 @@ async function init() {
 
 function bindControls() {
   document.querySelectorAll(".filter-section[data-mode]").forEach(section => {
-    section.querySelector("summary").addEventListener("click", event => {
-      event.preventDefault();
-      if (section.open && state.mode === section.dataset.mode) {
-        section.open = false;
-        return;
-      }
-      activateMode(section.dataset.mode);
+    section.addEventListener("toggle", () => {
+      if (section.open) activateMode(section.dataset.mode);
     });
   });
   document.querySelectorAll("#energy-layers input, #renewable-layers input, #nuclear-layers input, #coal-layers input, #iron-layers input, #cement-layers input")
@@ -93,6 +109,13 @@ function bindControls() {
   });
   document.querySelectorAll("[data-coal-view]").forEach(button => {
     button.addEventListener("click", () => setCoalView(button.dataset.coalView));
+  });
+  document.querySelectorAll(".coal-analysis-nav button").forEach(button => {
+    button.addEventListener("click", () => {
+      document.querySelectorAll(".coal-analysis-nav button").forEach(item => {
+        item.classList.toggle("active", item === button);
+      });
+    });
   });
   document.getElementById("coal-upload").addEventListener("click", () => {
     document.getElementById("coal-upload-input").click();
@@ -122,7 +145,7 @@ function bindControls() {
 function activateMode(mode) {
   state.mode = mode;
   document.querySelectorAll(".filter-section[data-mode]").forEach(section => {
-    section.open = section.dataset.mode === mode;
+    if (section.dataset.mode !== mode) section.open = false;
   });
   state.assetLayers.forEach((layer, id) => {
     if (LAYER_CONFIG[id].mode !== mode && state.map.hasLayer(layer)) state.map.removeLayer(layer);
@@ -149,6 +172,39 @@ function activateMode(mode) {
   }
   renderPorts();
   updateActiveCounts();
+}
+
+function addEnglishMapLabels() {
+  const makeLabel = (text, kind) => L.marker(
+    ENGLISH_MAP_LABELS[kind].find(item => item[0] === text).slice(1),
+    {
+      interactive: false,
+      icon: L.divIcon({
+        className: `english-map-label ${kind === "continents" ? "continent-label" : "country-label"}`,
+        html: `<span>${escapeHtml(text)}</span>`,
+        iconSize: [150, 28],
+        iconAnchor: [75, 14]
+      })
+    }
+  );
+  state.continentLabels = L.layerGroup(
+    ENGLISH_MAP_LABELS.continents.map(item => makeLabel(item[0], "continents"))
+  ).addTo(state.map);
+  state.countryLabels = L.layerGroup(
+    ENGLISH_MAP_LABELS.countries.map(item => makeLabel(item[0], "countries"))
+  );
+  const refresh = () => {
+    const zoom = state.map.getZoom();
+    if (zoom <= 3) {
+      if (!state.map.hasLayer(state.continentLabels)) state.continentLabels.addTo(state.map);
+      if (state.map.hasLayer(state.countryLabels)) state.map.removeLayer(state.countryLabels);
+    } else {
+      if (state.map.hasLayer(state.continentLabels)) state.map.removeLayer(state.continentLabels);
+      if (!state.map.hasLayer(state.countryLabels)) state.countryLabels.addTo(state.map);
+    }
+  };
+  state.map.on("zoomend", refresh);
+  refresh();
 }
 
 function portsAllowedForMode() {

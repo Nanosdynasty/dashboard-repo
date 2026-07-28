@@ -119,6 +119,9 @@ class PortApiTests(unittest.TestCase):
         self.assertGreater(payload["map_assets"]["coal_trade_terminals"], 0)
         self.assertIn(payload["status"], {"awaiting_data", "ready"})
         self.assertIn("quality_note", payload)
+        stock_cover = payload["metric_definitions"]["stock_cover_days"]
+        self.assertEqual(stock_cover["unit"], "days")
+        self.assertIn("average daily coal consumption", stock_cover["formula"])
 
         assets = self.client.get(
             "/api/coal/assets", params={"asset_kind": "coal_mines"}
@@ -139,6 +142,17 @@ class PortApiTests(unittest.TestCase):
         self.assertNotIn("<span>Container</span>", html)
         self.assertNotIn("<span>Liquid bulk</span>", html)
         self.assertNotIn("<span>LNG</span>", html)
+        self.assertIn("Stock cover", html)
+        self.assertIn("Trade flows", html)
+
+    def test_map_uses_only_explicit_english_labels(self):
+        response = self.client.get("/static/js/app.js")
+        self.assertEqual(response.status_code, 200)
+        javascript = response.text
+        self.assertIn('["Africa", 7, 20]', javascript)
+        self.assertIn('["South America", -18, -59]', javascript)
+        self.assertNotIn("World_Light_Gray_Reference", javascript)
+        self.assertNotIn("event.preventDefault()", javascript)
 
 
 if __name__ == "__main__":

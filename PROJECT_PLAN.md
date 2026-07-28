@@ -76,6 +76,13 @@ Status: foundation implemented; analytical metrics await user uploads.
 - Next analytical increment: normalize compatible period/unit schemas, then add
   monthly production-versus-import charts, YoY comparisons, configurable
   weekly/monthly/quarterly/yearly power-use views, and lagged driver analysis.
+- Use an Oceanbolt-style analytical hierarchy: overview, supply, trade flows,
+  power, stock cover, and external drivers, with commodity, frequency, period,
+  geography, port, and vessel-segment filters when those fields exist.
+- Define coal stock as **stock cover in days**. Prefer an authoritative reported
+  days-left value; otherwise calculate usable inventory tonnes divided by
+  aligned average daily consumption tonnes at the same plant/state/national
+  scope. Retain inventory tonnes as a supporting measure.
 - Correlation outputs must report overlap, missingness, lag assumptions, and
   confidence, and must never be described as causal evidence.
 

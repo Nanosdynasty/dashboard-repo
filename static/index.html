@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Howe Robinson | Global Assets Map</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="/static/css/style.css" />
+  <link rel="stylesheet" href="/static/css/style.css?v=20260728-2" />
 </head>
 <body>
   <div class="app-shell">
@@ -112,7 +112,7 @@
                   <option value="production">Production</option>
                   <option value="imports">Imports</option>
                   <option value="power_use">Power use</option>
-                  <option value="power_stocks">Power stocks</option>
+                  <option value="power_stocks">Stock cover (days)</option>
                   <option value="renewables">Renewables</option>
                   <option value="weather">Monsoon &amp; heat</option>
                 </select>
@@ -127,6 +127,27 @@
                 </select>
               </div>
             </div>
+            <div class="filter-grid">
+              <div class="field">
+                <label for="coal-grade">Coal type</label>
+                <select id="coal-grade">
+                  <option value="">All coal</option>
+                  <option value="thermal">Thermal coal</option>
+                  <option value="coking">Coking coal</option>
+                  <option value="lignite">Lignite</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="coal-period">Period</label>
+                <select id="coal-period">
+                  <option value="12m">Last 12 months</option>
+                  <option value="3y">Last 3 years</option>
+                  <option value="5y">Last 5 years</option>
+                  <option value="10y">Last 10 years</option>
+                  <option value="all">All available</option>
+                </select>
+              </div>
+            </div>
             <input id="coal-upload-input" type="file" accept=".xlsx,.xls,.csv,.json" hidden />
             <button type="button" class="filter-button" id="coal-upload">Upload selected dataset</button>
             <p id="coal-upload-message" class="source-note">No operational time series uploaded yet. Production, imports, use and stock figures will remain blank until data is supplied.</p>
@@ -135,6 +156,7 @@
               <button type="button" id="coal-export" disabled>Download Excel</button>
             </div>
             <p class="data-gap"><strong>Analysis guardrail:</strong> correlations will use aligned time periods and will be labelled as association, not causation.</p>
+            <p class="source-note"><strong>Stock cover:</strong> days of coal remaining at the observed consumption rate. Inventory tonnes remain a supporting field.</p>
           </div>
         </details>
 
@@ -225,11 +247,38 @@
         </div>
       </header>
       <section id="coal-data-surface" class="coal-data-surface" hidden>
+        <nav class="coal-analysis-nav" aria-label="Coal analysis sections">
+          <button type="button" class="active">Overview</button>
+          <button type="button">Supply</button>
+          <button type="button">Trade flows</button>
+          <button type="button">Power</button>
+          <button type="button">Stock cover</button>
+          <button type="button">Drivers</button>
+        </nav>
         <div class="coal-kpis">
           <article><span>Production</span><strong>Awaiting data</strong><small>Upload production series</small></article>
           <article><span>Seaborne imports</span><strong>Awaiting data</strong><small>Upload import series</small></article>
           <article><span>Power use</span><strong>Awaiting data</strong><small>Upload consumption series</small></article>
-          <article><span>Power stocks</span><strong>Awaiting data</strong><small>Upload stock series</small></article>
+          <article><span>Stock cover</span><strong>Awaiting data</strong><small>Days remaining at observed burn rate</small></article>
+          <article><span>Import vessels</span><strong>Awaiting data</strong><small>Port-call or voyage data required</small></article>
+        </div>
+        <div class="coal-analysis-grid">
+          <article>
+            <header><div><span>SUPPLY BALANCE</span><h3>Production vs seaborne imports</h3></div><small>Monthly / quarterly / yearly</small></header>
+            <div class="chart-empty"><i></i><p>Upload aligned production and imports series to populate this chart.</p></div>
+          </article>
+          <article>
+            <header><div><span>POWER SYSTEM</span><h3>Coal burn and stock-cover days</h3></div><small>Plant, state or national</small></header>
+            <div class="chart-empty"><i></i><p>Stock cover = usable inventory ÷ average daily coal consumption.</p></div>
+          </article>
+          <article>
+            <header><div><span>TRADE FLOWS</span><h3>Origins, loading ports and discharge ports</h3></div><small>Commodity / vessel segment</small></header>
+            <div class="chart-empty"><i></i><p>Upload voyage or port-call data to analyse seaborne coal flows.</p></div>
+          </article>
+          <article>
+            <header><div><span>DRIVERS</span><h3>Renewables, monsoon and heat</h3></div><small>Aligned periods and lags</small></header>
+            <div class="chart-empty"><i></i><p>Driver analysis will show association, overlap and lag—not causal claims.</p></div>
+          </article>
         </div>
         <div class="coal-surface-heading">
           <div>
@@ -259,6 +308,6 @@
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/static/js/app.js"></script>
+  <script src="/static/js/app.js?v=20260728-2"></script>
 </body>
 </html>

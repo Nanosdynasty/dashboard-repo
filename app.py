@@ -69,7 +69,7 @@ COAL_DATASET_TYPES = {
     "production": "Coal production",
     "imports": "Coal imports",
     "power_use": "Coal used in power generation",
-    "power_stocks": "Power-sector coal stocks",
+    "power_stocks": "Power-sector coal stock cover",
     "renewables": "Renewable generation",
     "weather": "Weather, monsoon and heat",
 }
@@ -683,6 +683,27 @@ async def coal_summary():
             "Coal used in power generation by week, month, quarter and year",
             "Aligned-series correlation with renewables, monsoon and heat",
         ],
+        "metric_definitions": {
+            "stock_cover_days": {
+                "label": "Coal stock cover",
+                "unit": "days",
+                "formula": (
+                    "usable coal inventory tonnes / average daily coal "
+                    "consumption tonnes"
+                ),
+                "supporting_fields": [
+                    "usable coal inventory tonnes",
+                    "average daily coal consumption tonnes",
+                    "observation date",
+                    "plant, state or national scope",
+                ],
+                "caveat": (
+                    "Use a reported days-of-stock figure when authoritative. "
+                    "Otherwise calculate only when inventory and consumption "
+                    "refer to the same scope and observation period."
+                ),
+            }
+        },
         "quality_note": (
             "Map assets use GEM and WPI sources. Operational production, trade, "
             "use, stocks and driver metrics are shown only after user data is uploaded."
@@ -749,6 +770,25 @@ async def upload_coal_dataset(
         if pd.to_numeric(frame[column], errors="coerce").notna().sum()
         >= max(1, int(len(frame) * 0.5))
     ]
+    stock_cover_candidates = [
+        column for column in frame.columns
+        if "day" in column.lower()
+        and any(token in column.lower() for token in ("stock", "cover", "left"))
+    ]
+    inventory_candidates = [
+        column for column in frame.columns
+        if any(token in column.lower() for token in ("stock", "inventory"))
+        and column not in stock_cover_candidates
+    ]
+    consumption_candidates = [
+        column for column in frame.columns
+        if any(token in column.lower() for token in ("consumption", "daily use", "burn"))
+    ]
+    stock_cover_issue = (
+        dataset_type == "power_stocks"
+        and not stock_cover_candidates
+        and not (inventory_candidates and consumption_candidates)
+    )
     metadata = {
         "id": csv_path.stem,
         "dataset_type": dataset_type,
@@ -758,15 +798,25 @@ async def upload_coal_dataset(
         "columns": list(frame.columns),
         "date_candidates": date_candidates,
         "numeric_candidates": numeric_candidates,
+        "stock_cover_candidates": stock_cover_candidates,
+        "inventory_candidates": inventory_candidates,
+        "consumption_candidates": consumption_candidates,
         "uploaded_at": datetime.utcnow().isoformat() + "Z",
         "quality_status": (
-            "review_needed" if not date_candidates or not numeric_candidates else "profiled"
+            "review_needed"
+            if not date_candidates or not numeric_candidates or stock_cover_issue
+            else "profiled"
         ),
         "quality_issues": [
             issue
             for condition, issue in (
                 (not date_candidates, "No obvious date or period column was detected."),
                 (not numeric_candidates, "No mostly numeric measure column was detected."),
+                (
+                    stock_cover_issue,
+                    "Stock-cover data needs a reported days-left field or both "
+                    "inventory tonnes and aligned daily consumption.",
+                ),
             )
             if condition
         ],

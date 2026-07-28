@@ -254,7 +254,7 @@ button, summary, label, select { -webkit-tap-highlight-color: transparent; }
   background: #eef2f4;
 }
 .coal-data-surface[hidden] { display: none; }
-.coal-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.coal-kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
 .coal-kpis article {
   min-width: 0;
   padding: 15px;
@@ -321,6 +321,49 @@ button, summary, label, select { -webkit-tap-highlight-color: transparent; }
 .asset-tooltip::before, .port-tooltip::before { border-top-color: rgba(28,41,74,.94) !important; }
 .asset-tooltip strong, .port-tooltip strong { display: block; margin-bottom: 2px; font-size: 11px; }
 .leaflet-control-zoom a { color: var(--hrp-blue) !important; }
+.english-map-label {
+  width: 150px !important;
+  margin: 0 !important;
+  color: #73808b;
+  background: transparent;
+  border: 0;
+  text-align: center;
+  text-shadow: 0 1px 0 rgba(255,255,255,.95), 0 0 3px rgba(255,255,255,.95);
+  pointer-events: none;
+}
+.continent-label span { font-size: 14px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }
+.country-label span { font-size: 10px; font-weight: 700; }
+
+.coal-analysis-nav {
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+  margin: -20px -20px 18px;
+  padding: 0 20px;
+  background: #fff;
+  border-bottom: 1px solid var(--line);
+}
+.coal-analysis-nav button {
+  flex: 0 0 auto;
+  padding: 14px 12px 11px;
+  color: #65717c;
+  background: transparent;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 700;
+}
+.coal-analysis-nav button.active { color: var(--hrp-blue); border-bottom-color: var(--hrp-red); }
+.coal-analysis-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.coal-analysis-grid > article { min-height: 210px; padding: 15px; background: #fff; box-shadow: 0 4px 16px rgba(28,41,74,.06); }
+.coal-analysis-grid header { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; }
+.coal-analysis-grid header span { color: var(--hrp-red); font-size: 8px; font-weight: 700; letter-spacing: .1em; }
+.coal-analysis-grid h3 { margin: 3px 0 0; color: var(--hrp-navy); font-size: 13px; }
+.coal-analysis-grid header small { color: #87919a; font-size: 8px; text-align: right; }
+.chart-empty { display: flex; min-height: 145px; align-items: center; justify-content: center; flex-direction: column; gap: 10px; color: #808b94; text-align: center; }
+.chart-empty i { display: block; width: 80%; height: 54px; border-bottom: 1px solid #dfe4e8; background: linear-gradient(160deg, transparent 47%, #dfe4e8 48%, #dfe4e8 50%, transparent 51%); }
+.chart-empty p { max-width: 330px; margin: 0; font-size: 9px; }
 
 @media (max-width: 760px) {
   html, body { overflow: auto; }
@@ -331,6 +374,7 @@ button, summary, label, select { -webkit-tap-highlight-color: transparent; }
   .map-key { display: none; }
   .brand img { width: 190px; }
   .coal-kpis { grid-template-columns: 1fr 1fr; }
+  .coal-analysis-grid { grid-template-columns: 1fr; }
   .coal-workspace-header { padding-left: 50px; }
   .coal-header-meta { display: none; }
 }
