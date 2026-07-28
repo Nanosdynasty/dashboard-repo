@@ -223,9 +223,18 @@
             <p class="group-label">Iron ore &amp; steel</p>
             <div class="layer-list" id="iron-layers">
               <label><input type="checkbox" value="iron_ore_mines" /><i style="--dot:#a45332"></i><span>Iron ore mines</span><small>949</small></label>
+              <label><input type="checkbox" value="iron_ore_terminals" /><i style="--dot:#d67a27"></i><span>Iron ore trade terminals</span><small>46</small></label>
               <label><input type="checkbox" value="steel_plants" /><i style="--dot:#536a7a"></i><span>Iron &amp; steel plants</span><small>1,293</small></label>
             </div>
-            <p class="source-note">Enable the port overlay to compare mines and plants with nearby ports. The current source does not classify ports as iron-ore loading or discharge facilities.</p>
+            <div class="field">
+              <label for="iron-terminal-role">Iron ore terminal direction</label>
+              <select id="iron-terminal-role">
+                <option value="">Imports and exports</option>
+                <option value="Exports">Export / loading terminals</option>
+                <option value="Imports">Import / discharge terminals</option>
+              </select>
+            </div>
+            <p class="source-note">The terminal layer is a reviewed catalogue of 46 major facilities, not an exhaustive berth list. Country and direction filters can be combined. Sources and evidence level appear in each terminal detail card.</p>
             <p class="group-label">Cement</p>
             <div class="layer-list" id="cement-layers">
               <label><input type="checkbox" value="cement_plants" /><i style="--dot:#9a8a73"></i><span>Cement plants</span><small>3,513</small></label>

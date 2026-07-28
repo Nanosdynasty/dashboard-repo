@@ -53,6 +53,11 @@ TRACKERS = {
     "bioenergy": {"label": "Bioenergy Power", "file": "bioenergy.csv.gz", "icon": "◉"},
     "coal_mines": {"label": "Coal Mines", "file": "coal_mines.csv.gz", "icon": "◆"},
     "iron_ore_mines": {"label": "Iron Ore Mines", "file": "iron_ore_mines.csv.gz", "icon": "◆"},
+    "iron_ore_terminals": {
+        "label": "Iron Ore Trade Terminals",
+        "file": "iron_ore_terminals.csv.gz",
+        "icon": "◆",
+    },
     "steel_plants": {"label": "Iron & Steel Plants", "file": "steel_plants.csv.gz", "icon": "●"},
     "cement_plants": {"label": "Cement Plants", "file": "cement_plants.csv.gz", "icon": "●"},
     "coal_trade_terminals": {
@@ -66,6 +71,7 @@ NORMALIZED_MAP_TRACKERS = {
     "bioenergy",
     "coal_mines",
     "iron_ore_mines",
+    "iron_ore_terminals",
     "steel_plants",
     "cement_plants",
     "coal_trade_terminals",
@@ -1038,6 +1044,9 @@ async def get_map_points(
         )
         return [ports.compact(item) for item in filtered[:limit]]
     if tracker_id in NORMALIZED_MAP_TRACKERS:
+        columns = {
+            row[0] for row in con.execute(f"DESCRIBE {tracker_id}").fetchall()
+        }
         clauses = ["lat IS NOT NULL", "lon IS NOT NULL"]
         params: List[Any] = []
         if status:
@@ -1058,10 +1067,24 @@ async def get_map_points(
                     + ")"
                 )
                 params.extend(value.lower() for value in values)
+        optional_columns = {
+            name for name in (
+                "source_url",
+                "source_date",
+                "evidence_level",
+                "coverage_note",
+            )
+            if name in columns
+        }
+        optional_select = "".join(
+            f", {name}" for name in sorted(optional_columns)
+        )
         sql = (
             "SELECT asset_id AS id, name, unit, status, capacity, "
             "capacity_unit, lat, lon, country, layer, asset_type, parent_port, "
-            "product_type, source_text FROM "
+            "product_type, source_text"
+            + optional_select
+            + " FROM "
             + tracker_id
             + " WHERE "
             + " AND ".join(clauses)

@@ -495,3 +495,21 @@ button, summary, label, select { -webkit-tap-highlight-color: transparent; }
   .coal-workspace-header { padding-left: 50px; }
   .coal-header-meta { display: none; }
 }
+.detail-source-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  margin-top: 12px;
+  padding: 0 13px;
+  border: 1px solid rgba(0, 54, 113, 0.22);
+  border-radius: 4px;
+  color: #003671;
+  background: #f4f8fc;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.detail-source-link:hover {
+  background: #eaf2f9;
+}

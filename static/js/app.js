@@ -9,13 +9,14 @@ const LAYER_CONFIG = {
   coal_mines: { label: "Coal mine", color: "#242b38", radius: 3, mode: "commodities" },
   coal_trade_terminals: { label: "Coal trade terminal", color: "#db2f34", radius: 3, mode: "commodities" },
   iron_ore_mines: { label: "Iron ore mine", color: "#a45332", radius: 3, mode: "commodities" },
+  iron_ore_terminals: { label: "Iron ore trade terminal", color: "#d67a27", radius: 4.5, mode: "commodities" },
   steel_plants: { label: "Iron & steel plant", color: "#536a7a", radius: 3, mode: "commodities" },
   cement_plants: { label: "Cement plant", color: "#9a8a73", radius: 3, mode: "commodities" }
 };
 
 const WORKSPACE_LAYERS = {
   energy: ["coal_plants", "solar", "wind", "hydro", "nuclear", "geothermal", "bioenergy"],
-  commodities: ["coal_mines", "coal_trade_terminals", "iron_ore_mines", "steel_plants", "cement_plants"]
+  commodities: ["coal_mines", "coal_trade_terminals", "iron_ore_mines", "iron_ore_terminals", "steel_plants", "cement_plants"]
 };
 
 const COAL_ASSET_CONFIG = {
@@ -75,6 +76,12 @@ const state = {
   }
 };
 
+function workspaceInput(mode, id) {
+  return document.querySelector(
+    `details[data-mode="${mode}"] input[value="${id}"]`
+  );
+}
+
 document.addEventListener("DOMContentLoaded", init);
 
 async function init() {
@@ -113,6 +120,10 @@ function bindControls() {
     input.addEventListener("change", renderCoalLayers);
   });
   document.getElementById("coal-asset-status").addEventListener("change", loadCoalWorkspace);
+  document.getElementById("iron-terminal-role").addEventListener("change", () => {
+    const input = workspaceInput("commodities", "iron_ore_terminals");
+    if (input?.checked) applyWorkspaceFilters("commodities");
+  });
   document.querySelectorAll("[data-coal-view]").forEach(button => {
     button.addEventListener("click", () => setCoalView(button.dataset.coalView));
   });
@@ -159,7 +170,7 @@ function activateMode(mode) {
   });
   if (mode === "energy" || mode === "commodities") {
     WORKSPACE_LAYERS[mode].forEach(id => {
-      const input = document.querySelector(`input[value="${id}"]`);
+      const input = workspaceInput(mode, id);
       if (input?.checked) toggleAssetLayer(input);
     });
   }
@@ -377,7 +388,9 @@ function renderCoalAssetViews() {
   const table = document.getElementById("coal-assets-table");
   const cards = document.getElementById("coal-assets-cards");
   const visibleRows = rows.slice(0, 1000);
-  const cardRows = [...rows].sort((left, right) =>
+  const cardRows = rows
+    .filter(item => !["coal_mines", "iron_ore_mines"].includes(item.asset_kind))
+    .sort((left, right) =>
     Number(right.asset_kind === "coal_trade_terminals") -
     Number(left.asset_kind === "coal_trade_terminals")
   );
@@ -390,7 +403,7 @@ function renderCoalAssetViews() {
         `<td>${escapeHtml(item.source_text || "GEM / WPI")}</td></tr>`).join("") +
       `</tbody></table>${rows.length > visibleRows.length ? `<p class="table-limit">Showing first ${visibleRows.length.toLocaleString()} of ${rows.length.toLocaleString()} assets.</p>` : ""}`
     : `<div class="coal-empty">Select at least one verified map layer.</div>`;
-  cards.innerHTML = rows.length
+  cards.innerHTML = cardRows.length
     ? cardRows.slice(0, 120).map(item => `<article class="${item.port_specification_available ? "coal-port-card" : ""}"><span>${escapeHtml(item.asset_label || labelize(item.asset_kind))}</span>` +
         `<h3>${escapeHtml(item.name || "Unnamed asset")}</h3>` +
         `<p>${escapeHtml(item.status || item.asset_type || "Status unknown")}</p>` +
@@ -399,7 +412,7 @@ function renderCoalAssetViews() {
           ? `<button type="button" class="coal-card-action" data-port-spec-id="${escapeAttr(item.id)}">View port details</button>`
           : "") +
         `</article>`).join("")
-    : `<div class="coal-empty">Select at least one verified map layer.</div>`;
+    : `<div class="coal-empty">Mine assets are available in map and table views. Select a terminal or consuming-industry layer to use card view.</div>`;
   cards.querySelectorAll("[data-port-spec-id]").forEach(button => {
     button.addEventListener("click", () => {
       const asset = state.coalAssets.find(item => item.id === button.dataset.portSpecId);
@@ -766,7 +779,11 @@ function layerUrl(id) {
 }
 
 function layerCacheKey(id) {
-  const role = id === "coal_trade_terminals" ? document.getElementById("coal-terminal-role").value : "";
+  const role = id === "coal_trade_terminals"
+    ? document.getElementById("coal-terminal-role").value
+    : id === "iron_ore_terminals"
+      ? document.getElementById("iron-terminal-role").value
+      : "";
   return `${layerUrl(id)}|${role}`;
 }
 
@@ -783,7 +800,7 @@ async function applyWorkspaceFilters(mode) {
     state.assetLayers.delete(id);
   });
   const checked = WORKSPACE_LAYERS[mode]
-    .map(id => document.querySelector(`input[value="${id}"]`))
+    .map(id => workspaceInput(mode, id))
     .filter(input => input?.checked);
   for (const input of checked) await toggleAssetLayer(input);
   updateMapStatus();
@@ -808,8 +825,10 @@ async function toggleAssetLayer(input) {
       const response = await fetch(layerUrl(id));
       if (!response.ok) throw new Error(`Could not load ${config.label}`);
       points = await response.json();
-      if (id === "coal_trade_terminals") {
-        const role = document.getElementById("coal-terminal-role").value;
+      if (id === "coal_trade_terminals" || id === "iron_ore_terminals") {
+        const role = document.getElementById(
+          id === "coal_trade_terminals" ? "coal-terminal-role" : "iron-terminal-role"
+        ).value;
         if (role) points = points.filter(point => String(point.asset_type || "").includes(role));
       }
       state.assetCache.set(cacheKey, points);
@@ -847,13 +866,27 @@ function buildAssetLayer(id, points) {
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
     const marker = L.circleMarker([lat, lon], {
       renderer,
-      radius: config.radius,
+      radius: config.mode === "commodities" ? Math.max(config.radius, 4.5) : config.radius,
       color: "#ffffff",
-      weight: 0.45,
+      weight: config.mode === "commodities" ? 1 : 0.45,
       fillColor: config.color,
-      fillOpacity: 0.84
+      fillOpacity: 0.88,
+      interactive: true,
+      bubblingMouseEvents: false
     });
-    marker.bindTooltip(assetTooltip(config, point), { className: "asset-tooltip", direction: "top", opacity: 1 });
+    marker.bindTooltip(assetTooltip(config, point), {
+      className: "asset-tooltip",
+      direction: "top",
+      opacity: 1,
+      sticky: true
+    });
+    marker.on("mouseover", () => {
+      marker.setStyle({ weight: 2, fillOpacity: 1 });
+      marker.openTooltip();
+    });
+    marker.on("mouseout", () => {
+      marker.setStyle({ weight: config.mode === "commodities" ? 1 : 0.45, fillOpacity: 0.88 });
+    });
     marker.on("click", () => showAssetCard(config, point));
     marker.addTo(group);
   });
@@ -977,6 +1010,9 @@ function showAssetCard(config, point) {
   }
   const card = document.getElementById("port-card");
   card.classList.remove("port-spec-card");
+  const sourceLink = point.source_url
+    ? `<a class="detail-source-link" href="${escapeAttr(point.source_url)}" target="_blank" rel="noopener">Open source</a>`
+    : "";
   document.getElementById("port-card-content").innerHTML =
     `<span class="detail-eyebrow">${escapeHtml(config.label)}</span><h2>${escapeHtml(point.name || config.label)}</h2>` +
     `<p class="detail-meta">${escapeHtml(point.country || "Country unknown")}</p>` +
@@ -1000,7 +1036,9 @@ function showAssetCard(config, point) {
     ) +
     detailCell("Product", point.product_type) +
     detailCell("Supply source", point.source_text) +
-    `</div><p class="detail-note">Source: Global Energy Monitor workbook layer.</p>`;
+    detailCell("Evidence", point.evidence_level) +
+    detailCell("Source review", point.source_date) +
+    `</div>${sourceLink}<p class="detail-note">${escapeHtml(point.coverage_note || "Source: Global Energy Monitor workbook layer.")}</p>`;
   card.classList.add("open");
   card.setAttribute("aria-hidden", "false");
 }
@@ -1166,8 +1204,12 @@ function detailCell(label, value) {
 }
 
 function updateActiveCounts() {
-  const energy = WORKSPACE_LAYERS.energy.filter(id => document.querySelector(`input[value="${id}"]`)?.checked).length;
-  const commodities = WORKSPACE_LAYERS.commodities.filter(id => document.querySelector(`input[value="${id}"]`)?.checked).length;
+  const energy = WORKSPACE_LAYERS.energy.filter(
+    id => workspaceInput("energy", id)?.checked
+  ).length;
+  const commodities = WORKSPACE_LAYERS.commodities.filter(
+    id => workspaceInput("commodities", id)?.checked
+  ).length;
   document.getElementById("energy-active-count").textContent = `${energy} active`;
   document.getElementById("commodity-active-count").textContent = `${commodities} active`;
 }

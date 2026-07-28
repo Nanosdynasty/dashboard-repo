@@ -59,6 +59,7 @@ class PortApiTests(unittest.TestCase):
         expected = {
             "coal_mines": 5_382,
             "iron_ore_mines": 949,
+            "iron_ore_terminals": 46,
             "steel_plants": 1_293,
             "cement_plants": 3_513,
             "geothermal": 835,
@@ -88,7 +89,7 @@ class PortApiTests(unittest.TestCase):
         commodities = self.client.get(
             "/api/layer-facets",
             params={
-                "trackers": "coal_mines,coal_trade_terminals,iron_ore_mines,steel_plants"
+                "trackers": "coal_mines,coal_trade_terminals,iron_ore_mines,iron_ore_terminals,steel_plants"
             },
         )
         self.assertEqual(commodities.status_code, 200)
@@ -98,6 +99,23 @@ class PortApiTests(unittest.TestCase):
         self.assertTrue({"Australia", "China", "India"}.issubset(countries))
         self.assertIn("Exports", terminal_types)
         self.assertIn("Imports", terminal_types)
+
+    def test_iron_ore_terminals_filter_by_country_and_direction_metadata(self):
+        india = self.client.get(
+            "/api/map/iron_ore_terminals",
+            params={"country": "India", "status": "operating", "limit": 150_000},
+        )
+        self.assertEqual(india.status_code, 200)
+        rows = india.json()
+        self.assertGreaterEqual(len(rows), 5)
+        self.assertTrue(all(row["country"] == "India" for row in rows))
+        self.assertTrue(all(row["product_type"] == "Iron ore" for row in rows))
+        self.assertTrue(all(row["source_url"] for row in rows))
+        self.assertTrue(
+            {"Imports / Exports", "Exports"}.issubset(
+                {row["asset_type"] for row in rows}
+            )
+        )
 
     def test_country_and_status_filters_are_applied_to_map_layers(self):
         response = self.client.get(
