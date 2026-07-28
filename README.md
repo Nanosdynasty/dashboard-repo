@@ -27,11 +27,28 @@ palette.
 - Port filters for country, harbor size, and source-supported port categories
 - Compact hover labels and click-through port/asset detail cards
 - Geographically guarded enrichment from the GEM Global Coal Terminals Tracker
-- Two-click port routing with nautical miles, vessel-speed input, sailing days,
-  remaining hours, and a visible route polyline
+- Exact-catalogue port routing with selectable origin/destination, map picking,
+  maritime-network and great-circle distances, endpoint connector legs,
+  confidence, route passages, canal avoidance, vessel speed, sea margin,
+  operational delays, and a visible route polyline
 - Map-only extracts from the uploaded GEM workbook bundle:
-  5,382 coal mines, 519 coal trade terminals, 949 iron ore mines, 1,293 steel
-  plants, 3,513 cement plants, 835 geothermal assets, and 4,537 bioenergy assets
+  5,382 coal mines, 519 coal trade terminals, 949 iron ore mines, 46 reviewed
+  major iron ore terminals, 1,293 steel plants, 3,513 cement plants, 835
+  geothermal assets, and 4,537 bioenergy assets
+
+### Voyage-calculation method
+
+The calculator resolves selected IDs against the bundled World Port Index
+catalogue, snaps each endpoint to the `searoute` 1.6 maritime network, and
+reports the network path and endpoint connector legs separately. The displayed
+routed distance is recomputed along the returned polyline in nautical miles and
+is shown alongside the direct great-circle distance as a sanity check.
+
+Time is broken into calm-sea sailing time, a user-entered sea-margin percentage,
+port time, and canal delay. Passage-avoidance controls currently cover Suez,
+Panama, and Malacca. Results are analytical shortest-path estimates and are not
+safe for navigation, berth clearance, charter-party performance claims, or
+substitution for commercial routing tools and official charts.
 
 ---
 

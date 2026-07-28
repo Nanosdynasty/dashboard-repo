@@ -1,8 +1,17 @@
 import unittest
+from unittest.mock import AsyncMock, patch
 
 from fastapi.testclient import TestClient
 
-from app import NPP_CACHE_TTL_SECONDS, app, _transform_npp_power
+from app import (
+    NPP_CACHE_TTL_SECONDS,
+    _compute_route,
+    _haversine_nm,
+    _infer_passage,
+    _route_with_endpoints,
+    _transform_npp_power,
+    app,
+)
 
 
 class PortApiTests(unittest.TestCase):
@@ -127,6 +136,93 @@ class PortApiTests(unittest.TestCase):
         self.assertTrue(rows)
         self.assertTrue(all(row["country"] == "India" for row in rows))
         self.assertTrue(all(row["status"].lower() == "operating" for row in rows))
+
+    def test_route_helpers_preserve_distance_and_antimeridian_continuity(self):
+        self.assertAlmostEqual(
+            _haversine_nm([0.0, 0.0], [0.0, 1.0]),
+            60.04,
+            places=1,
+        )
+        coordinates = _route_with_endpoints(
+            [151.2, -33.86],
+            [[151.21, -33.85], [240.0, -45.0], [316.85, -22.93]],
+            [-43.18, -22.9],
+        )
+        self.assertAlmostEqual(coordinates[-1][0], 316.82, places=2)
+        self.assertTrue(
+            all(
+                abs(coordinates[index][0] - coordinates[index - 1][0]) <= 180
+                for index in range(1, len(coordinates))
+            )
+        )
+        self.assertEqual(
+            _infer_passage(
+                [[-5.5, 36.0], [32.5, 30.0], [43.0, 13.0], [102.0, 2.0]]
+            ),
+            "Strait of Gibraltar, Suez Canal, Bab el-Mandeb, Strait of Malacca",
+        )
+
+    def test_maritime_route_has_precision_breakdown_and_passages(self):
+        route = _compute_route(
+            72.866667,
+            18.966667,
+            103.85,
+            1.283333,
+            12,
+            ["northwest"],
+        )
+        self.assertGreater(route["distance_nm"], route["great_circle_nm"])
+        self.assertAlmostEqual(
+            route["distance_nm"],
+            route["network_distance_nm"]
+            + route["origin_connector_nm"]
+            + route["destination_connector_nm"],
+            delta=1.0,
+        )
+        self.assertIn("Strait of Malacca", route["passages"])
+        self.assertIn(route["route_confidence"], {"high", "medium", "low"})
+        self.assertGreater(route["waypoint_count"], 10)
+
+    def test_route_api_uses_catalogue_ports_and_explicit_time_allowances(self):
+        weather = {"source": "test"}
+        bunker = {
+            "vlsfo_usd_mt": 580,
+            "mgo_usd_mt": 820,
+            "source": "test",
+        }
+        with (
+            patch("app.fetch_weather", new=AsyncMock(return_value=weather)),
+            patch("app.fetch_bunker_prices", new=AsyncMock(return_value=bunker)),
+        ):
+            response = self.client.post(
+                "/api/route",
+                json={
+                    "from_lon": 0,
+                    "from_lat": 0,
+                    "to_lon": 0,
+                    "to_lat": 1,
+                    "from_port_id": "48840",
+                    "to_port_id": "50000",
+                    "speed_knots": 12,
+                    "sea_margin_pct": 10,
+                    "port_time_hours": 24,
+                    "canal_delay_hours": 6,
+                },
+            )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["from_name"], "MUMBAI (BOMBAY)")
+        self.assertEqual(payload["to_name"], "KEPPEL - (EAST SINGAPORE)")
+        self.assertEqual(payload["coordinate_source"], "World Port Index catalogue")
+        self.assertEqual(payload["sea_margin_pct"], 10)
+        self.assertGreater(payload["total_duration_hours"], payload["sailing_hours"])
+        self.assertAlmostEqual(
+            payload["total_duration_hours"] - payload["sailing_hours"],
+            30,
+            places=1,
+        )
+        self.assertEqual(payload["fuel"]["consumption_tpd"], 25)
+        self.assertIn("not for navigation", payload["warnings"][0].lower())
 
     def test_india_coal_workspace_uses_verified_assets_without_fake_metrics(self):
         summary = self.client.get("/api/coal/summary")

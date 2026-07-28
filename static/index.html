@@ -250,18 +250,39 @@
           </summary>
           <div class="voyage-card">
             <div class="voyage-heading">
-              <h2>Distance calculator</h2>
+              <div>
+                <span>MARITIME NETWORK ROUTING</span>
+                <h2>Distance calculator</h2>
+              </div>
               <button type="button" class="text-button" id="route-reset">Reset</button>
+            </div>
+            <div class="route-select-grid">
+              <label for="route-from-select">
+                <span>Origin port</span>
+                <select id="route-from-select"><option value="">Choose origin</option></select>
+              </label>
+              <label for="route-to-select">
+                <span>Destination port</span>
+                <select id="route-to-select"><option value="">Choose destination</option></select>
+              </label>
             </div>
             <button type="button" id="route-pick" class="primary-button">Select two ports on map</button>
             <div class="route-ports">
               <div><span>From</span><strong id="route-from-name">Select origin</strong></div>
               <div><span>To</span><strong id="route-to-name">Select destination</strong></div>
             </div>
-            <label class="speed-field" for="route-speed">
-              <span>Vessel speed</span>
-              <span><input id="route-speed" type="number" value="12" min="4" max="30" step="0.5" /> kn</span>
-            </label>
+            <div class="route-assumptions">
+              <label for="route-speed"><span>Speed</span><b><input id="route-speed" type="number" value="12" min="4" max="30" step="0.5" /> kn</b></label>
+              <label for="route-sea-margin"><span>Sea margin</span><b><input id="route-sea-margin" type="number" value="5" min="0" max="50" step="0.5" /> %</b></label>
+              <label for="route-port-hours"><span>Port time</span><b><input id="route-port-hours" type="number" value="0" min="0" max="720" step="1" /> hr</b></label>
+              <label for="route-canal-hours"><span>Canal delay</span><b><input id="route-canal-hours" type="number" value="0" min="0" max="240" step="1" /> hr</b></label>
+            </div>
+            <fieldset class="route-restrictions">
+              <legend>Avoid passage</legend>
+              <label><input type="checkbox" value="suez" />Suez</label>
+              <label><input type="checkbox" value="panama" />Panama</label>
+              <label><input type="checkbox" value="malacca" />Malacca</label>
+            </fieldset>
             <div id="route-result" class="route-result">Click the button, then choose two port dots.</div>
           </div>
         </details>

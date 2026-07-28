@@ -177,9 +177,31 @@ button, summary, label, select { -webkit-tap-highlight-color: transparent; }
 .voyage-section[open] summary::after { color: #fff; }
 .voyage-card { padding: 13px; color: #fff; background: var(--hrp-navy); }
 .voyage-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.voyage-heading > div > span { color: #9eacc0; font-size: 7px; font-weight: 700; letter-spacing: .13em; }
 .eyebrow { color: #bac4d2; font-size: 8px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
 .voyage-heading h2 { margin: 2px 0 0; font-size: 16px; }
 .text-button { padding: 2px 0; color: #c8d4e0; background: transparent; border: 0; cursor: pointer; font-size: 10px; }
+.route-select-grid { display: grid; gap: 7px; margin-top: 12px; }
+.route-select-grid label > span,
+.route-assumptions label > span,
+.route-restrictions legend {
+  display: block;
+  margin-bottom: 3px;
+  color: #aeb9c7;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.route-select-grid select {
+  width: 100%;
+  min-width: 0;
+  padding: 7px 8px;
+  color: #fff;
+  background: #26375e;
+  border: 1px solid #40527a;
+  font-size: 10px;
+}
 .primary-button {
   width: 100%;
   margin-top: 12px;
@@ -193,12 +215,34 @@ button, summary, label, select { -webkit-tap-highlight-color: transparent; }
 .primary-button.active { background: #fff; color: var(--hrp-red); }
 .route-ports { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
 .route-ports div { min-width: 0; padding: 8px; background: rgba(255,255,255,0.07); }
-.route-ports span, .speed-field > span:first-child { display: block; color: #aeb9c7; font-size: 8px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.route-ports span { display: block; color: #aeb9c7; font-size: 8px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 .route-ports strong { display: block; overflow: hidden; margin-top: 3px; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
-.speed-field { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
-.speed-field input { width: 58px; padding: 5px; color: #fff; background: #26375e; border: 1px solid #40527a; }
+.route-assumptions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 10px; }
+.route-assumptions label { padding: 7px; background: rgba(255,255,255,.055); }
+.route-assumptions b { display: flex; align-items: center; gap: 4px; color: #dbe4ee; font-size: 9px; font-weight: 600; }
+.route-assumptions input { width: 55px; padding: 5px; color: #fff; background: #26375e; border: 1px solid #40527a; }
+.route-restrictions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin: 10px 0 0;
+  padding: 8px;
+  border: 1px solid rgba(255,255,255,.13);
+}
+.route-restrictions legend { padding: 0 4px; }
+.route-restrictions label { display: flex; align-items: center; gap: 4px; color: #d4dce6; font-size: 9px; }
+.route-restrictions input { accent-color: var(--hrp-red); }
 .route-result { margin-top: 10px; padding-top: 10px; color: #c5ced9; border-top: 1px solid rgba(255,255,255,.15); font-size: 10px; }
-.route-result strong { display: block; margin-bottom: 3px; color: #fff; font-size: 18px; }
+.route-result-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.route-result-head span, .route-result-grid span { display: block; color: #9eacc0; font-size: 7px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.route-result-head strong { display: block; margin: 1px 0 3px; color: #fff; font-size: 20px; }
+.route-confidence { padding: 3px 6px; color: #d9e8db; background: rgba(72,145,83,.25); border: 1px solid rgba(111,182,121,.35); font-size: 7px; font-style: normal; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+.route-confidence.medium { color: #f4dfae; background: rgba(185,130,33,.25); border-color: rgba(218,170,73,.4); }
+.route-confidence.low { color: #ffd0d0; background: rgba(193,47,52,.25); border-color: rgba(219,47,52,.45); }
+.route-result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; margin-top: 7px; background: rgba(255,255,255,.12); }
+.route-result-grid > div { padding: 6px; background: #1e2d50; }
+.route-result-grid b { display: block; margin-top: 2px; font-size: 10px; }
+.route-result p { margin: 8px 0 5px; line-height: 1.5; }
 .route-result b { color: #fff; }
 
 .map-panel { position: relative; min-width: 0; height: 100%; overflow: hidden; }

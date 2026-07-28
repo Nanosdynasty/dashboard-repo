@@ -62,6 +62,7 @@ const state = {
   routeLayer: null,
   routeMode: false,
   routePorts: [],
+  routePortCatalog: [],
   coalLayer: null,
   coalAssets: [],
   coalSummary: null,
@@ -153,9 +154,17 @@ function bindControls() {
   document.getElementById("coal-terminal-role").addEventListener("change", () => applyWorkspaceFilters("commodities"));
   document.getElementById("route-pick").addEventListener("click", startRoutePicking);
   document.getElementById("route-reset").addEventListener("click", resetRoute);
-  document.getElementById("route-speed").addEventListener("change", () => {
-    if (state.routePorts.length === 2) calculateRoute();
+  document.getElementById("route-from-select").addEventListener("change", event => {
+    selectRoutePort(0, event.target.value);
   });
+  document.getElementById("route-to-select").addEventListener("change", event => {
+    selectRoutePort(1, event.target.value);
+  });
+  document.querySelectorAll(
+    "#route-speed, #route-sea-margin, #route-port-hours, #route-canal-hours, .route-restrictions input"
+  ).forEach(input => input.addEventListener("change", () => {
+    if (state.routePorts[0] && state.routePorts[1]) calculateRoute();
+  }));
   document.getElementById("close-port-card").addEventListener("click", closePortCard);
   document.getElementById("fit-world").addEventListener("click", () => state.map.setView([18, 10], 2));
 }
@@ -227,6 +236,7 @@ function addEnglishMapLabels() {
 }
 
 function portsAllowedForMode() {
+  if (state.routeMode) return true;
   if (state.mode === "ports") return document.getElementById("show-ports").checked;
   if (state.mode === "energy") return document.getElementById("energy-show-ports").checked;
   if (state.mode === "commodities") return document.getElementById("commodity-show-ports").checked;
@@ -715,6 +725,13 @@ async function loadPorts() {
     if (!response.ok) throw new Error("Could not load ports");
     state.ports = await response.json();
     state.filteredPorts = state.ports;
+    if (!state.routePortCatalog.length) {
+      state.routePortCatalog = [...state.ports].sort((left, right) =>
+        String(left.name || "").localeCompare(String(right.name || "")) ||
+        String(left.country || "").localeCompare(String(right.country || ""))
+      );
+      populateRoutePortSelects();
+    }
     renderPorts();
   } catch (error) {
     setStatus(error.message);
@@ -908,20 +925,55 @@ function handlePortClick(port) {
     showPortCard(port);
     return;
   }
-  if (state.routePorts.length === 2) resetRoute(false);
-  state.routePorts.push(port);
+  if (state.routePorts[0] && state.routePorts[1]) resetRoute(false);
+  if (!state.routePorts[0]) state.routePorts[0] = port;
+  else state.routePorts[1] = port;
   updateRouteSelection();
-  if (state.routePorts.length === 2) {
+  if (state.routePorts[0] && state.routePorts[1]) {
     state.routeMode = false;
     document.getElementById("route-pick").classList.remove("active");
     document.getElementById("route-pick").textContent = "Select two ports on map";
+    renderPorts();
     calculateRoute();
+  }
+}
+
+function populateRoutePortSelects() {
+  const options = state.routePortCatalog.map(port =>
+    `<option value="${escapeAttr(port.id)}">${escapeHtml(port.name)}${port.country ? " · " + escapeHtml(port.country) : ""}</option>`
+  ).join("");
+  [
+    ["route-from-select", "Choose origin"],
+    ["route-to-select", "Choose destination"]
+  ].forEach(([id, label]) => {
+    const select = document.getElementById(id);
+    const current = select.value;
+    select.innerHTML = `<option value="">${label}</option>${options}`;
+    select.value = current;
+  });
+}
+
+function selectRoutePort(index, portId) {
+  const port = state.routePortCatalog.find(item => String(item.id) === String(portId));
+  if (port) state.routePorts[index] = port;
+  else delete state.routePorts[index];
+  state.routeMode = false;
+  document.getElementById("route-pick").classList.remove("active");
+  document.getElementById("route-pick").textContent = "Select two ports on map";
+  updateRouteSelection();
+  renderPorts();
+  if (state.routePorts[0] && state.routePorts[1]) calculateRoute();
+  else {
+    state.routeLayer.clearLayers();
+    document.getElementById("route-result").textContent =
+      "Choose both ports or select them directly on the map.";
   }
 }
 
 function startRoutePicking() {
   resetRoute(false);
   state.routeMode = true;
+  renderPorts();
   closePortCard();
   const button = document.getElementById("route-pick");
   button.classList.add("active");
@@ -932,6 +984,8 @@ function startRoutePicking() {
 function updateRouteSelection() {
   const from = state.routePorts[0];
   const to = state.routePorts[1];
+  document.getElementById("route-from-select").value = from ? String(from.id) : "";
+  document.getElementById("route-to-select").value = to ? String(to.id) : "";
   document.getElementById("route-from-name").textContent = from ? from.name : "Select origin";
   document.getElementById("route-to-name").textContent = to ? to.name : "Select destination";
   const button = document.getElementById("route-pick");
@@ -946,13 +1000,25 @@ function resetRoute(clearText = true) {
   button.classList.remove("active");
   button.textContent = "Select two ports on map";
   updateRouteSelection();
+  renderPorts();
   if (clearText) document.getElementById("route-result").textContent = "Click the button, then choose two port dots.";
 }
 
+function formatVoyageHours(value) {
+  const hours = Math.max(0, Math.round(Number(value || 0)));
+  return `${Math.floor(hours / 24)}d ${hours % 24}h`;
+}
+
 async function calculateRoute() {
-  if (state.routePorts.length !== 2) return;
+  if (!state.routePorts[0] || !state.routePorts[1]) return;
   const [from, to] = state.routePorts;
   const speed = Number(document.getElementById("route-speed").value) || 12;
+  const seaMargin = Number(document.getElementById("route-sea-margin").value) || 0;
+  const portHours = Number(document.getElementById("route-port-hours").value) || 0;
+  const canalHours = Number(document.getElementById("route-canal-hours").value) || 0;
+  const avoid = Array.from(
+    document.querySelectorAll(".route-restrictions input:checked")
+  ).map(input => input.value);
   const result = document.getElementById("route-result");
   result.textContent = "Calculating sea route…";
   try {
@@ -961,7 +1027,10 @@ async function calculateRoute() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         from_lon: from.lon, from_lat: from.lat, to_lon: to.lon, to_lat: to.lat,
-        speed_knots: speed, from_name: from.name, to_name: to.name
+        from_port_id: String(from.id), to_port_id: String(to.id),
+        speed_knots: speed, sea_margin_pct: seaMargin,
+        port_time_hours: portHours, canal_delay_hours: canalHours,
+        avoid, from_name: from.name, to_name: to.name
       })
     });
     const route = await response.json();
@@ -970,17 +1039,33 @@ async function calculateRoute() {
     state.routeLayer.clearLayers();
     if (coordinates.length) {
       L.polyline(coordinates, { color: "#db2f34", weight: 3.2, opacity: 0.92 }).addTo(state.routeLayer);
-      L.circleMarker([from.lat, from.lon], { radius: 6, color: "#fff", weight: 2, fillColor: "#003671", fillOpacity: 1 }).addTo(state.routeLayer);
-      L.circleMarker([to.lat, to.lon], { radius: 6, color: "#fff", weight: 2, fillColor: "#db2f34", fillOpacity: 1 }).addTo(state.routeLayer);
+      L.circleMarker(coordinates[0], { radius: 6, color: "#fff", weight: 2, fillColor: "#003671", fillOpacity: 1 }).addTo(state.routeLayer);
+      L.circleMarker(coordinates[coordinates.length - 1], { radius: 6, color: "#fff", weight: 2, fillColor: "#db2f34", fillOpacity: 1 }).addTo(state.routeLayer);
       state.map.fitBounds(coordinates, { padding: [50, 50] });
     }
     const nm = route.distance_nm != null ? route.distance_nm : route.distance_km / 1.852;
-    const days = route.duration_days != null ? route.duration_days : nm / speed / 24;
-    const totalHours = Math.round(days * 24);
-    result.innerHTML = `<strong>${Number(nm).toLocaleString(undefined, {maximumFractionDigits: 0})} nm</strong>` +
-      `<b>${Math.floor(totalHours / 24)} days ${totalHours % 24} hours</b> at ${speed} kn` +
-      `<br>${escapeHtml(route.via ? "Via " + route.via : "Estimated sea route")}` +
-      `<br><small>Analytical estimate only—not for navigation.</small>`;
+    const connectorTotal = Number(route.origin_connector_nm || 0) + Number(route.destination_connector_nm || 0);
+    const confidence = String(route.route_confidence || "estimated").toLowerCase();
+    const alternate = route.alternate_cape_nm
+      ? `<div><span>Alternative avoiding Suez</span><b>${formatNumber(route.alternate_cape_nm, 0)} nm · ${formatVoyageHours(Number(route.alternate_cape_days) * 24)}</b></div>`
+      : "";
+    result.innerHTML =
+      `<div class="route-result-head"><div><span>Routed distance</span><strong>${formatNumber(nm, 0)} nm</strong></div>` +
+      `<em class="route-confidence ${escapeAttr(confidence)}">${escapeHtml(confidence)} confidence</em></div>` +
+      `<div class="route-result-grid">` +
+      `<div><span>Great-circle</span><b>${formatNumber(route.great_circle_nm, 0)} nm</b></div>` +
+      `<div><span>Network only</span><b>${formatNumber(route.network_distance_nm, 0)} nm</b></div>` +
+      `<div><span>Connector legs</span><b>${formatNumber(connectorTotal, 1)} nm</b></div>` +
+      `<div><span>Detour factor</span><b>${formatNumber(route.detour_factor, 2)}×</b></div>` +
+      `<div><span>Calm-sea time</span><b>${formatVoyageHours(route.calm_sea_hours)}</b></div>` +
+      `<div><span>Total elapsed</span><b>${formatVoyageHours(route.total_duration_hours)}</b></div>` +
+      `${alternate}</div>` +
+      `<p><b>${escapeHtml(route.via ? "Via " + route.via : "Open-sea network route")}</b><br>` +
+      `${formatNumber(speed, 1)} kn + ${formatNumber(route.sea_margin_pct, 1)}% sea margin` +
+      `${Number(route.port_time_hours) ? ` + ${formatNumber(route.port_time_hours, 0)} hr port time` : ""}` +
+      `${Number(route.canal_delay_hours) ? ` + ${formatNumber(route.canal_delay_hours, 0)} hr canal delay` : ""}</p>` +
+      `<small>${escapeHtml(route.coordinate_source || "Selected port coordinates")} · ` +
+      `${Number(route.waypoint_count || 0).toLocaleString()} route points · analytical estimate, not for navigation.</small>`;
   } catch (error) {
     result.textContent = error.message;
   }

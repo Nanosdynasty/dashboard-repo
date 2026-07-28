@@ -1,6 +1,6 @@
 """Global Energy Transition Dashboard"""
 from __future__ import annotations
-import os, json, io, uuid, asyncio, logging, re, zipfile
+import os, json, io, uuid, asyncio, logging, math, re, zipfile
 from pathlib import Path
 from typing import Optional, Dict, List, Any
 from datetime import datetime, timedelta, timezone
@@ -821,24 +821,95 @@ class RouteRequest(BaseModel):
     from_lat: float
     to_lon: float
     to_lat: float
+    from_port_id: Optional[str] = None
+    to_port_id: Optional[str] = None
     speed_knots: float = 12.0
     from_name: Optional[str] = None
     to_name: Optional[str] = None
     avoid: Optional[List[str]] = None
+    sea_margin_pct: float = 5.0
+    port_time_hours: float = 0.0
+    canal_delay_hours: float = 0.0
     consumption_tpd: float = 25.0  # tonnes per day fuel burn
+
+
+PASSAGE_LABELS = {
+    "babalmandab": "Bab el-Mandeb",
+    "bosporus": "Bosporus",
+    "gibraltar": "Strait of Gibraltar",
+    "suez": "Suez Canal",
+    "panama": "Panama Canal",
+    "ormuz": "Strait of Hormuz",
+    "northwest": "Northwest Passage",
+    "malacca": "Strait of Malacca",
+    "sunda": "Sunda Strait",
+    "chili": "Cape Horn / Chilean route",
+    "south_africa": "Cape of Good Hope",
+}
+ALLOWED_ROUTE_RESTRICTIONS = set(PASSAGE_LABELS)
+
+
+def _haversine_nm(left: List[float], right: List[float]) -> float:
+    """Great-circle distance between [lon, lat] points in nautical miles."""
+    lon1, lat1 = map(math.radians, left)
+    lon2, lat2 = map(math.radians, right)
+    delta_lon = (lon2 - lon1 + math.pi) % (2 * math.pi) - math.pi
+    delta_lat = lat2 - lat1
+    hav = (
+        math.sin(delta_lat / 2) ** 2
+        + math.cos(lat1) * math.cos(lat2) * math.sin(delta_lon / 2) ** 2
+    )
+    return 3440.065 * 2 * math.asin(min(1.0, math.sqrt(hav)))
+
+
+def _wrapped_lon_near(lon: float, reference: float) -> float:
+    """Return the equivalent longitude closest to the previous route point."""
+    return lon + 360.0 * round((reference - lon) / 360.0)
+
+
+def _route_with_endpoints(
+    origin: List[float],
+    network_coordinates: List[List[float]],
+    destination: List[float],
+) -> List[List[float]]:
+    """Unwrap a route continuously and attach exact selected port coordinates."""
+    output: List[List[float]] = [[float(origin[0]), float(origin[1])]]
+    for raw_lon, raw_lat in network_coordinates:
+        output.append([
+            _wrapped_lon_near(float(raw_lon), output[-1][0]),
+            float(raw_lat),
+        ])
+    output.append([
+        _wrapped_lon_near(float(destination[0]), output[-1][0]),
+        float(destination[1]),
+    ])
+    deduplicated: List[List[float]] = []
+    for point in output:
+        if not deduplicated or _haversine_nm(deduplicated[-1], point) > 0.001:
+            deduplicated.append(point)
+    return deduplicated
+
+
+def _polyline_distance_nm(coordinates: List[List[float]]) -> float:
+    return sum(
+        _haversine_nm(coordinates[index - 1], coordinates[index])
+        for index in range(1, len(coordinates))
+    )
 
 def _infer_passage(coords):
     if not coords:
         return None
     tags = []
     for lon, lat in coords:
+        lon = ((float(lon) + 180.0) % 360.0) - 180.0
         if 29 < lat < 32 and 32 < lon < 33: tags.append("Suez Canal")
         elif 8.5 < lat < 9.5 and -80 < lon < -79: tags.append("Panama Canal")
         elif 25.5 < lat < 27 and 56 < lon < 57.5: tags.append("Strait of Hormuz")
-        elif 1 < lat < 4 and 100 < lon < 104: tags.append("Malacca Strait")
+        elif 1 < lat < 4 and 100 < lon < 104: tags.append("Strait of Malacca")
+        elif -7 < lat < -5 and 104.5 < lon < 106.5: tags.append("Sunda Strait")
         elif 12 < lat < 14 and 42 < lon < 44: tags.append("Bab el-Mandeb")
         elif lat < -33 and 15 < lon < 22: tags.append("Cape of Good Hope")
-        elif lat < -54 and -70 < lon < -65: tags.append("Cape Horn")
+        elif lat < -54 and -70 < lon < -65: tags.append("Cape Horn / Chilean route")
         elif 35.5 < lat < 36.5 and -6 < lon < -5: tags.append("Strait of Gibraltar")
         elif 40.5 < lat < 41.5 and 28.5 < lon < 29.5: tags.append("Bosporus")
     seen, out = set(), []
@@ -857,23 +928,57 @@ def _length_to_nm(length: float, units: str) -> float:
 
 def _compute_route(from_lon, from_lat, to_lon, to_lat, speed_knots, restrictions: Optional[List[str]] = None):
     import searoute as sr
-    restrictions = restrictions if restrictions is not None else ["northwest"]
+    restrictions = [
+        value for value in (restrictions or ["northwest"])
+        if value in ALLOWED_ROUTE_RESTRICTIONS
+    ]
+    origin = [float(from_lon), float(from_lat)]
+    destination = [float(to_lon), float(to_lat)]
     feature = sr.searoute(
-        [from_lon, from_lat], [to_lon, to_lat],
-        units="naut", speed_knot=speed_knots, append_orig_dest=True,
+        origin, destination,
+        units="naut", speed_knot=speed_knots, append_orig_dest=False,
         restrictions=restrictions, return_passages=True,
+        algorithm="astar",
     )
     props = feature.get("properties", {}) if isinstance(feature, dict) else feature.properties
     geom = feature.get("geometry", {}) if isinstance(feature, dict) else feature.geometry
-    coords = geom.get("coordinates", []) if isinstance(geom, dict) else getattr(geom, "coordinates", [])
-    length = float(props.get("length", 0))
+    network_coords = geom.get("coordinates", []) if isinstance(geom, dict) else getattr(geom, "coordinates", [])
+    if not network_coords:
+        raise ValueError("No navigable maritime-network path was found")
+    coords = _route_with_endpoints(origin, network_coords, destination)
+    length = float(props.get("length", 0) or 0)
     units = str(props.get("units", "naut"))
-    distance_nm = _length_to_nm(length, units)
+    network_distance_nm = _length_to_nm(length, units)
+    origin_connector_nm = _haversine_nm(origin, network_coords[0])
+    destination_connector_nm = _haversine_nm(network_coords[-1], destination)
+    distance_nm = _polyline_distance_nm(coords)
+    direct_nm = _haversine_nm(origin, destination)
     duration_hours = distance_nm / speed_knots if speed_knots > 0 else 0.0
-    passages = props.get("passages") or []
-    via = ", ".join(passages) if passages else _infer_passage(coords)
+    passage_ids = [
+        str(value).lower()
+        for value in (props.get("traversed_passages") or props.get("passages") or [])
+    ]
+    reported_passages = [
+        PASSAGE_LABELS.get(value, value.replace("_", " ").title())
+        for value in passage_ids
+    ]
+    inferred_via = _infer_passage(coords)
+    ordered_passages = inferred_via.split(", ") if inferred_via else []
+    passages = ordered_passages + [
+        value for value in reported_passages if value not in ordered_passages
+    ]
+    via = ", ".join(passages) if passages else None
+    max_connector_nm = max(origin_connector_nm, destination_connector_nm)
+    confidence = "high" if max_connector_nm <= 5 else "medium" if max_connector_nm <= 20 else "low"
     return {
         "distance_nm": round(distance_nm, 1),
+        "network_distance_nm": round(network_distance_nm, 1),
+        "great_circle_nm": round(direct_nm, 1),
+        "detour_factor": round(distance_nm / direct_nm, 3) if direct_nm else 1.0,
+        "origin_connector_nm": round(origin_connector_nm, 1),
+        "destination_connector_nm": round(destination_connector_nm, 1),
+        "route_confidence": confidence,
+        "waypoint_count": len(coords),
         "distance_miles": round(distance_nm * 1.150779, 1),
         "distance_km": round(distance_nm * 1.852, 1),
         "duration_hours": round(duration_hours, 2),
@@ -882,6 +987,8 @@ def _compute_route(from_lon, from_lat, to_lon, to_lat, speed_knots, restrictions
         "coordinates": coords,
         "units": "nm",
         "via": via,
+        "passages": passages,
+        "passage_ids": passage_ids,
         "restrictions": restrictions,
     }
 
@@ -1599,49 +1706,129 @@ async def bunker():
 @app.post("/api/route")
 async def sea_route(req: RouteRequest):
     try:
-        speed = req.speed_knots if req.speed_knots and req.speed_knots > 0 else 12.0
-        avoid = list(req.avoid or [])
+        from_port = (
+            ports.by_id.get(str(req.from_port_id))
+            if req.from_port_id is not None else None
+        )
+        to_port = (
+            ports.by_id.get(str(req.to_port_id))
+            if req.to_port_id is not None else None
+        )
+        from_lon = float(from_port["lon"] if from_port else req.from_lon)
+        from_lat = float(from_port["lat"] if from_port else req.from_lat)
+        to_lon = float(to_port["lon"] if to_port else req.to_lon)
+        to_lat = float(to_port["lat"] if to_port else req.to_lat)
+        if not (-180 <= from_lon <= 180 and -90 <= from_lat <= 90):
+            raise ValueError("Origin coordinates are outside valid longitude/latitude bounds")
+        if not (-180 <= to_lon <= 180 and -90 <= to_lat <= 90):
+            raise ValueError("Destination coordinates are outside valid longitude/latitude bounds")
+        if _haversine_nm([from_lon, from_lat], [to_lon, to_lat]) < 0.05:
+            raise ValueError("Origin and destination must be different ports")
+
+        speed = min(40.0, max(1.0, float(req.speed_knots or 12.0)))
+        sea_margin_pct = min(50.0, max(0.0, float(req.sea_margin_pct or 0.0)))
+        port_time_hours = min(720.0, max(0.0, float(req.port_time_hours or 0.0)))
+        canal_delay_hours = min(240.0, max(0.0, float(req.canal_delay_hours or 0.0)))
+        avoid = [
+            str(value).lower()
+            for value in (req.avoid or [])
+            if str(value).lower() in ALLOWED_ROUTE_RESTRICTIONS
+        ]
         if "northwest" not in avoid:
             avoid.append("northwest")
-        primary = _compute_route(req.from_lon, req.from_lat, req.to_lon, req.to_lat, speed, avoid)
+        primary = _compute_route(from_lon, from_lat, to_lon, to_lat, speed, avoid)
+        calm_sea_hours = primary["distance_nm"] / speed
+        sea_margin_hours = calm_sea_hours * sea_margin_pct / 100.0
+        sailing_hours = calm_sea_hours + sea_margin_hours
+        total_hours = sailing_hours + port_time_hours + canal_delay_hours
+        primary.update({
+            "calm_sea_hours": round(calm_sea_hours, 2),
+            "sea_margin_pct": round(sea_margin_pct, 1),
+            "sea_margin_hours": round(sea_margin_hours, 2),
+            "sailing_hours": round(sailing_hours, 2),
+            "port_time_hours": round(port_time_hours, 2),
+            "canal_delay_hours": round(canal_delay_hours, 2),
+            "total_duration_hours": round(total_hours, 2),
+            "total_duration_days": round(total_hours / 24.0, 2),
+            "effective_speed_knots": round(
+                primary["distance_nm"] / sailing_hours if sailing_hours else speed,
+                2,
+            ),
+        })
         alt = None
-        via_suez = primary.get("via") and "Suez" in str(primary.get("via"))
+        via_suez = "suez" in primary.get("passage_ids", [])
         if via_suez and "suez" not in avoid:
             try:
-                alt = _compute_route(req.from_lon, req.from_lat, req.to_lon, req.to_lat, speed, avoid + ["suez"])
+                alt = _compute_route(
+                    from_lon, from_lat, to_lon, to_lat, speed, avoid + ["suez"]
+                )
             except Exception:
                 alt = None
 
-        zone_info = analyze_route_zones(primary.get("coordinates") or [])
-        bunker = await fetch_bunker_prices()
+        zone_coordinates = [
+            [((float(lon) + 180.0) % 360.0) - 180.0, float(lat)]
+            for lon, lat in (primary.get("coordinates") or [])
+        ]
+        zone_info = analyze_route_zones(zone_coordinates)
+        coords = primary.get("coordinates") or []
+        mid = coords[len(coords) // 2] if coords else [from_lon, from_lat]
+        bunker, origin_weather, midpoint_weather, destination_weather = (
+            await asyncio.gather(
+                fetch_bunker_prices(),
+                fetch_weather(from_lat, from_lon),
+                fetch_weather(mid[1], mid[0]),
+                fetch_weather(to_lat, to_lon),
+            )
+        )
         fuel = estimate_fuel_cost(
-            primary["distance_nm"], primary["duration_days"],
+            primary["distance_nm"], primary["effective_speed_knots"],
             req.consumption_tpd or 25.0,
-            zone_info.get("eca_nm_share") or 0.0,
+            zone_info.get("eca_fraction") or 0.0,
             bunker,
         )
 
         # Weather at origin, midpoint sample, destination
-        coords = primary.get("coordinates") or []
-        mid = coords[len(coords) // 2] if coords else [req.from_lon, req.from_lat]
         weather = {
-            "origin": await fetch_weather(req.from_lat, req.from_lon),
-            "midpoint": await fetch_weather(mid[1], mid[0]),
-            "destination": await fetch_weather(req.to_lat, req.to_lon),
+            "origin": origin_weather,
+            "midpoint": midpoint_weather,
+            "destination": destination_weather,
         }
 
+        from_name = (from_port or {}).get("name") or req.from_name
+        to_name = (to_port or {}).get("name") or req.to_name
+        warnings = [
+            "Analytical shortest-path estimate on the searoute maritime network; not for navigation."
+        ]
+        if primary["route_confidence"] == "low":
+            warnings.append(
+                "A selected port is more than 20 nm from the nearest network node; review the connector leg."
+            )
         result = {
             **primary,
-            "from_name": req.from_name,
-            "to_name": req.to_name,
-            "method": "maritime network (searoute) · NM / kn / 24",
+            "from_name": from_name,
+            "to_name": to_name,
+            "from_port_id": str(req.from_port_id) if from_port else None,
+            "to_port_id": str(req.to_port_id) if to_port else None,
+            "coordinate_source": (
+                "World Port Index catalogue"
+                if from_port and to_port else "submitted map coordinates"
+            ),
+            "method": "searoute 1.6 maritime network + endpoint connector legs",
+            "warnings": warnings,
             "zones": zone_info,
             "fuel": fuel,
             "weather": weather,
         }
         if alt and alt["distance_nm"] > primary["distance_nm"]:
+            alt_calm_hours = alt["distance_nm"] / speed
+            alt_total_hours = (
+                alt_calm_hours * (1 + sea_margin_pct / 100.0)
+                + port_time_hours
+                + canal_delay_hours
+            )
             result["alternate_cape_nm"] = alt["distance_nm"]
-            result["alternate_cape_days"] = alt["duration_days"]
+            result["alternate_cape_days"] = round(alt_total_hours / 24.0, 2)
+            result["alternate_cape_via"] = alt.get("via")
         return result
     except Exception as e:
         raise HTTPException(400, f"Route error: {e}")
