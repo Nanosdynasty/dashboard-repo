@@ -982,19 +982,25 @@ def _compute_curated_corridor(
     destination_approach = _port_approach(to_id)
     if not origin_approach or not destination_approach:
         return None
+    canonical_from_id = str(
+        origin_approach.get("canonical_port_id") or from_id
+    )
+    canonical_to_id = str(
+        destination_approach.get("canonical_port_id") or to_id
+    )
     corridor = next(
         (
             item
             for item in PORT_APPROACH_DATA["corridors"]
             if set(map(str, item.get("endpoint_port_ids", [])))
-            == {from_id, to_id}
+            == {canonical_from_id, canonical_to_id}
         ),
         None,
     )
     if not corridor:
         return None
     configured_ids = list(map(str, corridor["endpoint_port_ids"]))
-    forward = configured_ids == [from_id, to_id]
+    forward = configured_ids == [canonical_from_id, canonical_to_id]
     intermediate = [
         [float(item["longitude"]), float(item["latitude"])]
         for item in corridor.get("waypoints", [])
@@ -1151,6 +1157,92 @@ def _compute_route(from_lon, from_lat, to_lon, to_lat, speed_knots, restrictions
         "passage_ids": passage_ids,
         "restrictions": restrictions,
     }
+
+
+def _route_reference_ports(
+    coordinates: List[List[float]],
+    from_port_id: Optional[str] = None,
+    to_port_id: Optional[str] = None,
+    limit: int = 5,
+) -> List[Dict[str, Any]]:
+    """Choose geographically useful named ports along a calculated track.
+
+    Five evenly distributed progress targets are used so labels describe the
+    route instead of clustering around a single port complex. The distance is
+    measured to route nodes and disclosed as an analytical proximity value.
+    """
+    if len(coordinates) < 2 or limit < 1:
+        return []
+    excluded = {
+        str(value)
+        for value in (from_port_id, to_port_id)
+        if value is not None
+    }
+    # Bound work for very dense routes while retaining endpoints.
+    stride = max(1, math.ceil(len(coordinates) / 500))
+    sampled = [
+        (index, coordinates[index])
+        for index in range(0, len(coordinates), stride)
+    ]
+    if sampled[-1][0] != len(coordinates) - 1:
+        sampled.append((len(coordinates) - 1, coordinates[-1]))
+    candidates: List[Dict[str, Any]] = []
+    for port in ports.ports:
+        if str(port.get("id")) in excluded:
+            continue
+        lat = port.get("lat")
+        lon = port.get("lon")
+        if lat is None or lon is None:
+            continue
+        port_point = [float(lon), float(lat)]
+        nearest_index, distance_nm = min(
+            (
+                (index, _haversine_nm(port_point, route_point))
+                for index, route_point in sampled
+            ),
+            key=lambda item: item[1],
+        )
+        candidates.append(
+            {
+                "id": str(port.get("id")),
+                "name": port.get("name"),
+                "country": port.get("country"),
+                "lat": float(lat),
+                "lon": float(lon),
+                "distance_from_route_nm": round(distance_nm, 1),
+                "progress_pct": round(
+                    nearest_index / (len(coordinates) - 1) * 100.0, 1
+                ),
+                "specialist_terminal": bool(
+                    port.get("specialist_terminal")
+                ),
+            }
+        )
+    if not candidates:
+        return []
+    selected: List[Dict[str, Any]] = []
+    selected_ids: set[str] = set()
+    for target in [
+        (index + 1) / (limit + 1) * 100.0 for index in range(limit)
+    ]:
+        eligible = [
+            item for item in candidates if item["id"] not in selected_ids
+        ]
+        if not eligible:
+            break
+        choice = min(
+            eligible,
+            key=lambda item: (
+                abs(item["progress_pct"] - target) * 12.0
+                + item["distance_from_route_nm"],
+                item["distance_from_route_nm"],
+                str(item.get("name") or ""),
+            ),
+        )
+        choice["label_role"] = "route_reference"
+        selected.append(choice)
+        selected_ids.add(choice["id"])
+    return sorted(selected, key=lambda item: item["progress_pct"])
 
 @app.get("/api/trackers")
 async def list_trackers():
@@ -2010,6 +2102,12 @@ async def sea_route(req: RouteRequest):
             "zones": zone_info,
             "fuel": fuel,
             "weather": weather,
+            "route_ports": _route_reference_ports(
+                primary.get("coordinates") or [],
+                str(req.from_port_id) if from_port else None,
+                str(req.to_port_id) if to_port else None,
+                limit=5,
+            ),
         }
         if alt and alt["distance_nm"] > primary["distance_nm"]:
             alt_calm_hours = alt["distance_nm"] / speed

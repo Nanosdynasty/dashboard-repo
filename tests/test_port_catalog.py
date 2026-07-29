@@ -41,6 +41,16 @@ class PortCatalogQualityTests(unittest.TestCase):
             all(port["max_vessel_draft_m"] is None for port in missing_draft)
         )
 
+    def test_specialist_coal_terminals_are_searchable_by_market_alias(self):
+        rbct = ports.by_id["gem-terminal-richards-bay-coal-terminal"]
+        self.assertEqual(rbct["name"], "Richards Bay Coal Terminal")
+        self.assertIn("RBCT", rbct["search_aliases"])
+        self.assertAlmostEqual(rbct["lat"], -28.818, places=3)
+        kalimantan = ports.filtered(q="Kalimantan")
+        names = {item["name"] for item in kalimantan}
+        self.assertIn("Tanjung Bara Coal Terminal", names)
+        self.assertIn("Muara Berau Anchorage Coal Terminal", names)
+
 
 if __name__ == "__main__":
     unittest.main()

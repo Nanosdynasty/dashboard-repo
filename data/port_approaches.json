@@ -26,6 +26,19 @@
       "source_date": "2026-07-28",
       "source_url": "https://wavenet.csir.co.za/OnlineData/RichardsBay/richardsbay.htm",
       "source_detail": "Directional wave buoy in 22 m water, about 1.4 km off the South Breakwater: 28°49'35.40\" S, 32°06'14.40\" E"
+    },
+    "gem-terminal-richards-bay-coal-terminal": {
+      "port_name": "RICHARDS BAY COAL TERMINAL (RBCT)",
+      "country": "ZA",
+      "canonical_port_id": "46855",
+      "kind": "sea_approach_reference",
+      "latitude": -28.8265,
+      "longitude": 32.104,
+      "verification": "official_operational_reference",
+      "source_title": "CSIR WaveNet Richards Bay operational wave buoy",
+      "source_date": "2026-07-28",
+      "source_url": "https://wavenet.csir.co.za/OnlineData/RichardsBay/richardsbay.htm",
+      "source_detail": "RBCT is inside Richards Bay harbour; routing uses the same official operational sea-side reference as Port of Richards Bay."
     }
   },
   "corridors": [

@@ -18,6 +18,17 @@ WPI_SOURCE_URL = "https://msi.nga.mil/Publications/WPI"
 GEM_COAL_TERMINALS_URL = (
     "https://globalenergymonitor.org/projects/global-coal-terminals-tracker/"
 )
+OFFICIAL_TERMINAL_POINTS: Dict[str, Dict[str, Any]] = {
+    "richardsbaycoalterminal": {
+        "lat": -28.818,
+        "lon": 32.052,
+        "source": {
+            "name": "Richards Bay Coal Terminal",
+            "url": "https://rbct.co.za/operations-2/",
+            "role": "official terminal name and GPS location",
+        },
+    }
+}
 
 
 FIELD_ALIASES: Dict[str, List[str]] = {
@@ -218,6 +229,7 @@ class PortCatalog:
 
         sql = (
             "SELECT "
+            f"{column('asset_id', 'Project ID')} AS asset_id, "
             f"{column('Plant name')} AS name, "
             f"{column('Location')} AS location, "
             f"{column('Country/Area')} AS country, "
@@ -225,11 +237,166 @@ class PortCatalog:
             f"{column('Capacity (MW)', 'Capacity (Mt)')} AS capacity, "
             f"{column('Owner')} AS owner, "
             f"{column('Wiki URL')} AS wiki_url, "
+            f"{column('Parent port', 'parent_port')} AS parent_port, "
+            f"{column('Source text', 'source_text')} AS source_text, "
             f"{column('Latitude')} AS lat, "
             f"{column('Longitude')} AS lon "
             "FROM coal_terminals"
         )
         return self.connection.execute(sql).fetchdf().to_dict(orient="records")
+
+    @staticmethod
+    def _terminal_search_aliases(terminal: Dict[str, Any]) -> List[str]:
+        """Return useful shipping-market aliases without inventing assets."""
+        name = str(_clean(terminal.get("name")) or "")
+        aliases = [
+            str(value)
+            for value in (
+                _clean(terminal.get("location")),
+                _clean(terminal.get("parent_port")),
+            )
+            if value
+        ]
+        aliases.extend(
+            {
+                "richardsbaycoalterminal": ["RBCT", "Richards Bay"],
+                "tanjungbaracoalterminal": [
+                    "TBCT",
+                    "Tanjung Bara",
+                    "Kalimantan",
+                ],
+                "muaraberauanchoragecoalterminal": [
+                    "Muara Berau",
+                    "Kalimantan",
+                ],
+                "adangbayanchoragecoalterminal": ["Adang Bay", "Kalimantan"],
+                "taboneoanchoragebanjamarsinport": [
+                    "Taboneo",
+                    "Banjarmasin",
+                    "Kalimantan",
+                ],
+                "bunatiport": ["Bunati", "Kalimantan"],
+                "pulaulautcoalterminal": ["Pulau Laut", "Kalimantan"],
+            }.get(_normal_key(name), [])
+        )
+        return sorted(
+            {
+                alias.strip()
+                for alias in aliases
+                if alias and alias.strip().lower() != name.strip().lower()
+            }
+        )
+
+    @staticmethod
+    def _specialist_terminal_port(
+        terminal: Dict[str, Any], port_id: str
+    ) -> Dict[str, Any]:
+        """Expose an operating GEM terminal as a searchable map location."""
+        name = str(_clean(terminal.get("name")) or "Coal terminal")
+        capacity = _number(terminal.get("capacity"))
+        official = OFFICIAL_TERMINAL_POINTS.get(_normal_key(name))
+        lat = (
+            float(official["lat"])
+            if official
+            else _number(terminal.get("lat"))
+        )
+        lon = (
+            float(official["lon"])
+            if official
+            else _number(terminal.get("lon"))
+        )
+        terminal_record = {
+            "id": "gem-coal-" + str(
+                _clean(terminal.get("asset_id")) or _slug(name)
+            ),
+            "name": name,
+            "location": _clean(terminal.get("location")),
+            "status": _clean(terminal.get("status")),
+            "capacity_mtpa": capacity,
+            "owner": _clean(terminal.get("owner")),
+            "wiki_url": _clean(terminal.get("wiki_url")),
+            "lat": lat,
+            "lon": lon,
+            "distance_km": 0.0,
+            "match_confidence": "high",
+            "coordinate_confidence": "source_coordinate",
+        }
+        return {
+            "id": port_id,
+            "name": name,
+            "alternate_name": (
+                _clean(terminal.get("parent_port"))
+                or _clean(terminal.get("location"))
+            ),
+            "search_aliases": PortCatalog._terminal_search_aliases(terminal),
+            "unlocode": None,
+            "country": _clean(terminal.get("country")),
+            "lat": lat,
+            "lon": lon,
+            "harbor_size": "Unknown",
+            "harbor_type": "Specialist coal terminal / anchorage",
+            "harbor_use": "Coal",
+            "shelter": "Unknown",
+            "channel_depth": "Unknown",
+            "channel_depth_m": None,
+            "anchorage_depth": "Unknown",
+            "anchorage_depth_m": None,
+            "cargo_depth": "Unknown",
+            "cargo_depth_m": None,
+            "oil_depth": "Unknown",
+            "lng_depth": "Unknown",
+            "max_vessel": "Unknown",
+            "max_vessel_length_m": None,
+            "max_vessel_beam_m": None,
+            "max_vessel_draft_m": None,
+            "tidal_range_m": None,
+            "entrance_width_m": None,
+            "facilities": {
+                "wharves": None,
+                "anchorage": "anchorage" in name.lower(),
+                "solid_bulk": True,
+                "liquid_bulk": None,
+                "container": None,
+                "breakbulk": None,
+                "oil_terminal": None,
+                "lng_terminal": None,
+                "roro": None,
+            },
+            "navigation": {
+                "pilotage_compulsory": None,
+                "pilotage_available": None,
+                "tugs_assistance": None,
+            },
+            "services": {
+                "cranes_fixed": None,
+                "cranes_mobile": None,
+                "cranes_container": None,
+                "railway": None,
+                "repairs": None,
+                "dry_dock": None,
+            },
+            "categories": ["coal", "dry_bulk"],
+            "coal_terminals": [terminal_record],
+            "sources": (
+                [{
+                    "name": "Global Coal Terminals Tracker",
+                    "url": GEM_COAL_TERMINALS_URL,
+                    "role": (
+                        "terminal operating status, capacity and source context"
+                        if official
+                        else "terminal name, operating status, capacity and coordinates"
+                    ),
+                }]
+                + ([official["source"]] if official else [])
+            ),
+            "specialist_terminal": True,
+            "terminal_status": _clean(terminal.get("status")),
+            "terminal_capacity_mtpa": capacity,
+            "source_text": _clean(terminal.get("source_text")),
+            "data_completeness_pct": 25,
+            "coal_terminal_count": 1,
+            "coal_capacity_mtpa": capacity or 0.0,
+        }
 
     @staticmethod
     def _terminal_matches(
@@ -361,6 +528,7 @@ class PortCatalog:
                 "id": port_id,
                 "name": str(name),
                 "alternate_name": _clean(raw.get("alternate_name")),
+                "search_aliases": [],
                 "unlocode": _clean(raw.get("unlocode")),
                 "country": _clean(raw.get("country")),
                 "lat": lat,
@@ -413,6 +581,23 @@ class PortCatalog:
                     port["categories"].append("dry_bulk")
                 port["categories"].append("coal")
                 port["coal_terminals"] = matched
+                matched_names = {
+                    str(item.get("name") or "").strip().lower()
+                    for item in matched
+                }
+                port["search_aliases"] = sorted(
+                    {
+                        alias
+                        for terminal in terminals
+                        if str(_clean(terminal.get("name")) or "").strip().lower()
+                        in matched_names
+                        for alias in (
+                            [str(_clean(terminal.get("name")) or "")]
+                            + self._terminal_search_aliases(terminal)
+                        )
+                        if alias
+                    }
+                )
                 port["sources"].append(
                     {
                         "name": "Global Coal Terminals Tracker",
@@ -446,6 +631,40 @@ class PortCatalog:
                 1,
             )
             output.append(port)
+
+        # WPI covers ports but not every named loading terminal or offshore
+        # anchorage. Add operating GEM locations as explicit searchable
+        # records, preserving their source status and leaving unknown marine
+        # specifications unknown.
+        terminal_ids: Counter[str] = Counter()
+        terminal_seen: set[tuple[str, float, float]] = set()
+        for terminal in terminals:
+            if str(_clean(terminal.get("status")) or "").lower() != "operating":
+                continue
+            lat = _number(terminal.get("lat"))
+            lon = _number(terminal.get("lon"))
+            name = _clean(terminal.get("name"))
+            if not name or lat is None or lon is None:
+                continue
+            if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+                continue
+            identity = (_normal_key(str(name)), round(lat, 5), round(lon, 5))
+            if identity in terminal_seen:
+                continue
+            terminal_seen.add(identity)
+            raw_terminal_id = str(
+                _clean(terminal.get("asset_id")) or _slug(str(name))
+            )
+            base_terminal_id = f"gem-terminal-{raw_terminal_id}"
+            terminal_ids[base_terminal_id] += 1
+            terminal_port_id = (
+                base_terminal_id
+                if terminal_ids[base_terminal_id] == 1
+                else f"{base_terminal_id}-{terminal_ids[base_terminal_id]}"
+            )
+            output.append(
+                self._specialist_terminal_port(terminal, terminal_port_id)
+            )
 
         self.ports = sorted(output, key=lambda item: item["name"].lower())
         self.by_id = {item["id"]: item for item in self.ports}
@@ -507,8 +726,19 @@ class PortCatalog:
         for port in self.ports:
             if query:
                 haystack = " ".join(
-                    str(port.get(key) or "")
-                    for key in ("name", "alternate_name", "unlocode", "country")
+                    [
+                        str(port.get(key) or "")
+                        for key in (
+                            "name",
+                            "alternate_name",
+                            "unlocode",
+                            "country",
+                        )
+                    ]
+                    + [
+                        str(alias)
+                        for alias in port.get("search_aliases", [])
+                    ]
                 ).lower()
                 if query not in haystack:
                     continue
@@ -543,6 +773,7 @@ class PortCatalog:
                 "id",
                 "name",
                 "alternate_name",
+                "search_aliases",
                 "unlocode",
                 "country",
                 "lat",
@@ -558,6 +789,9 @@ class PortCatalog:
                 "cargo_depth_m",
                 "max_vessel",
                 "max_vessel_draft_m",
+                "specialist_terminal",
+                "terminal_status",
+                "terminal_capacity_mtpa",
                 "coal_terminal_count",
                 "coal_capacity_mtpa",
                 "data_completeness_pct",

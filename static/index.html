@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Howe Robinson | Global Assets Map</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="/static/css/style.css?v=20260729-1" />
+  <link rel="stylesheet" href="/static/css/style.css?v=20260729-4" />
 </head>
 <body>
   <div class="app-shell">
@@ -383,7 +383,18 @@
       </section>
       <div class="map-topbar">
         <div class="map-status"><span></span><strong id="map-status">Loading ports…</strong></div>
-        <button type="button" id="fit-world" class="map-button" title="Fit world">World view</button>
+        <div class="map-tools" aria-label="Map display controls">
+          <label>
+            <span>Map skin</span>
+            <select id="map-skin">
+              <option value="light" selected>HRP light</option>
+              <option value="nautical">Ocean chart</option>
+              <option value="satellite">Satellite</option>
+              <option value="dark">Dark</option>
+            </select>
+          </label>
+          <button type="button" id="fit-world" class="map-button" title="Fit world">World view</button>
+        </div>
       </div>
       <div id="loading-indicator" class="loading-indicator" hidden>Loading layer…</div>
       <aside id="port-card" class="port-card" aria-hidden="true">
@@ -399,6 +410,6 @@
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/static/js/app.js?v=20260729-3"></script>
+  <script src="/static/js/app.js?v=20260729-6"></script>
 </body>
 </html>

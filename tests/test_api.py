@@ -197,6 +197,16 @@ class PortApiTests(unittest.TestCase):
         self.assertGreater(route["waypoint_count"], 150)
         self.assertLessEqual(route["origin_connector_nm"], 0)
         self.assertEqual(len(route["approach_sources"]), 2)
+        rbct_route = _compute_curated_corridor(
+            "49535",
+            "gem-terminal-richards-bay-coal-terminal",
+            13,
+            ["northwest"],
+        )
+        self.assertIsNotNone(rbct_route)
+        self.assertAlmostEqual(
+            rbct_route["distance_nm"], route["distance_nm"], delta=0.1
+        )
         with (
             patch(
                 "app.fetch_weather",
@@ -235,6 +245,14 @@ class PortApiTests(unittest.TestCase):
         self.assertEqual(payload["method"], "HRP verified-approach dense corridor")
         self.assertEqual(
             payload["routing_profile"], "verified-approach-dense-corridor"
+        )
+        self.assertEqual(len(payload["route_ports"]), 5)
+        self.assertTrue(
+            all(item["name"] for item in payload["route_ports"])
+        )
+        self.assertEqual(
+            sorted(item["progress_pct"] for item in payload["route_ports"]),
+            [item["progress_pct"] for item in payload["route_ports"]],
         )
 
     def test_route_api_uses_catalogue_ports_and_explicit_time_allowances(self):
@@ -454,11 +472,32 @@ class PortApiTests(unittest.TestCase):
         self.assertIn("Coal stock availability", html)
         self.assertIn("Cumulative generation", html)
         self.assertIn("Sector-wise PLF", html)
-        self.assertIn("app.js?v=20260729-3", html)
+        self.assertIn("app.js?v=20260729-6", html)
         self.assertIn('id="route-from-input" type="search"', html)
         self.assertIn('id="route-to-input" type="search"', html)
         self.assertIn('list="route-port-options"', html)
         self.assertIn('id="route-port-options"', html)
+        self.assertIn('id="map-skin"', html)
+        self.assertNotIn('id="show-eca-zones"', html)
+        self.assertNotIn('id="show-piracy-zones"', html)
+        self.assertNotIn(">ECA<", html)
+        self.assertNotIn("Security watch", html)
+
+    def test_maritime_zone_overlays_disclose_source_and_boundary_quality(self):
+        response = self.client.get("/api/zones")
+        self.assertEqual(response.status_code, 200)
+        features = response.json()["features"]
+        self.assertTrue(any(
+            item["properties"]["zone_type"] == "ECA" for item in features
+        ))
+        self.assertTrue(any(
+            item["properties"]["zone_type"] == "piracy" for item in features
+        ))
+        self.assertTrue(all(
+            item["properties"].get("source_url")
+            and item["properties"].get("boundary_quality")
+            for item in features
+        ))
 
     def test_map_uses_only_explicit_english_labels(self):
         response = self.client.get("/static/js/app.js")
@@ -474,6 +513,10 @@ class PortApiTests(unittest.TestCase):
         self.assertIn("formatRefreshInterval", javascript)
         self.assertIn("showCoalPortDetails", javascript)
         self.assertIn("satelliteImageUrl", javascript)
+        self.assertIn("World_Ocean_Base", javascript)
+        self.assertIn("World_Ocean_Reference", javascript)
+        self.assertIn("portVisibleAtZoom", javascript)
+        self.assertNotIn("show-piracy-zones", javascript)
 
     def test_npp_transform_reconciles_requested_power_visuals(self):
         reporting_date = 1_720_000_000_000

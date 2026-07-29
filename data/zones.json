@@ -7,7 +7,11 @@
         "name": "North Sea & Baltic SECA",
         "zone_type": "ECA",
         "fuel": "MGO 0.1%S",
-        "description": "Sulphur Emission Control Area — only MGO / UL SFO ≤0.10% S allowed"
+        "description": "MARPOL Annex VI sulphur emission control areas. Display boundary is generalized and must not be used for navigation.",
+        "boundary_quality": "generalized_from_official_definition",
+        "as_of": "2026-07-29",
+        "source_title": "IMO — Emission Control Areas designated under MARPOL Annex VI",
+        "source_url": "https://www.imo.org/en/ourwork/environment/pages/emission-control-areas-%28ecas%29-designated-under-regulation-13-of-marpol-annex-vi-%28nox-emission-control%29.aspx"
       },
       "geometry": {
         "type": "Polygon",
@@ -25,7 +29,11 @@
         "name": "North American ECA",
         "zone_type": "ECA",
         "fuel": "MGO 0.1%S",
-        "description": "US & Canadian coastal ECA (200 nm) — MGO required"
+        "description": "MARPOL North American ECA display area. This compact dashboard polygon is generalized; consult MARPOL Appendix VII coordinates for compliance.",
+        "boundary_quality": "generalized_from_official_coordinates",
+        "as_of": "2026-07-29",
+        "source_title": "IMO — Emission Control Areas designated under MARPOL Annex VI",
+        "source_url": "https://www.imo.org/en/ourwork/environment/pages/emission-control-areas-%28ecas%29-designated-under-regulation-13-of-marpol-annex-vi-%28nox-emission-control%29.aspx"
       },
       "geometry": {
         "type": "Polygon",
@@ -44,7 +52,11 @@
         "name": "US Caribbean ECA",
         "zone_type": "ECA",
         "fuel": "MGO 0.1%S",
-        "description": "Puerto Rico / US Virgin Islands ECA"
+        "description": "MARPOL United States Caribbean Sea ECA around Puerto Rico and the US Virgin Islands; generalized display.",
+        "boundary_quality": "generalized_from_official_coordinates",
+        "as_of": "2026-07-29",
+        "source_title": "IMO — Emission Control Areas designated under MARPOL Annex VI",
+        "source_url": "https://www.imo.org/en/ourwork/environment/pages/emission-control-areas-%28ecas%29-designated-under-regulation-13-of-marpol-annex-vi-%28nox-emission-control%29.aspx"
       },
       "geometry": {
         "type": "Polygon",
@@ -60,7 +72,11 @@
         "name": "Mediterranean SECA (2025+)",
         "zone_type": "ECA",
         "fuel": "MGO 0.1%S",
-        "description": "Mediterranean Emission Control Area (in force from 1 May 2025)"
+        "description": "Mediterranean Sea Emission Control Area in effect from 1 May 2025; generalized display.",
+        "boundary_quality": "generalized_from_official_definition",
+        "as_of": "2026-07-29",
+        "source_title": "IMO — Emission Control Areas designated under MARPOL Annex VI",
+        "source_url": "https://www.imo.org/en/ourwork/environment/pages/emission-control-areas-%28ecas%29-designated-under-regulation-13-of-marpol-annex-vi-%28nox-emission-control%29.aspx"
       },
       "geometry": {
         "type": "Polygon",
@@ -77,9 +93,13 @@
       "type": "Feature",
       "properties": {
         "name": "China Domestic ECA",
-        "zone_type": "ECA",
+        "zone_type": "domestic_emission_control",
         "fuel": "MGO 0.1%S / LSFO",
-        "description": "China coastal and key port ECAs (Yangtze, Pearl River, Bohai)"
+        "description": "Indicative China domestic emission-control display; this is not an IMO MARPOL ECA polygon.",
+        "boundary_quality": "indicative_domestic_scheme",
+        "as_of": "2026-07-29",
+        "source_title": "China Maritime Safety Administration — domestic emission-control requirements",
+        "source_url": "https://en.msa.gov.cn/"
       },
       "geometry": {
         "type": "Polygon",
@@ -95,10 +115,56 @@
     {
       "type": "Feature",
       "properties": {
-        "name": "Gulf of Guinea Piracy",
+        "name": "Norwegian Sea ECA (2026+)",
+        "zone_type": "ECA",
+        "fuel": "MGO 0.1%S",
+        "description": "Norwegian Sea ECA effective 1 March 2026; generalized display only.",
+        "boundary_quality": "generalized_from_official_definition",
+        "as_of": "2026-07-29",
+        "source_title": "IMO — Canadian Arctic and Norwegian Sea ECAs in force",
+        "source_url": "https://www.imo.org/en/mediacentre/pages/whatsnew-2431.aspx"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-5.0, 62.0], [4.0, 62.0], [12.0, 64.0], [18.0, 68.0],
+          [25.0, 72.0], [20.0, 76.0], [8.0, 77.0], [-3.0, 72.0],
+          [-8.0, 66.0], [-5.0, 62.0]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Canadian Arctic ECA (2026+)",
+        "zone_type": "ECA",
+        "fuel": "MGO 0.1%S",
+        "description": "Canadian Arctic ECA effective 1 March 2026; highly generalized display only. Use MARPOL Appendix VII WGS84 coordinates for compliance.",
+        "boundary_quality": "highly_generalized_from_official_coordinates",
+        "as_of": "2026-07-29",
+        "source_title": "IMO — MARPOL Annex VI March 2026 supplement",
+        "source_url": "https://wwwcdn.imo.org/localresources/en/publications/Documents/Supplements/English/2QD664E_supplement_March2026_EBK.pdf"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-137.0, 68.9], [-125.0, 70.0], [-110.0, 69.0], [-95.0, 70.0],
+          [-80.0, 73.0], [-66.5, 80.8], [-78.0, 84.0], [-105.0, 84.0],
+          [-130.0, 78.0], [-141.0, 72.0], [-137.0, 68.9]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Gulf of Guinea security watch area",
         "zone_type": "piracy",
         "fuel": null,
-        "description": "High risk of piracy / armed robbery — increased security recommended"
+        "description": "Indicative security watch area for piracy and armed robbery. Risk changes over time; consult current voyage advisories and incident reports.",
+        "boundary_quality": "indicative_watch_area_not_navigational",
+        "as_of": "2026-07-29",
+        "source_title": "IMO piracy reports and current maritime-security guidance",
+        "source_url": "https://www.imo.org/en/ourwork/security/pages/piracy-reports-default.aspx"
       },
       "geometry": {
         "type": "Polygon",
@@ -112,10 +178,14 @@
     {
       "type": "Feature",
       "properties": {
-        "name": "Bab el-Mandeb / Southern Red Sea",
+        "name": "Bab el-Mandeb / Southern Red Sea security watch",
         "zone_type": "piracy",
         "fuel": null,
-        "description": "Elevated risk of attacks / Houthi-related incidents"
+        "description": "Indicative composite maritime-security watch area; not a fixed piracy-zone boundary.",
+        "boundary_quality": "indicative_watch_area_not_navigational",
+        "as_of": "2026-07-29",
+        "source_title": "Directorate General of Shipping India — maritime security advisories",
+        "source_url": "https://dgma.gov.in/nautical-wing/nw-circulars/nautical-isps-maritime-security"
       },
       "geometry": {
         "type": "Polygon",
@@ -128,10 +198,14 @@
     {
       "type": "Feature",
       "properties": {
-        "name": "Malacca Strait High Risk",
+        "name": "Malacca and Singapore Straits security watch",
         "zone_type": "piracy",
         "fuel": null,
-        "description": "Armed robbery / piracy risk area — transit with caution"
+        "description": "Indicative watch area reflecting recurring armed-robbery reporting; not a statutory exclusion zone.",
+        "boundary_quality": "indicative_watch_area_not_navigational",
+        "as_of": "2026-07-29",
+        "source_title": "IMO piracy reports",
+        "source_url": "https://www.imo.org/en/ourwork/security/pages/piracy-reports-default.aspx"
       },
       "geometry": {
         "type": "Polygon",
@@ -144,10 +218,14 @@
     {
       "type": "Feature",
       "properties": {
-        "name": "NW Indian Ocean / Horn of Africa",
+        "name": "NW Indian Ocean / Horn of Africa security watch",
         "zone_type": "piracy",
         "fuel": null,
-        "description": "Residual piracy risk (Somalia / Gulf of Aden approaches)"
+        "description": "Indicative watch area for Somali piracy and Gulf of Aden approaches; consult current BMP and flag-state advice.",
+        "boundary_quality": "indicative_watch_area_not_navigational",
+        "as_of": "2026-07-29",
+        "source_title": "Directorate General of Shipping India — maritime security guidance",
+        "source_url": "https://dgma.gov.in/nautical-wing/maritime-security"
       },
       "geometry": {
         "type": "Polygon",

@@ -264,6 +264,35 @@ button, summary, label, select { -webkit-tap-highlight-color: transparent; }
 .map-status { display: flex; align-items: center; gap: 7px; padding: 8px 10px; font-size: 10px; }
 .map-status > span { width: 7px; height: 7px; background: var(--hrp-blue); border-radius: 50%; }
 .map-button { padding: 8px 10px; color: var(--hrp-blue); cursor: pointer; pointer-events: auto; font-size: 10px; }
+.map-tools {
+  display: flex;
+  align-items: stretch;
+  gap: 5px;
+  pointer-events: auto;
+}
+.map-tools > label, .map-tools > button {
+  min-height: 34px;
+  color: var(--hrp-navy);
+  background: rgba(255,255,255,.95);
+  border: 1px solid rgba(28,41,74,.14);
+  box-shadow: 0 4px 16px rgba(28,41,74,.1);
+}
+.map-tools > label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  font-size: 9px;
+}
+.map-tools > label > span:first-child { font-weight: 700; }
+.map-tools select {
+  max-width: 98px;
+  padding: 3px 4px;
+  color: var(--hrp-navy);
+  background: #fff;
+  border: 1px solid #d2d9de;
+  font-size: 9px;
+}
 .loading-indicator { position: absolute; z-index: 800; top: 58px; left: 50%; padding: 9px 13px; transform: translateX(-50%); color: var(--hrp-blue); font-size: 10px; }
 .map-key { position: absolute; z-index: 600; right: 12px; bottom: 12px; display: flex; gap: 13px; padding: 8px 10px; color: #596671; font-size: 9px; }
 .map-key span { display: flex; align-items: center; gap: 5px; }
@@ -486,7 +515,6 @@ button, summary, label, select { -webkit-tap-highlight-color: transparent; }
 .asset-tooltip strong, .port-tooltip strong { display: block; margin-bottom: 2px; font-size: 11px; }
 .leaflet-control-zoom a { color: var(--hrp-blue) !important; }
 .english-map-label {
-  width: 150px !important;
   margin: 0 !important;
   color: #73808b;
   background: transparent;
@@ -495,8 +523,55 @@ button, summary, label, select { -webkit-tap-highlight-color: transparent; }
   text-shadow: 0 1px 0 rgba(255,255,255,.95), 0 0 3px rgba(255,255,255,.95);
   pointer-events: none;
 }
+.english-map-label span {
+  display: block;
+  max-width: var(--country-label-width, 150px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .continent-label span { font-size: 14px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }
-.country-label span { font-size: 10px; font-weight: 700; }
+.country-label span { font-size: 8px; font-weight: 700; }
+#map[data-label-zoom="regional"] .country-label span { font-size: 9px; }
+#map[data-label-zoom="detail"] .country-label span { font-size: 10px; }
+#map[data-map-skin="dark"] .english-map-label,
+#map[data-map-skin="satellite"] .english-map-label {
+  color: #f3f6f8;
+  text-shadow: 0 1px 2px #101927, 0 0 4px #101927;
+}
+.route-port-label {
+  padding: 6px 8px !important;
+  color: #fff !important;
+  background: rgba(28,41,74,.94) !important;
+  border: 0 !important;
+  border-radius: 2px !important;
+  box-shadow: 0 4px 14px rgba(28,41,74,.2) !important;
+  font-size: 9px;
+}
+.route-port-label::before {
+  border-top-color: rgba(28,41,74,.94) !important;
+}
+.route-port-label {
+  padding: 3px 5px !important;
+  color: var(--hrp-navy) !important;
+  background: rgba(255,255,255,.88) !important;
+  border: 1px solid rgba(28,41,74,.16) !important;
+  box-shadow: 0 2px 7px rgba(28,41,74,.12) !important;
+  white-space: nowrap;
+  font-size: 8px;
+  font-weight: 700;
+}
+.leaflet-tooltip-top.route-port-label::before {
+  border-top-color: rgba(255,255,255,.88) !important;
+}
+.leaflet-tooltip-bottom.route-port-label::before {
+  border-bottom-color: rgba(255,255,255,.88) !important;
+}
+.route-port-summary {
+  padding: 7px;
+  color: #dbe4ee;
+  background: rgba(255,255,255,.06);
+}
 
 .coal-analysis-nav {
   display: flex;
@@ -544,6 +619,9 @@ button, summary, label, select { -webkit-tap-highlight-color: transparent; }
   .port-spec-grid, .satellite-grid, .facility-list, .source-list { grid-template-columns: 1fr; }
   .coal-workspace-header { padding-left: 50px; }
   .coal-header-meta { display: none; }
+  .map-topbar { left: 46px; align-items: flex-start; }
+  .map-tools { flex-wrap: wrap; justify-content: flex-end; }
+  .map-tools > label:first-child { display: none; }
 }
 .detail-source-link {
   display: inline-flex;

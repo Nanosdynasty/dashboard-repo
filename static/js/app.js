@@ -50,8 +50,54 @@ const ENGLISH_MAP_LABELS = {
   ]
 };
 
+const COUNTRY_LABEL_WIDTHS = {
+  India: 70, China: 96, Australia: 105, Indonesia: 100,
+  "South Africa": 82, Brazil: 95, "United States": 112, Canada: 120,
+  Russia: 130, Japan: 48, "South Korea": 48, Vietnam: 45,
+  Bangladesh: 45, Pakistan: 62, Türkiye: 60, "United Kingdom": 54,
+  Germany: 48, France: 48, Spain: 48, Italy: 38, Egypt: 48,
+  "Saudi Arabia": 76, "United Arab Emirates": 55, Colombia: 58,
+  Chile: 36, Argentina: 70
+};
+
+const MAP_SKINS = {
+  light: () => L.tileLayer(
+    "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+    { maxZoom: 16, attribution: "Tiles &copy; Esri" }
+  ),
+  nautical: () => L.layerGroup([
+    L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}", {
+      maxZoom: 16,
+      attribution: "Ocean basemap &copy; Esri, GEBCO, NOAA"
+    }),
+    L.tileLayer("https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png", {
+      maxZoom: 18,
+      opacity: 0.92,
+      attribution: "Navigation aids &copy; OpenSeaMap contributors"
+    }),
+    L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}", {
+      maxZoom: 16,
+      attribution: "English reference labels &copy; Esri"
+    })
+  ]),
+  satellite: () => L.tileLayer(
+    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    { maxZoom: 18, attribution: "Imagery &copy; Esri" }
+  ),
+  dark: () => L.tileLayer(
+    "https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png",
+    {
+      subdomains: "abcd",
+      maxZoom: 20,
+      attribution: "&copy; OpenStreetMap contributors &copy; CARTO"
+    }
+  )
+};
+
 const state = {
   map: null,
+  baseLayer: null,
+  mapSkin: "light",
   mode: "ports",
   portLayer: null,
   assetLayers: new Map(),
@@ -71,6 +117,7 @@ const state = {
   nppRefreshTimer: null,
   continentLabels: null,
   countryLabels: null,
+  renderedPortCount: 0,
   filters: {
     energy: { country: "", status: "operating" },
     commodities: { country: "", status: "operating" }
@@ -93,16 +140,18 @@ async function init() {
     zoomControl: true,
     minZoom: 2
   }).setView([18, 10], 2);
-  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}", {
-    maxZoom: 16,
-    attribution: "Tiles &copy; Esri"
-  }).addTo(state.map);
+  setMapSkin("light");
   addEnglishMapLabels();
   state.portLayer = L.layerGroup().addTo(state.map);
   state.coalLayer = L.layerGroup().addTo(state.map);
   state.routeLayer = L.layerGroup().addTo(state.map);
+  state.map.on("zoomend", renderPorts);
   bindControls();
-  await Promise.all([loadPortFacets(), loadWorkspaceFacets(), loadCoalWorkspace()]);
+  await Promise.all([
+    loadPortFacets(),
+    loadWorkspaceFacets(),
+    loadCoalWorkspace()
+  ]);
   await loadPorts();
   activateMode("ports");
 }
@@ -181,6 +230,9 @@ function bindControls() {
   });
   document.getElementById("close-port-card").addEventListener("click", closePortCard);
   document.getElementById("fit-world").addEventListener("click", () => state.map.setView([18, 10], 2));
+  document.getElementById("map-skin").addEventListener("change", event => {
+    setMapSkin(event.target.value);
+  });
 }
 
 function activateMode(mode) {
@@ -216,27 +268,48 @@ function activateMode(mode) {
   updateActiveCounts();
 }
 
+function setMapSkin(skin) {
+  if (!MAP_SKINS[skin]) skin = "light";
+  if (state.baseLayer && state.map.hasLayer(state.baseLayer)) {
+    state.map.removeLayer(state.baseLayer);
+  }
+  state.mapSkin = skin;
+  state.baseLayer = MAP_SKINS[skin]();
+  state.baseLayer.addTo(state.map);
+  state.baseLayer.bringToBack?.();
+  document.getElementById("map")?.setAttribute("data-map-skin", skin);
+  const selector = document.getElementById("map-skin");
+  if (selector) selector.value = skin;
+}
+
 function addEnglishMapLabels() {
-  const makeLabel = (text, kind) => L.marker(
-    ENGLISH_MAP_LABELS[kind].find(item => item[0] === text).slice(1),
+  const makeLabel = (item, kind) => {
+    const [text, lat, lon] = item;
+    const width = kind === "continents"
+      ? 150
+      : COUNTRY_LABEL_WIDTHS[text] || 70;
+    return L.marker(
+    [lat, lon],
     {
       interactive: false,
       icon: L.divIcon({
         className: `english-map-label ${kind === "continents" ? "continent-label" : "country-label"}`,
-        html: `<span>${escapeHtml(text)}</span>`,
-        iconSize: [150, 28],
-        iconAnchor: [75, 14]
+        html: `<span style="--country-label-width:${width}px">${escapeHtml(text)}</span>`,
+        iconSize: [width, 28],
+        iconAnchor: [width / 2, 14]
       })
     }
-  );
+  )};
   state.continentLabels = L.layerGroup(
-    ENGLISH_MAP_LABELS.continents.map(item => makeLabel(item[0], "continents"))
+    ENGLISH_MAP_LABELS.continents.map(item => makeLabel(item, "continents"))
   ).addTo(state.map);
   state.countryLabels = L.layerGroup(
-    ENGLISH_MAP_LABELS.countries.map(item => makeLabel(item[0], "countries"))
+    ENGLISH_MAP_LABELS.countries.map(item => makeLabel(item, "countries"))
   );
   const refresh = () => {
     const zoom = state.map.getZoom();
+    document.getElementById("map").dataset.labelZoom =
+      zoom >= 7 ? "detail" : zoom >= 5 ? "regional" : "world";
     if (zoom <= 3) {
       if (!state.map.hasLayer(state.continentLabels)) state.continentLabels.addTo(state.map);
       if (state.map.hasLayer(state.countryLabels)) state.map.removeLayer(state.countryLabels);
@@ -754,31 +827,64 @@ async function loadPorts() {
   }
 }
 
+function portDisplayTier(port) {
+  const size = String(port.harbor_size || "").toLowerCase();
+  const capacity = Number(port.terminal_capacity_mtpa || 0);
+  const largeVessel = String(port.max_vessel || "").toLowerCase().includes("over 500");
+  if (size === "large" || capacity >= 20 || largeVessel) return 1;
+  if (size === "medium" || capacity >= 5 || port.specialist_terminal) return 2;
+  if (size === "small") return 3;
+  return 4;
+}
+
+function portVisibleAtZoom(port, zoom) {
+  const tier = portDisplayTier(port);
+  if (zoom <= 3) return tier === 1;
+  if (zoom === 4) return tier <= 2;
+  if (zoom === 5) return tier <= 3;
+  return true;
+}
+
 function renderPorts() {
   state.portLayer.clearLayers();
+  state.renderedPortCount = 0;
   if (!portsAllowedForMode()) {
     document.getElementById("port-visible-count").textContent = state.mode === "ports" ? "hidden" : "overlay off";
     updateMapStatus();
     return;
   }
   const renderer = L.canvas({ padding: 0.5 });
-  state.filteredPorts.forEach(port => {
+  const zoom = state.map.getZoom();
+  const visiblePorts = state.filteredPorts.filter(port =>
+    portVisibleAtZoom(port, zoom)
+  );
+  visiblePorts.forEach(port => {
     const lat = Number(port.lat);
     const lon = Number(port.lon);
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+    const tier = portDisplayTier(port);
     const marker = L.circleMarker([lat, lon], {
       renderer,
-      radius: 2.4,
+      radius: tier === 1 ? 3.2 : tier === 2 ? 2.7 : 2.25,
       color: "#ffffff",
-      weight: 0.55,
+      weight: tier === 1 ? 0.9 : 0.5,
       fillColor: portColor(port.categories),
-      fillOpacity: 0.88
+      fillOpacity: tier === 1 ? 0.94 : 0.82
     });
     marker.bindTooltip(portTooltip(port), { className: "port-tooltip", direction: "top", opacity: 1 });
     marker.on("click", () => handlePortClick(port));
     marker.addTo(state.portLayer);
   });
-  document.getElementById("port-visible-count").textContent = state.filteredPorts.length.toLocaleString() + " shown";
+  state.renderedPortCount = visiblePorts.length;
+  const visibilityLabel = zoom <= 3
+    ? "major"
+    : zoom === 4
+      ? "major + regional"
+      : zoom === 5
+        ? "expanded"
+        : "all";
+  document.getElementById("port-visible-count").textContent =
+    `${visiblePorts.length.toLocaleString()} ${visibilityLabel}`;
   updateMapStatus();
 }
 
@@ -957,9 +1063,12 @@ function routePortLabel(port) {
 }
 
 function populateRoutePortSearch() {
-  document.getElementById("route-port-options").innerHTML = state.routePortCatalog.map(port =>
-    `<option value="${escapeAttr(routePortLabel(port))}"></option>`
-  ).join("");
+  document.getElementById("route-port-options").innerHTML = state.routePortCatalog.flatMap(port => [
+    `<option value="${escapeAttr(routePortLabel(port))}"></option>`,
+    ...(port.search_aliases || []).map(alias =>
+      `<option value="${escapeAttr(alias)}">${escapeHtml(port.name)} · ${escapeHtml(port.country || "")}</option>`
+    )
+  ]).join("");
 }
 
 function normalizedPortQuery(value) {
@@ -977,10 +1086,23 @@ function routePortFromQuery(query) {
     normalizedPortQuery(port.name) === normalized
   );
   if (exactName) return exactName;
+  const exactAliasMatches = state.routePortCatalog.filter(port =>
+    (port.search_aliases || []).some(alias =>
+      normalizedPortQuery(alias) === normalized
+    )
+  );
+  if (exactAliasMatches.length) {
+    return exactAliasMatches.find(port => port.specialist_terminal)
+      || exactAliasMatches[0];
+  }
   return state.routePortCatalog.find(port =>
     normalizedPortQuery(port.name).startsWith(normalized)
   ) || state.routePortCatalog.find(port =>
     normalizedPortQuery(routePortLabel(port)).includes(normalized)
+  ) || state.routePortCatalog.find(port =>
+    (port.search_aliases || []).some(alias =>
+      normalizedPortQuery(alias).includes(normalized)
+    )
   ) || null;
 }
 
@@ -1107,6 +1229,31 @@ async function calculateRoute() {
       L.polyline(coordinates, { color: "#db2f34", weight: 3.2, opacity: 0.92 }).addTo(state.routeLayer);
       L.circleMarker(coordinates[0], { radius: 6, color: "#fff", weight: 2, fillColor: "#003671", fillOpacity: 1 }).addTo(state.routeLayer);
       L.circleMarker(coordinates[coordinates.length - 1], { radius: 6, color: "#fff", weight: 2, fillColor: "#db2f34", fillOpacity: 1 }).addTo(state.routeLayer);
+      (route.route_ports || []).forEach((port, index) => {
+        const marker = L.circleMarker([Number(port.lat), Number(port.lon)], {
+          radius: 3,
+          color: "#1c294a",
+          weight: 0.8,
+          opacity: 0.28,
+          fillColor: "#ffffff",
+          fillOpacity: 0.2
+        }).addTo(state.routeLayer);
+        marker.bindTooltip(
+          escapeHtml(port.name || "Route port"),
+          {
+            className: "route-port-label",
+            permanent: true,
+            direction: index % 2 ? "bottom" : "top",
+            offset: [0, index % 2 ? 5 : -5],
+            opacity: 1
+          }
+        );
+        marker.bindPopup(
+          `<strong>${escapeHtml(port.name || "Route port")}</strong>` +
+          `<br>${escapeHtml(port.country || "")}` +
+          `<br>${formatNumber(port.distance_from_route_nm, 0)} nm from calculated track`
+        );
+      });
       state.map.fitBounds(coordinates, { padding: [50, 50] });
     }
     const nm = route.distance_nm != null ? route.distance_nm : route.distance_km / 1.852;
@@ -1116,6 +1263,12 @@ async function calculateRoute() {
       : `${confidence} confidence`;
     const alternate = route.alternate_cape_nm
       ? `<div><span>Alternative avoiding Suez</span><b>${formatNumber(route.alternate_cape_nm, 0)} nm · ${formatVoyageHours(Number(route.alternate_cape_days) * 24)}</b></div>`
+      : "";
+    const routePorts = (route.route_ports || []).length
+      ? `<p class="route-port-summary"><b>Ports along the way</b><br>` +
+        `${(route.route_ports || []).map(port =>
+          `${escapeHtml(port.name || "Port")} (${formatNumber(port.distance_from_route_nm, 0)} nm)`
+        ).join(" · ")}</p>`
       : "";
     result.innerHTML =
       `<div class="route-result-head"><div><span>Routed distance</span><strong>${formatNumber(nm, 0)} nm</strong></div>` +
@@ -1128,6 +1281,7 @@ async function calculateRoute() {
       `${formatNumber(speed, 1)} kn + ${formatNumber(route.sea_margin_pct, 1)}% sea margin` +
       `${Number(route.port_time_hours) ? ` + ${formatNumber(route.port_time_hours, 0)} hr port time` : ""}` +
       `${Number(route.canal_delay_hours) ? ` + ${formatNumber(route.canal_delay_hours, 0)} hr canal delay` : ""}</p>` +
+      routePorts +
       `<small>${escapeHtml(route.coordinate_source || "Selected port coordinates")} · ` +
       `${Number(route.waypoint_count || 0).toLocaleString()} route points · analytical estimate, not for navigation.</small>`;
   } catch (error) {
@@ -1364,7 +1518,7 @@ function updateActiveCounts() {
 }
 
 function updateMapStatus() {
-  const ports = portsAllowedForMode() ? state.filteredPorts.length : 0;
+  const ports = portsAllowedForMode() ? state.renderedPortCount : 0;
   let assets = 0;
   state.assetLayers.forEach(layer => {
     if (state.map.hasLayer(layer)) assets += Number(layer._pointCount || 0);
