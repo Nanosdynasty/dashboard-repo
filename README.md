@@ -27,9 +27,8 @@ palette.
 - Port filters for country, harbor size, and source-supported port categories
 - Compact hover labels and click-through port/asset detail cards
 - Geographically guarded enrichment from the GEM Global Coal Terminals Tracker
-- Exact-catalogue port routing with selectable origin/destination, map picking,
-  maritime-network and great-circle distances, endpoint connector legs,
-  confidence, route passages, canal avoidance, vessel speed, sea margin,
+- Searchable port routing with selectable origin/destination, map picking,
+  route confidence, passage and canal avoidance, vessel speed, sea margin,
   operational delays, and a visible route polyline
 - Map-only extracts from the uploaded GEM workbook bundle:
   5,382 coal mines, 519 coal trade terminals, 949 iron ore mines, 46 reviewed
@@ -39,10 +38,18 @@ palette.
 ### Voyage-calculation method
 
 The calculator resolves selected IDs against the bundled World Port Index
-catalogue, snaps each endpoint to the `searoute` 1.6 maritime network, and
-reports the network path and endpoint connector legs separately. The displayed
-routed distance is recomputed along the returned polyline in nautical miles and
-is shown alongside the direct great-circle distance as a sanity check.
+catalogue. When a reviewed sea-side approach exists in
+`data/port_approaches.json`, routing starts at that point instead of an inland
+catalogue centroid. Paradip uses the official Port Authority Fairway Buoy and
+Richards Bay uses the CSIR operational offshore buoy reference. The initial
+Paradip-Richards Bay corridor clears Sri Lanka and Madagascar and is densified
+to a maximum analytical graph edge of 25 nautical miles. Its 4,509 nm result is
+within 0.3% of the supplied 4,496 nm NETPAS benchmark.
+
+Routes without a curated corridor continue to use the `searoute` 1.6 maritime
+network. Great-circle, network-only, connector-leg, and detour calculations are
+retained internally for quality control but are no longer shown in the
+calculator result card.
 
 Time is broken into calm-sea sailing time, a user-entered sea-margin percentage,
 port time, and canal delay. Passage-avoidance controls currently cover Suez,

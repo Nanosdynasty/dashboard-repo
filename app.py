@@ -38,6 +38,7 @@ NPP_ALL_INDIA_URL = "https://npp.gov.in/dashBoard/getAllZone"
 NPP_HISTORY_URL = "https://npp.gov.in/dashBoard/get_installed_capacity_list"
 NPP_GENERATION_URL = "https://npp.gov.in/dashBoard/getAllZoneGen"
 INDIA_COAL_PORT_SPECS_PATH = DATA_DIR / "india_coal_port_specs.json"
+PORT_APPROACHES_PATH = DATA_DIR / "port_approaches.json"
 
 AISSTREAM_API_KEY = os.getenv("AISSTREAM_API_KEY", "").strip()
 
@@ -849,6 +850,28 @@ PASSAGE_LABELS = {
 ALLOWED_ROUTE_RESTRICTIONS = set(PASSAGE_LABELS)
 
 
+def _load_port_approach_data() -> Dict[str, Any]:
+    try:
+        payload = json.loads(PORT_APPROACHES_PATH.read_text(encoding="utf-8"))
+        if not isinstance(payload.get("approaches"), dict):
+            raise ValueError("approaches must be an object")
+        if not isinstance(payload.get("corridors"), list):
+            raise ValueError("corridors must be an array")
+        return payload
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        log.warning("Could not load verified port approaches: %s", exc)
+        return {"approaches": {}, "corridors": []}
+
+
+PORT_APPROACH_DATA = _load_port_approach_data()
+
+
+def _port_approach(port_id: Optional[str]) -> Optional[Dict[str, Any]]:
+    if port_id is None:
+        return None
+    return PORT_APPROACH_DATA["approaches"].get(str(port_id))
+
+
 def _haversine_nm(left: List[float], right: List[float]) -> float:
     """Great-circle distance between [lon, lat] points in nautical miles."""
     lon1, lat1 = map(math.radians, left)
@@ -895,6 +918,143 @@ def _polyline_distance_nm(coordinates: List[List[float]]) -> float:
         _haversine_nm(coordinates[index - 1], coordinates[index])
         for index in range(1, len(coordinates))
     )
+
+
+def _geodesic_point(
+    left: List[float], right: List[float], fraction: float
+) -> List[float]:
+    """Spherical interpolation between two [lon, lat] points."""
+    lon1, lat1 = map(math.radians, left)
+    lon2, lat2 = map(math.radians, right)
+    vectors = [
+        (
+            math.cos(lat) * math.cos(lon),
+            math.cos(lat) * math.sin(lon),
+            math.sin(lat),
+        )
+        for lon, lat in ((lon1, lat1), (lon2, lat2))
+    ]
+    dot = max(-1.0, min(1.0, sum(a * b for a, b in zip(*vectors))))
+    angle = math.acos(dot)
+    if angle < 1e-12:
+        return [float(left[0]), float(left[1])]
+    scale = math.sin(angle)
+    left_weight = math.sin((1.0 - fraction) * angle) / scale
+    right_weight = math.sin(fraction * angle) / scale
+    x, y, z = (
+        left_weight * vectors[0][index] + right_weight * vectors[1][index]
+        for index in range(3)
+    )
+    lon = math.degrees(math.atan2(y, x))
+    lat = math.degrees(math.atan2(z, math.hypot(x, y)))
+    return [lon, lat]
+
+
+def _densify_geodesic_route(
+    waypoints: List[List[float]], max_leg_nm: float = 25.0
+) -> List[List[float]]:
+    """Add graph nodes so every analytical corridor edge is short and smooth."""
+    if len(waypoints) < 2:
+        return [list(point) for point in waypoints]
+    output = [[float(waypoints[0][0]), float(waypoints[0][1])]]
+    for right in waypoints[1:]:
+        left = output[-1]
+        distance = _haversine_nm(left, right)
+        steps = max(1, math.ceil(distance / max_leg_nm))
+        for step in range(1, steps + 1):
+            point = _geodesic_point(left, right, step / steps)
+            point[0] = _wrapped_lon_near(point[0], output[-1][0])
+            output.append(point)
+    return output
+
+
+def _compute_curated_corridor(
+    from_port_id: Optional[str],
+    to_port_id: Optional[str],
+    speed_knots: float,
+    restrictions: Optional[List[str]] = None,
+) -> Optional[Dict[str, Any]]:
+    """Use a provenance-backed dense corridor when both endpoints match."""
+    if from_port_id is None or to_port_id is None:
+        return None
+    from_id, to_id = str(from_port_id), str(to_port_id)
+    origin_approach = _port_approach(from_id)
+    destination_approach = _port_approach(to_id)
+    if not origin_approach or not destination_approach:
+        return None
+    corridor = next(
+        (
+            item
+            for item in PORT_APPROACH_DATA["corridors"]
+            if set(map(str, item.get("endpoint_port_ids", [])))
+            == {from_id, to_id}
+        ),
+        None,
+    )
+    if not corridor:
+        return None
+    configured_ids = list(map(str, corridor["endpoint_port_ids"]))
+    forward = configured_ids == [from_id, to_id]
+    intermediate = [
+        [float(item["longitude"]), float(item["latitude"])]
+        for item in corridor.get("waypoints", [])
+    ]
+    if not forward:
+        intermediate.reverse()
+    origin = [
+        float(origin_approach["longitude"]),
+        float(origin_approach["latitude"]),
+    ]
+    destination = [
+        float(destination_approach["longitude"]),
+        float(destination_approach["latitude"]),
+    ]
+    coordinates = _densify_geodesic_route(
+        [origin, *intermediate, destination], max_leg_nm=25.0
+    )
+    distance_nm = _polyline_distance_nm(coordinates)
+    direct_nm = _haversine_nm(origin, destination)
+    duration_hours = distance_nm / speed_knots if speed_knots > 0 else 0.0
+    return {
+        "distance_nm": round(distance_nm, 1),
+        "network_distance_nm": round(distance_nm, 1),
+        "great_circle_nm": round(direct_nm, 1),
+        "detour_factor": round(distance_nm / direct_nm, 3) if direct_nm else 1.0,
+        "origin_connector_nm": 0.0,
+        "destination_connector_nm": 0.0,
+        "route_confidence": "high",
+        "waypoint_count": len(coordinates),
+        "distance_miles": round(distance_nm * 1.150779, 1),
+        "distance_km": round(distance_nm * 1.852, 1),
+        "duration_hours": round(duration_hours, 2),
+        "duration_days": round(duration_hours / 24.0, 2),
+        "speed_knots": speed_knots,
+        "coordinates": coordinates,
+        "units": "nm",
+        "via": corridor.get("label"),
+        "passages": [],
+        "passage_ids": [],
+        "restrictions": restrictions or [],
+        "routing_profile": "verified-approach-dense-corridor",
+        "corridor_id": corridor["id"],
+        "approach_sources": [
+            {
+                "port_id": from_id,
+                "port_name": origin_approach["port_name"],
+                "kind": origin_approach["kind"],
+                "source_title": origin_approach["source_title"],
+                "source_url": origin_approach["source_url"],
+            },
+            {
+                "port_id": to_id,
+                "port_name": destination_approach["port_name"],
+                "kind": destination_approach["kind"],
+                "source_title": destination_approach["source_title"],
+                "source_url": destination_approach["source_url"],
+            },
+        ],
+    }
+
 
 def _infer_passage(coords):
     if not coords:
@@ -1736,7 +1896,21 @@ async def sea_route(req: RouteRequest):
         ]
         if "northwest" not in avoid:
             avoid.append("northwest")
-        primary = _compute_route(from_lon, from_lat, to_lon, to_lat, speed, avoid)
+        from_approach = _port_approach(str(req.from_port_id)) if from_port else None
+        to_approach = _port_approach(str(req.to_port_id)) if to_port else None
+        route_from_lon = float(
+            from_approach["longitude"] if from_approach else from_lon
+        )
+        route_from_lat = float(
+            from_approach["latitude"] if from_approach else from_lat
+        )
+        route_to_lon = float(to_approach["longitude"] if to_approach else to_lon)
+        route_to_lat = float(to_approach["latitude"] if to_approach else to_lat)
+        primary = _compute_curated_corridor(
+            req.from_port_id, req.to_port_id, speed, avoid
+        ) or _compute_route(
+            route_from_lon, route_from_lat, route_to_lon, route_to_lat, speed, avoid
+        )
         calm_sea_hours = primary["distance_nm"] / speed
         sea_margin_hours = calm_sea_hours * sea_margin_pct / 100.0
         sailing_hours = calm_sea_hours + sea_margin_hours
@@ -1760,7 +1934,12 @@ async def sea_route(req: RouteRequest):
         if via_suez and "suez" not in avoid:
             try:
                 alt = _compute_route(
-                    from_lon, from_lat, to_lon, to_lat, speed, avoid + ["suez"]
+                    route_from_lon,
+                    route_from_lat,
+                    route_to_lon,
+                    route_to_lat,
+                    speed,
+                    avoid + ["suez"],
                 )
             except Exception:
                 alt = None
@@ -1775,9 +1954,9 @@ async def sea_route(req: RouteRequest):
         bunker, origin_weather, midpoint_weather, destination_weather = (
             await asyncio.gather(
                 fetch_bunker_prices(),
-                fetch_weather(from_lat, from_lon),
+                fetch_weather(route_from_lat, route_from_lon),
                 fetch_weather(mid[1], mid[0]),
-                fetch_weather(to_lat, to_lon),
+                fetch_weather(route_to_lat, route_to_lon),
             )
         )
         fuel = estimate_fuel_cost(
@@ -1796,9 +1975,14 @@ async def sea_route(req: RouteRequest):
 
         from_name = (from_port or {}).get("name") or req.from_name
         to_name = (to_port or {}).get("name") or req.to_name
-        warnings = [
-            "Analytical shortest-path estimate on the searoute maritime network; not for navigation."
-        ]
+        if primary.get("routing_profile") == "verified-approach-dense-corridor":
+            warnings = [
+                "Official sea-side approach references with an analytical densified open-sea corridor; not for navigation."
+            ]
+        else:
+            warnings = [
+                "Analytical shortest-path estimate on the searoute maritime network; not for navigation."
+            ]
         if primary["route_confidence"] == "low":
             warnings.append(
                 "A selected port is more than 20 nm from the nearest network node; review the connector leg."
@@ -1810,10 +1994,18 @@ async def sea_route(req: RouteRequest):
             "from_port_id": str(req.from_port_id) if from_port else None,
             "to_port_id": str(req.to_port_id) if to_port else None,
             "coordinate_source": (
-                "World Port Index catalogue"
-                if from_port and to_port else "submitted map coordinates"
+                "Verified sea-side port approaches"
+                if from_approach and to_approach
+                else "World Port Index catalogue"
+                if from_port and to_port
+                else "submitted map coordinates"
             ),
-            "method": "searoute 1.6 maritime network + endpoint connector legs",
+            "method": (
+                "HRP verified-approach dense corridor"
+                if primary.get("routing_profile")
+                == "verified-approach-dense-corridor"
+                else "searoute 1.6 maritime network + endpoint connector legs"
+            ),
             "warnings": warnings,
             "zones": zone_info,
             "fuel": fuel,

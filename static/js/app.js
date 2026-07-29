@@ -76,6 +76,7 @@ const state = {
     commodities: { country: "", status: "operating" }
   }
 };
+let routeRecalculationTimer = null;
 
 function workspaceInput(mode, id) {
   return document.querySelector(
@@ -169,9 +170,15 @@ function bindControls() {
   });
   document.querySelectorAll(
     "#route-speed, #route-sea-margin, #route-port-hours, #route-canal-hours, .route-restrictions input"
-  ).forEach(input => input.addEventListener("change", () => {
-    if (state.routePorts[0] && state.routePorts[1]) calculateRoute();
-  }));
+  ).forEach(input => {
+    const schedule = () => {
+      if (!state.routePorts[0] || !state.routePorts[1]) return;
+      window.clearTimeout(routeRecalculationTimer);
+      routeRecalculationTimer = window.setTimeout(calculateRoute, 300);
+    };
+    input.addEventListener("change", schedule);
+    if (input.type === "number") input.addEventListener("input", schedule);
+  });
   document.getElementById("close-port-card").addEventListener("click", closePortCard);
   document.getElementById("fit-world").addEventListener("click", () => state.map.setView([18, 10], 2));
 }
@@ -1103,19 +1110,17 @@ async function calculateRoute() {
       state.map.fitBounds(coordinates, { padding: [50, 50] });
     }
     const nm = route.distance_nm != null ? route.distance_nm : route.distance_km / 1.852;
-    const connectorTotal = Number(route.origin_connector_nm || 0) + Number(route.destination_connector_nm || 0);
     const confidence = String(route.route_confidence || "estimated").toLowerCase();
+    const confidenceLabel = route.routing_profile === "verified-approach-dense-corridor"
+      ? "verified approaches"
+      : `${confidence} confidence`;
     const alternate = route.alternate_cape_nm
       ? `<div><span>Alternative avoiding Suez</span><b>${formatNumber(route.alternate_cape_nm, 0)} nm · ${formatVoyageHours(Number(route.alternate_cape_days) * 24)}</b></div>`
       : "";
     result.innerHTML =
       `<div class="route-result-head"><div><span>Routed distance</span><strong>${formatNumber(nm, 0)} nm</strong></div>` +
-      `<em class="route-confidence ${escapeAttr(confidence)}">${escapeHtml(confidence)} confidence</em></div>` +
+      `<em class="route-confidence ${escapeAttr(confidence)}">${escapeHtml(confidenceLabel)}</em></div>` +
       `<div class="route-result-grid">` +
-      `<div><span>Great-circle</span><b>${formatNumber(route.great_circle_nm, 0)} nm</b></div>` +
-      `<div><span>Network only</span><b>${formatNumber(route.network_distance_nm, 0)} nm</b></div>` +
-      `<div><span>Connector legs</span><b>${formatNumber(connectorTotal, 1)} nm</b></div>` +
-      `<div><span>Detour factor</span><b>${formatNumber(route.detour_factor, 2)}×</b></div>` +
       `<div><span>Calm-sea time</span><b>${formatVoyageHours(route.calm_sea_hours)}</b></div>` +
       `<div><span>Total elapsed</span><b>${formatVoyageHours(route.total_duration_hours)}</b></div>` +
       `${alternate}</div>` +

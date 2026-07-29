@@ -1,0 +1,67 @@
+{
+  "schema_version": "1.0",
+  "updated_at": "2026-07-29",
+  "purpose": "Verified sea-side reference points and curated analytical corridors for port-to-port distance estimation.",
+  "approaches": {
+    "49535": {
+      "port_name": "PARADIP",
+      "country": "IN",
+      "kind": "fairway_buoy",
+      "latitude": 20.2061667,
+      "longitude": 86.7806667,
+      "verification": "official_exact",
+      "source_title": "Paradip Port Trust Marine Department - M.S. Navigational Buoys",
+      "source_date": "2015-12-16",
+      "source_url": "https://www.paradipport.gov.in/uploads/2025/10/MS_Navig.pdf",
+      "source_detail": "Fairway Buoy: 20°12.37' N, 086°46.84' E"
+    },
+    "46855": {
+      "port_name": "RICHARDS BAY",
+      "country": "ZA",
+      "kind": "sea_approach_reference",
+      "latitude": -28.8265,
+      "longitude": 32.104,
+      "verification": "official_operational_reference",
+      "source_title": "CSIR WaveNet Richards Bay operational wave buoy",
+      "source_date": "2026-07-28",
+      "source_url": "https://wavenet.csir.co.za/OnlineData/RichardsBay/richardsbay.htm",
+      "source_detail": "Directional wave buoy in 22 m water, about 1.4 km off the South Breakwater: 28°49'35.40\" S, 32°06'14.40\" E"
+    }
+  },
+  "corridors": [
+    {
+      "id": "paradip-richards-bay-indian-ocean-v1",
+      "endpoint_port_ids": ["49535", "46855"],
+      "label": "Sri Lanka south and Madagascar south",
+      "status": "curated_analytical",
+      "benchmark": {
+        "reference": "NETPAS user-provided route",
+        "distance_nm": 4496,
+        "observed_date": "2026-07-29"
+      },
+      "waypoints": [
+        {
+          "name": "Sri Lanka east clearance",
+          "latitude": 6.8,
+          "longitude": 82.2
+        },
+        {
+          "name": "Sri Lanka south clearance",
+          "latitude": 5.5,
+          "longitude": 80.2
+        },
+        {
+          "name": "Madagascar east clearance",
+          "latitude": -24.0,
+          "longitude": 51.0
+        },
+        {
+          "name": "Madagascar south clearance",
+          "latitude": -27.0,
+          "longitude": 43.0
+        }
+      ],
+      "method_note": "Analytical water-clearance waypoints are densified at no more than 25 nautical miles per graph edge. They are not navigational waypoints."
+    }
+  ]
+}

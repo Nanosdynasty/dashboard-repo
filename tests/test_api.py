@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from app import (
     NPP_CACHE_TTL_SECONDS,
     _compute_route,
+    _compute_curated_corridor,
     _haversine_nm,
     _infer_passage,
     _route_with_endpoints,
@@ -182,6 +183,59 @@ class PortApiTests(unittest.TestCase):
         self.assertIn("Strait of Malacca", route["passages"])
         self.assertIn(route["route_confidence"], {"high", "medium", "low"})
         self.assertGreater(route["waypoint_count"], 10)
+
+    def test_verified_paradip_richards_bay_corridor_matches_benchmark(self):
+        route = _compute_curated_corridor(
+            "49535", "46855", 13, ["northwest"]
+        )
+        self.assertIsNotNone(route)
+        self.assertEqual(
+            route["routing_profile"], "verified-approach-dense-corridor"
+        )
+        self.assertAlmostEqual(route["distance_nm"], 4496, delta=25)
+        self.assertAlmostEqual(route["duration_days"], 14.41, delta=0.1)
+        self.assertGreater(route["waypoint_count"], 150)
+        self.assertLessEqual(route["origin_connector_nm"], 0)
+        self.assertEqual(len(route["approach_sources"]), 2)
+        with (
+            patch(
+                "app.fetch_weather",
+                new=AsyncMock(return_value={"source": "test"}),
+            ),
+            patch(
+                "app.fetch_bunker_prices",
+                new=AsyncMock(
+                    return_value={
+                        "vlsfo_usd_mt": 580,
+                        "mgo_usd_mt": 820,
+                        "source": "test",
+                    }
+                ),
+            ),
+        ):
+            response = self.client.post(
+                "/api/route",
+                json={
+                    "from_lon": 0,
+                    "from_lat": 0,
+                    "to_lon": 0,
+                    "to_lat": 1,
+                    "from_port_id": "49535",
+                    "to_port_id": "46855",
+                    "speed_knots": 13,
+                    "sea_margin_pct": 0,
+                },
+            )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertAlmostEqual(payload["distance_nm"], 4496, delta=25)
+        self.assertEqual(
+            payload["coordinate_source"], "Verified sea-side port approaches"
+        )
+        self.assertEqual(payload["method"], "HRP verified-approach dense corridor")
+        self.assertEqual(
+            payload["routing_profile"], "verified-approach-dense-corridor"
+        )
 
     def test_route_api_uses_catalogue_ports_and_explicit_time_allowances(self):
         weather = {"source": "test"}
@@ -400,7 +454,7 @@ class PortApiTests(unittest.TestCase):
         self.assertIn("Coal stock availability", html)
         self.assertIn("Cumulative generation", html)
         self.assertIn("Sector-wise PLF", html)
-        self.assertIn("app.js?v=20260729-1", html)
+        self.assertIn("app.js?v=20260729-3", html)
         self.assertIn('id="route-from-input" type="search"', html)
         self.assertIn('id="route-to-input" type="search"', html)
         self.assertIn('list="route-port-options"', html)
