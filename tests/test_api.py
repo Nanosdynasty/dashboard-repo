@@ -400,7 +400,11 @@ class PortApiTests(unittest.TestCase):
         self.assertIn("Coal stock availability", html)
         self.assertIn("Cumulative generation", html)
         self.assertIn("Sector-wise PLF", html)
-        self.assertIn("app.js?v=20260728-5", html)
+        self.assertIn("app.js?v=20260729-1", html)
+        self.assertIn('id="route-from-input" type="search"', html)
+        self.assertIn('id="route-to-input" type="search"', html)
+        self.assertIn('list="route-port-options"', html)
+        self.assertIn('id="route-port-options"', html)
 
     def test_map_uses_only_explicit_english_labels(self):
         response = self.client.get("/static/js/app.js")

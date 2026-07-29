@@ -154,11 +154,18 @@ function bindControls() {
   document.getElementById("coal-terminal-role").addEventListener("change", () => applyWorkspaceFilters("commodities"));
   document.getElementById("route-pick").addEventListener("click", startRoutePicking);
   document.getElementById("route-reset").addEventListener("click", resetRoute);
-  document.getElementById("route-from-select").addEventListener("change", event => {
-    selectRoutePort(0, event.target.value);
-  });
-  document.getElementById("route-to-select").addEventListener("change", event => {
-    selectRoutePort(1, event.target.value);
+  [
+    ["route-from-input", 0],
+    ["route-to-input", 1]
+  ].forEach(([id, index]) => {
+    const input = document.getElementById(id);
+    input.addEventListener("input", () => input.setCustomValidity(""));
+    input.addEventListener("change", () => selectRoutePortFromInput(index, input));
+    input.addEventListener("keydown", event => {
+      if (event.key === "Enter") {
+        selectRoutePortFromInput(index, input);
+      }
+    });
   });
   document.querySelectorAll(
     "#route-speed, #route-sea-margin, #route-port-hours, #route-canal-hours, .route-restrictions input"
@@ -730,7 +737,7 @@ async function loadPorts() {
         String(left.name || "").localeCompare(String(right.name || "")) ||
         String(left.country || "").localeCompare(String(right.country || ""))
       );
-      populateRoutePortSelects();
+      populateRoutePortSearch();
     }
     renderPorts();
   } catch (error) {
@@ -938,19 +945,67 @@ function handlePortClick(port) {
   }
 }
 
-function populateRoutePortSelects() {
-  const options = state.routePortCatalog.map(port =>
-    `<option value="${escapeAttr(port.id)}">${escapeHtml(port.name)}${port.country ? " · " + escapeHtml(port.country) : ""}</option>`
+function routePortLabel(port) {
+  return `${port.name}${port.country ? " · " + port.country : ""}`;
+}
+
+function populateRoutePortSearch() {
+  document.getElementById("route-port-options").innerHTML = state.routePortCatalog.map(port =>
+    `<option value="${escapeAttr(routePortLabel(port))}"></option>`
   ).join("");
-  [
-    ["route-from-select", "Choose origin"],
-    ["route-to-select", "Choose destination"]
-  ].forEach(([id, label]) => {
-    const select = document.getElementById(id);
-    const current = select.value;
-    select.innerHTML = `<option value="">${label}</option>${options}`;
-    select.value = current;
-  });
+}
+
+function normalizedPortQuery(value) {
+  return String(value || "").trim().toLocaleLowerCase();
+}
+
+function routePortFromQuery(query) {
+  const normalized = normalizedPortQuery(query);
+  if (!normalized) return null;
+  const exactLabel = state.routePortCatalog.find(port =>
+    normalizedPortQuery(routePortLabel(port)) === normalized
+  );
+  if (exactLabel) return exactLabel;
+  const exactName = state.routePortCatalog.find(port =>
+    normalizedPortQuery(port.name) === normalized
+  );
+  if (exactName) return exactName;
+  return state.routePortCatalog.find(port =>
+    normalizedPortQuery(port.name).startsWith(normalized)
+  ) || state.routePortCatalog.find(port =>
+    normalizedPortQuery(routePortLabel(port)).includes(normalized)
+  ) || null;
+}
+
+function selectRoutePortFromInput(index, input) {
+  const query = input.value.trim();
+  if (!query) {
+    clearRoutePort(index);
+    return;
+  }
+  const port = routePortFromQuery(query);
+  if (!port) {
+    delete state.routePorts[index];
+    state.routeLayer.clearLayers();
+    document.getElementById(index === 0 ? "route-from-name" : "route-to-name").textContent =
+      index === 0 ? "Select origin" : "Select destination";
+    document.getElementById("route-result").textContent =
+      "No matching port found. Continue typing or choose a port from the suggestions.";
+    input.setCustomValidity("No matching port found. Choose a port from the suggestions.");
+    input.reportValidity();
+    return;
+  }
+  input.setCustomValidity("");
+  selectRoutePort(index, port.id);
+}
+
+function clearRoutePort(index) {
+  delete state.routePorts[index];
+  state.routeLayer.clearLayers();
+  updateRouteSelection();
+  renderPorts();
+  document.getElementById("route-result").textContent =
+    "Type both port names or select them directly on the map.";
 }
 
 function selectRoutePort(index, portId) {
@@ -984,8 +1039,12 @@ function startRoutePicking() {
 function updateRouteSelection() {
   const from = state.routePorts[0];
   const to = state.routePorts[1];
-  document.getElementById("route-from-select").value = from ? String(from.id) : "";
-  document.getElementById("route-to-select").value = to ? String(to.id) : "";
+  const fromInput = document.getElementById("route-from-input");
+  const toInput = document.getElementById("route-to-input");
+  fromInput.value = from ? routePortLabel(from) : "";
+  toInput.value = to ? routePortLabel(to) : "";
+  fromInput.setCustomValidity("");
+  toInput.setCustomValidity("");
   document.getElementById("route-from-name").textContent = from ? from.name : "Select origin";
   document.getElementById("route-to-name").textContent = to ? to.name : "Select destination";
   const button = document.getElementById("route-pick");

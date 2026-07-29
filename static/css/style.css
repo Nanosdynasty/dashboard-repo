@@ -193,7 +193,7 @@ button, summary, label, select { -webkit-tap-highlight-color: transparent; }
   letter-spacing: .08em;
   text-transform: uppercase;
 }
-.route-select-grid select {
+.route-select-grid input[type="search"] {
   width: 100%;
   min-width: 0;
   padding: 7px 8px;
@@ -201,6 +201,12 @@ button, summary, label, select { -webkit-tap-highlight-color: transparent; }
   background: #26375e;
   border: 1px solid #40527a;
   font-size: 10px;
+}
+.route-select-grid input[type="search"]::placeholder { color: #9eacc0; }
+.route-select-grid input[type="search"]:focus {
+  outline: 2px solid rgba(219,47,52,.45);
+  outline-offset: 1px;
+  border-color: #db2f34;
 }
 .primary-button {
   width: 100%;

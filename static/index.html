@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Howe Robinson | Global Assets Map</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="/static/css/style.css?v=20260728-3" />
+  <link rel="stylesheet" href="/static/css/style.css?v=20260729-1" />
 </head>
 <body>
   <div class="app-shell">
@@ -257,14 +257,17 @@
               <button type="button" class="text-button" id="route-reset">Reset</button>
             </div>
             <div class="route-select-grid">
-              <label for="route-from-select">
+              <label for="route-from-input">
                 <span>Origin port</span>
-                <select id="route-from-select"><option value="">Choose origin</option></select>
+                <input id="route-from-input" type="search" list="route-port-options"
+                  placeholder="Type a port name" autocomplete="off" />
               </label>
-              <label for="route-to-select">
+              <label for="route-to-input">
                 <span>Destination port</span>
-                <select id="route-to-select"><option value="">Choose destination</option></select>
+                <input id="route-to-input" type="search" list="route-port-options"
+                  placeholder="Type a port name" autocomplete="off" />
               </label>
+              <datalist id="route-port-options"></datalist>
             </div>
             <button type="button" id="route-pick" class="primary-button">Select two ports on map</button>
             <div class="route-ports">
@@ -396,6 +399,6 @@
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/static/js/app.js?v=20260728-5"></script>
+  <script src="/static/js/app.js?v=20260729-1"></script>
 </body>
 </html>
