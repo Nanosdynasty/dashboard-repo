@@ -1,0 +1,270 @@
+{
+  "type": "FeatureCollection",
+  "metadata": {
+    "title": "HRP maritime risk routing zones",
+    "as_of": "2026-07-29",
+    "jwc_current_circular": "JWLA-033",
+    "jwc_current_circular_date": "2026-03-03",
+    "last_amendment_check": "2026-07-29",
+    "disclaimer": "Analytical voyage-planning aid only. JWC wording, IMO/IMB incident reporting and current security advice supersede this display. Not for navigation, insurance placement, or operational passage planning."
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "jwc-jwla033-western-indian-ocean",
+        "name": "JWC: Arabian Gulf, Indian Ocean, Gulf of Aden and southern Red Sea",
+        "risk_family": "jwc",
+        "zone_type": "jwc_listed_area",
+        "status": "current",
+        "effective_date": "2026-03-03",
+        "circular": "JWLA-033",
+        "description": "Defined waters listed for Hull War, Piracy, Terrorism and Related Perils. Offshore control points follow JWLA-033; coastline closures are generalized for analytical display.",
+        "boundary_quality": "exact_offshore_control_points_with_generalized_coastal_closure",
+        "source_title": "Joint War Committee Circular JWLA-033",
+        "source_url": "https://jwla.ai/api/docs/JWLA-033.pdf",
+        "secondary_source_url": "https://www.fa-maritime.com/en/joint-war-committee-updates-war-listed-areas-on-3rd-march-2026/",
+        "routing_policy": "advisory_transit_allowed",
+        "route_avoidance_scope": "largest_western_indian_ocean_polygon_only",
+        "preferred_boundary_arc": "offshore_east_south",
+        "avoidance_buffer_nm": 0,
+        "mandatory_shared_junction": [56.2, 22.8],
+        "routing_penalty": 1,
+        "not_for_navigation": true
+      },
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [[
+            [41.566667, -1.666667],
+            [48.75, -6.75],
+            [60.25, 10.8],
+            [65.0, 10.8],
+            [65.0, 25.320833],
+            [61.5, 25.3],
+            [58.0, 24.8],
+            [56.2, 22.8],
+            [54.0, 18.0],
+            [50.0, 15.0],
+            [46.0, 12.0],
+            [43.3, 10.5],
+            [42.5, 5.0],
+            [41.566667, -1.666667]
+          ]],
+          [[
+            [38.0, 18.0],
+            [42.0, 18.0],
+            [44.2, 12.4],
+            [43.0, 11.5],
+            [41.0, 13.0],
+            [38.0, 18.0]
+          ]],
+          [[
+            [48.0, 29.8],
+            [56.5, 26.5],
+            [56.2, 22.8],
+            [52.0, 24.0],
+            [48.0, 27.0],
+            [48.0, 29.8]
+          ]]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "jwc-jwla033-gulf-of-guinea",
+        "name": "JWC: Gulf of Guinea defined waters",
+        "risk_family": "jwc",
+        "zone_type": "jwc_listed_area",
+        "status": "current",
+        "effective_date": "2026-03-03",
+        "circular": "JWLA-033",
+        "description": "Waters from the Togo coast to 0°40'S, 3°E and east to Cape Lopez Peninsula, Gabon.",
+        "boundary_quality": "exact_control_points_with_generalized_coastline",
+        "source_title": "Joint War Committee Circular JWLA-033",
+        "source_url": "https://jwla.ai/api/docs/JWLA-033.pdf",
+        "routing_policy": "advisory_transit_allowed",
+        "routing_penalty": 1,
+        "not_for_navigation": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [1.2, 6.1125],
+          [3.0, -0.666667],
+          [8.7, -0.666667],
+          [9.0, 0.3],
+          [7.0, 3.0],
+          [4.0, 5.5],
+          [1.2, 6.1125]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "jwc-jwla033-cabo-delgado",
+        "name": "JWC: Cabo Delgado defined waters",
+        "risk_family": "jwc",
+        "zone_type": "jwc_listed_area",
+        "status": "current",
+        "effective_date": "2026-03-03",
+        "circular": "JWLA-033",
+        "description": "Territorial sea of Mozambique and Tanzania between Mnazi Bay and Baía do Lúrio as defined in JWLA-033.",
+        "boundary_quality": "exact_control_points_with_generalized_coastline",
+        "source_title": "Joint War Committee Circular JWLA-033",
+        "source_url": "https://jwla.ai/api/docs/JWLA-033.pdf",
+        "routing_policy": "advisory_transit_allowed",
+        "routing_penalty": 1,
+        "not_for_navigation": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [40.315, -10.326667],
+          [40.574, -10.171667],
+          [40.828333, -13.4995],
+          [40.526667, -13.5],
+          [40.315, -10.326667]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "jwc-jwla033-black-sea",
+        "name": "JWC: Black Sea and Sea of Azov defined waters",
+        "risk_family": "jwc",
+        "zone_type": "jwc_listed_area",
+        "status": "current",
+        "effective_date": "2026-03-03",
+        "circular": "JWLA-033",
+        "description": "Black Sea and Sea of Azov waters defined by the JWLA-033 western and southern control points.",
+        "boundary_quality": "exact_control_points_with_generalized_northern_closure",
+        "source_title": "Joint War Committee Circular JWLA-033",
+        "source_url": "https://jwla.ai/api/docs/JWLA-033.pdf",
+        "routing_policy": "advisory_transit_allowed",
+        "routing_penalty": 1,
+        "not_for_navigation": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [29.765483, 45.180967],
+          [29.852333, 45.18725],
+          [29.992717, 45.191233],
+          [30.040133, 45.089233],
+          [30.9787, 44.777083],
+          [31.17495, 44.7374],
+          [31.410033, 44.04795],
+          [31.332567, 43.451517],
+          [40.009983, 43.385433],
+          [42.0, 47.0],
+          [38.0, 48.0],
+          [32.0, 47.0],
+          [29.765483, 45.180967]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "piracy-watch-western-indian-ocean-2026",
+        "name": "Piracy watch: Somalia, Gulf of Aden and western Indian Ocean",
+        "risk_family": "piracy",
+        "zone_type": "piracy_watch",
+        "status": "current_watch",
+        "effective_date": "2026-07-09",
+        "description": "Analytical watch envelope for renewed Somali piracy capability and 2026 incidents. This is not a statutory or insurance boundary and the former industry Indian Ocean HRA was rescinded in 2023.",
+        "boundary_quality": "analytical_watch_envelope_not_official_boundary",
+        "source_title": "ICC IMB piracy-prone areas and 2026 incident reporting",
+        "source_url": "https://icc-ccs.org/piracy-and-armed-robbery-prone-areas-and-warnings/",
+        "secondary_source_url": "https://www.imo.org/en/mediacentre/pages/whatsnew-1821.aspx",
+        "routing_policy": "hard_avoid_where_navigable_path_exists",
+        "preferred_boundary_arc": "offshore_east_south",
+        "avoidance_buffer_nm": 0,
+        "mandatory_shared_junction": [60.0, 12.0],
+        "mandatory_eastern_exit": [60.0, 12.0],
+        "routing_penalty": 1000000,
+        "not_for_navigation": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [42.0, -2.0],
+          [58.0, -2.0],
+          [60.0, 12.0],
+          [53.0, 16.0],
+          [43.0, 15.0],
+          [42.0, -2.0]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "piracy-watch-soms-2026",
+        "name": "Piracy watch: Straits of Malacca and Singapore",
+        "risk_family": "piracy",
+        "zone_type": "piracy_watch",
+        "status": "current_watch",
+        "effective_date": "2026-06-08",
+        "description": "Analytical watch envelope covering the Straits of Malacca and Singapore, where ReCAAP continued to report armed robbery incidents in 2026.",
+        "boundary_quality": "analytical_watch_envelope_not_official_boundary",
+        "source_title": "ReCAAP ISC weekly and annual piracy reporting",
+        "source_url": "https://www.recaap.org/resources/ck/files/reports/weekly/2026/ReCAAP%20ISC%20Weekly%20Report%20%2802-08%20June%2026%29.pdf",
+        "routing_policy": "hard_avoid_where_navigable_path_exists",
+        "routing_penalty": 1000000,
+        "not_for_navigation": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [98.0, 5.8],
+          [101.0, 6.0],
+          [104.8, 2.4],
+          [105.0, 0.2],
+          [102.0, -0.2],
+          [99.0, 0.5],
+          [98.0, 5.8]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "piracy-watch-gulf-of-guinea-2026",
+        "name": "Piracy watch: Gulf of Guinea",
+        "risk_family": "piracy",
+        "zone_type": "piracy_watch",
+        "status": "current_watch",
+        "effective_date": "2026-07-09",
+        "description": "Analytical watch envelope for piracy and armed robbery risk in the Gulf of Guinea. Current incident levels are lower than historic peaks but crew-safety risk remains.",
+        "boundary_quality": "analytical_watch_envelope_not_official_boundary",
+        "source_title": "ICC IMB piracy-prone areas and warnings",
+        "source_url": "https://icc-ccs.org/piracy-and-armed-robbery-prone-areas-and-warnings/",
+        "routing_policy": "hard_avoid_where_navigable_path_exists",
+        "routing_penalty": 1000000,
+        "not_for_navigation": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-2.0, 7.0],
+          [10.0, 7.0],
+          [12.0, 1.0],
+          [9.0, -2.0],
+          [0.0, -2.0],
+          [-2.0, 7.0]
+        ]]
+      }
+    }
+  ],
+  "listed_country_codes": {
+    "jwc": [
+      "BH", "BJ", "BY", "DJ", "ER", "IR", "IQ", "IL", "KW", "LB", "LY",
+      "NG", "OM", "PK", "QA", "RU", "SA", "SO", "SD", "SY", "TG", "UA", "AE", "VE"
+    ]
+  }
+}

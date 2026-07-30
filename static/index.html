@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Howe Robinson | Global Assets Map</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="/static/css/style.css?v=20260729-4" />
+  <link rel="stylesheet" href="/static/css/style.css?v=20260730-2" />
 </head>
 <body>
   <div class="app-shell">
@@ -243,6 +243,77 @@
           </div>
         </details>
 
+        <details class="filter-section ais-section">
+          <summary>
+            <span><i class="section-icon ais-icon"></i>Live AIS vessels</span>
+            <span class="section-count" id="ais-layer-count">Off</span>
+          </summary>
+          <div class="ais-card">
+            <label class="ais-toggle">
+              <span>
+                <strong>Show live vessels</strong>
+                <small>Load positions already collected in the background</small>
+              </span>
+              <input id="ais-enabled" type="checkbox" role="switch" />
+            </label>
+            <label class="ais-search-label" for="ais-display-mode">
+              <span>Vessels displayed</span>
+              <select id="ais-display-mode">
+                <option value="all" selected>All live vessels</option>
+                <option value="selected">Selected vessels only</option>
+              </select>
+            </label>
+            <label class="ais-search-label" for="ais-type-filter">
+              <span>Vessel type</span>
+              <select id="ais-type-filter">
+                <option value="cargo_tanker" selected>Cargo + tankers + type pending</option>
+                <option value="cargo">Cargo vessels only</option>
+                <option value="tanker">Tankers only</option>
+                <option value="all">All vessel types</option>
+              </select>
+            </label>
+            <details class="ais-region-picker">
+              <summary>
+                <span>AIS regions</span>
+                <strong id="ais-region-summary">4 selected</strong>
+              </summary>
+              <div id="ais-region-options" class="ais-region-options">
+                <label><input type="checkbox" value="current" />Current map area</label>
+                <label><input type="checkbox" value="india" checked />India &amp; Bay of Bengal</label>
+                <label><input type="checkbox" value="china" checked />China coast</label>
+                <label><input type="checkbox" value="gulf" checked />Arabian/Persian Gulf</label>
+                <label><input type="checkbox" value="southeast_asia" checked />Southeast Asia &amp; Malacca</label>
+                <label><input type="checkbox" value="japan_korea" />Japan &amp; Korea</label>
+                <label><input type="checkbox" value="australia" />Australia</label>
+                <label><input type="checkbox" value="europe_med" />Europe &amp; Mediterranean</label>
+                <label><input type="checkbox" value="africa" />Africa</label>
+                <label><input type="checkbox" value="north_america" />North America</label>
+                <label><input type="checkbox" value="south_america" />South America</label>
+                <label><input type="checkbox" value="world" />Worldwide</label>
+              </div>
+            </details>
+            <label class="ais-search-label" for="ais-search">
+              <span>Find a vessel</span>
+              <input id="ais-search" type="search"
+                placeholder="Vessel name, MMSI or IMO" autocomplete="off" />
+            </label>
+            <div class="ais-actions">
+              <button type="button" id="ais-search-button" class="primary-button">Find &amp; add</button>
+              <button type="button" id="ais-refresh" class="secondary-button">Refresh</button>
+              <button type="button" id="ais-clear" class="secondary-button">Clear vessels</button>
+            </div>
+            <div id="ais-watchlist" class="ais-watchlist" hidden>
+              <span>No selected vessels.</span>
+            </div>
+            <div id="ais-status" class="ais-status">AIS layer is switched off.</div>
+            <p class="source-note">
+              The server collects AISStream.io positions in the background. The
+              map loads them only when this layer is switched on, keeping the
+              rest of the dashboard responsive. Click a vessel for its actual trail.
+            </p>
+          </div>
+        </details>
+
         <details class="filter-section voyage-section">
           <summary>
             <span><i class="section-icon voyage-icon"></i>Voyage distance</span>
@@ -404,12 +475,13 @@
       <div class="map-key">
         <span><i class="port-key"></i>Port</span>
         <span><i class="asset-key"></i>Selected asset</span>
+        <span><i class="ais-key"></i>Live AIS vessel</span>
         <span><i class="route-key"></i>Voyage route</span>
       </div>
     </main>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/static/js/app.js?v=20260729-6"></script>
+  <script src="/static/js/app.js?v=20260730-11"></script>
 </body>
 </html>

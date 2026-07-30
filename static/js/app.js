@@ -94,6 +94,23 @@ const MAP_SKINS = {
   )
 };
 
+const DEFAULT_MAP_CENTER = [23, 90];
+const DEFAULT_MAP_ZOOM = 3;
+const DEFAULT_AIS_REGIONS = ["india", "china", "gulf", "southeast_asia"];
+const AIS_REGION_BOUNDS = {
+  india: [[5, 64], [31, 100]],
+  china: [[17, 105], [42, 125]],
+  gulf: [[12, 42], [31.5, 62.5]],
+  southeast_asia: [[-12, 94], [22, 132]],
+  japan_korea: [[30, 124], [47, 147]],
+  australia: [[-47, 108], [-8, 158]],
+  europe_med: [[28, -12], [72, 45]],
+  africa: [[-38, -20], [38, 58]],
+  north_america: [[5, -170], [72, -50]],
+  south_america: [[-58, -92], [15, -30]],
+  world: [[-90, -180], [90, 180]]
+};
+
 const state = {
   map: null,
   baseLayer: null,
@@ -110,6 +127,17 @@ const state = {
   routePorts: [],
   routePortCatalog: [],
   coalLayer: null,
+  aisLayer: null,
+  aisTrailLayer: null,
+  aisVessels: [],
+  aisEnabled: false,
+  aisLoading: false,
+  aisRefreshTimer: null,
+  aisDisplayMode: "all",
+  aisTypeFilter: "cargo_tanker",
+  aisRegions: new Set(DEFAULT_AIS_REGIONS),
+  aisWatchlist: new Map(),
+  selectedAisMmsi: null,
   coalAssets: [],
   coalSummary: null,
   coalView: "map",
@@ -139,13 +167,16 @@ async function init() {
     worldCopyJump: true,
     zoomControl: true,
     minZoom: 2
-  }).setView([18, 10], 2);
+  }).setView(DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM);
   setMapSkin("light");
   addEnglishMapLabels();
   state.portLayer = L.layerGroup().addTo(state.map);
   state.coalLayer = L.layerGroup().addTo(state.map);
+  state.aisLayer = L.layerGroup().addTo(state.map);
+  state.aisTrailLayer = L.layerGroup().addTo(state.map);
   state.routeLayer = L.layerGroup().addTo(state.map);
   state.map.on("zoomend", renderPorts);
+  loadAisPreferences();
   bindControls();
   await Promise.all([
     loadPortFacets(),
@@ -167,6 +198,55 @@ function bindControls() {
   document.getElementById("show-ports").addEventListener("change", renderPorts);
   document.getElementById("energy-show-ports").addEventListener("change", renderPorts);
   document.getElementById("commodity-show-ports").addEventListener("change", renderPorts);
+  document.getElementById("ais-enabled").addEventListener("change", event => {
+    setAisEnabled(event.target.checked);
+  });
+  document.getElementById("ais-refresh").addEventListener("click", () => refreshAisLayer());
+  document.getElementById("ais-clear").addEventListener("click", clearAisVessels);
+  document.getElementById("ais-display-mode").addEventListener("change", event => {
+    state.aisDisplayMode = event.target.value === "selected" ? "selected" : "all";
+    saveAisPreferences();
+    renderAisVessels();
+    if (state.aisEnabled) refreshAisLayer();
+  });
+  document.getElementById("ais-type-filter").addEventListener("change", event => {
+    const allowed = new Set(["cargo_tanker", "cargo", "tanker", "all"]);
+    state.aisTypeFilter = allowed.has(event.target.value)
+      ? event.target.value
+      : "cargo_tanker";
+    saveAisPreferences();
+    renderAisVessels();
+  });
+  document.querySelectorAll("#ais-region-options input").forEach(input => {
+    input.addEventListener("change", () => {
+      if (input.value === "world" && input.checked) {
+        document.querySelectorAll("#ais-region-options input").forEach(option => {
+          option.checked = option === input;
+        });
+      } else if (input.checked) {
+        document.querySelector('#ais-region-options input[value="world"]').checked = false;
+      }
+      const checked = Array.from(
+        document.querySelectorAll("#ais-region-options input:checked")
+      );
+      if (!checked.length) {
+        const current = document.querySelector(
+          '#ais-region-options input[value="current"]'
+        );
+        current.checked = true;
+        checked.push(current);
+      }
+      state.aisRegions = new Set(checked.map(option => option.value));
+      saveAisPreferences();
+      updateAisRegionSummary();
+      renderAisVessels();
+      if (state.aisEnabled) refreshAisLayer();
+    });
+  });
+  document.getElementById("ais-search-button").addEventListener("click", () => refreshAisLayer(true));
+  document.getElementById("ais-search").addEventListener("keydown", event => {
+    if (event.key === "Enter") refreshAisLayer(true);
+  });
   document.querySelectorAll("#coal-workspace-layers input, #coal-consumer-layers input").forEach(input => {
     input.addEventListener("change", renderCoalLayers);
   });
@@ -266,6 +346,487 @@ function activateMode(mode) {
   }
   renderPorts();
   updateActiveCounts();
+}
+
+function loadAisPreferences() {
+  try {
+    const mode = window.localStorage.getItem("hrp-ais-display-mode");
+    state.aisDisplayMode = mode === "selected" ? "selected" : "all";
+    const typeFilter = window.localStorage.getItem("hrp-ais-type-filter");
+    state.aisTypeFilter = new Set(["cargo_tanker", "cargo", "tanker", "all"])
+      .has(typeFilter)
+      ? typeFilter
+      : "cargo_tanker";
+    const allowedRegions = new Set(["current", ...Object.keys(AIS_REGION_BOUNDS)]);
+    const savedRegions = JSON.parse(
+      window.localStorage.getItem("hrp-ais-regions") || "null"
+    );
+    const regions = Array.isArray(savedRegions)
+      ? savedRegions.filter(region => allowedRegions.has(region))
+      : DEFAULT_AIS_REGIONS;
+    state.aisRegions = new Set(regions.length ? regions : DEFAULT_AIS_REGIONS);
+    if (state.aisRegions.has("world")) state.aisRegions = new Set(["world"]);
+    const saved = JSON.parse(
+      window.localStorage.getItem("hrp-ais-watchlist") || "[]"
+    );
+    state.aisWatchlist = new Map(
+      (Array.isArray(saved) ? saved : [])
+        .filter(vessel => /^\d{9}$/.test(String(vessel.mmsi || "")))
+        .slice(0, 50)
+        .map(vessel => [String(vessel.mmsi), vessel])
+    );
+  } catch {
+    state.aisDisplayMode = "all";
+    state.aisTypeFilter = "cargo_tanker";
+    state.aisRegions = new Set(DEFAULT_AIS_REGIONS);
+    state.aisWatchlist = new Map();
+  }
+  document.getElementById("ais-display-mode").value = state.aisDisplayMode;
+  document.getElementById("ais-type-filter").value = state.aisTypeFilter;
+  document.querySelectorAll("#ais-region-options input").forEach(input => {
+    input.checked = state.aisRegions.has(input.value);
+  });
+  updateAisRegionSummary();
+  renderAisWatchlist();
+}
+
+function saveAisPreferences() {
+  try {
+    window.localStorage.setItem("hrp-ais-display-mode", state.aisDisplayMode);
+    window.localStorage.setItem("hrp-ais-type-filter", state.aisTypeFilter);
+    window.localStorage.setItem(
+      "hrp-ais-regions",
+      JSON.stringify(Array.from(state.aisRegions))
+    );
+    window.localStorage.setItem(
+      "hrp-ais-watchlist",
+      JSON.stringify(Array.from(state.aisWatchlist.values()))
+    );
+  } catch {
+    // Browser storage can be unavailable in privacy-restricted sessions.
+  }
+}
+
+function updateAisRegionSummary() {
+  const summary = document.getElementById("ais-region-summary");
+  if (!summary) return;
+  if (state.aisRegions.has("world")) {
+    summary.textContent = "Worldwide";
+  } else if (state.aisRegions.size === 1 && state.aisRegions.has("current")) {
+    summary.textContent = "Current map";
+  } else {
+    summary.textContent = `${state.aisRegions.size} selected`;
+  }
+}
+
+function aisVesselInSelectedRegions(vessel) {
+  if (state.aisRegions.has("world")) return true;
+  const lat = Number(vessel.lat);
+  const lon = Number(vessel.lon);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return false;
+  if (
+    state.aisRegions.has("current")
+    && state.map?.getBounds().contains([lat, lon])
+  ) {
+    return true;
+  }
+  return Array.from(state.aisRegions).some(region => {
+    const bounds = AIS_REGION_BOUNDS[region];
+    if (!bounds) return false;
+    return (
+      lat >= bounds[0][0] && lat <= bounds[1][0]
+      && lon >= bounds[0][1] && lon <= bounds[1][1]
+    );
+  });
+}
+
+function addAisWatchlistVessels(vessels) {
+  vessels.slice(0, 50).forEach(vessel => {
+    const mmsi = String(vessel.mmsi || "");
+    if (!/^\d{9}$/.test(mmsi)) return;
+    state.aisWatchlist.set(mmsi, {
+      mmsi,
+      imo: vessel.imo || "",
+      name: vessel.name || `MMSI ${mmsi}`
+    });
+  });
+  while (state.aisWatchlist.size > 50) {
+    const oldest = state.aisWatchlist.keys().next().value;
+    state.aisWatchlist.delete(oldest);
+  }
+  saveAisPreferences();
+  renderAisWatchlist();
+}
+
+function removeAisWatchlistVessel(mmsi) {
+  state.aisWatchlist.delete(String(mmsi));
+  saveAisPreferences();
+  renderAisWatchlist();
+  renderAisVessels();
+  if (state.aisEnabled && state.aisDisplayMode === "selected") {
+    refreshAisLayer();
+  }
+}
+
+function renderAisWatchlist() {
+  const container = document.getElementById("ais-watchlist");
+  if (!state.aisWatchlist.size) {
+    container.innerHTML = "<span>No selected vessels.</span>";
+    return;
+  }
+  container.innerHTML = Array.from(state.aisWatchlist.values())
+    .map(vessel => `
+      <button type="button" data-ais-remove="${escapeAttr(vessel.mmsi)}"
+        title="Remove ${escapeAttr(vessel.name)}">
+        <strong>${escapeHtml(vessel.name)}</strong>
+        <small>${escapeHtml(vessel.mmsi)}</small>
+        <i aria-hidden="true">×</i>
+      </button>
+    `)
+    .join("");
+  container.querySelectorAll("[data-ais-remove]").forEach(button => {
+    button.addEventListener("click", () => {
+      removeAisWatchlistVessel(button.dataset.aisRemove);
+    });
+  });
+}
+
+function displayedAisVessels() {
+  return state.aisVessels.filter(vessel => {
+    if (
+      state.aisDisplayMode === "selected"
+      && !state.aisWatchlist.has(String(vessel.mmsi || ""))
+    ) {
+      return false;
+    }
+    if (
+      state.aisDisplayMode !== "selected"
+      && !aisVesselInSelectedRegions(vessel)
+    ) {
+      return false;
+    }
+    const category = aisVesselTypeCategory(vessel.ship_type);
+    if (state.aisTypeFilter === "all") return true;
+    if (state.aisTypeFilter === "cargo") return category === "cargo";
+    if (state.aisTypeFilter === "tanker") return category === "tanker";
+    return category === "cargo" || category === "tanker" || category === "unknown";
+  });
+}
+
+function aisVesselTypeCategory(value) {
+  const type = Number(value);
+  if (!Number.isFinite(type)) return "unknown";
+  if (type >= 70 && type <= 79) return "cargo";
+  if (type >= 80 && type <= 89) return "tanker";
+  if (type >= 60 && type <= 69) return "passenger";
+  if (type >= 40 && type <= 49) return "high_speed";
+  if (type === 30) return "fishing";
+  if ([31, 32, 52].includes(type)) return "tug_tow";
+  if ([36, 37].includes(type)) return "pleasure";
+  if (type >= 33 && type <= 59) return "special";
+  if (type >= 90 && type <= 99) return "other";
+  return "unknown";
+}
+
+function aisVesselTypeLabel(value) {
+  const labels = {
+    cargo: "Cargo vessel",
+    tanker: "Tanker",
+    passenger: "Passenger vessel",
+    high_speed: "High-speed craft",
+    fishing: "Fishing vessel",
+    tug_tow: "Tug / towing vessel",
+    pleasure: "Sailing / pleasure craft",
+    special: "Special-purpose vessel",
+    other: "Other vessel",
+    unknown: "Type not yet received"
+  };
+  return labels[aisVesselTypeCategory(value)];
+}
+
+function setAisStatus(text, kind = "") {
+  const element = document.getElementById("ais-status");
+  element.textContent = text;
+  element.dataset.kind = kind;
+}
+
+async function setAisEnabled(enabled) {
+  state.aisEnabled = Boolean(enabled);
+  window.clearInterval(state.aisRefreshTimer);
+  state.aisRefreshTimer = null;
+  if (!state.aisEnabled) {
+    clearAisVessels(false);
+    document.getElementById("ais-layer-count").textContent = "Off";
+    setAisStatus("AIS layer is switched off.");
+    updateMapStatus();
+    return;
+  }
+  try {
+    const response = await fetch("/api/ais/status");
+    const status = await response.json();
+    if (!status.configured) {
+      document.getElementById("ais-enabled").checked = false;
+      state.aisEnabled = false;
+      document.getElementById("ais-layer-count").textContent = "Setup";
+      setAisStatus(
+        "Add AISSTREAM_API_KEY to the server environment, then restart the app.",
+        "error"
+      );
+      return;
+    }
+    setAisStatus("Connecting to live AIS observations…", "loading");
+    await refreshAisLayer();
+    if (state.aisEnabled) {
+      state.aisRefreshTimer = window.setInterval(() => refreshAisLayer(), 10_000);
+    }
+  } catch (error) {
+    setAisStatus(error.message || "AIS status could not be checked.", "error");
+  }
+}
+
+function clearAisVessels(showMessage = true) {
+  state.aisLayer.clearLayers();
+  state.aisTrailLayer.clearLayers();
+  state.aisVessels = [];
+  state.selectedAisMmsi = null;
+  if (state.aisEnabled) {
+    document.getElementById("ais-layer-count").textContent = "0 retained";
+    if (showMessage) {
+      setAisStatus("Retained vessels cleared. Press Refresh to receive the current map area.");
+    }
+  }
+  updateMapStatus();
+}
+
+function currentAisBounds() {
+  const bounds = state.map.getBounds();
+  return {
+    south: Math.max(-90, bounds.getSouth()),
+    north: Math.min(90, bounds.getNorth()),
+    west: Math.max(-180, bounds.getWest()),
+    east: Math.min(180, bounds.getEast())
+  };
+}
+
+async function refreshAisLayer(isSearch = false) {
+  if (!state.aisEnabled || state.aisLoading) return;
+  const selectedMmsis = state.aisDisplayMode === "selected" && !isSearch
+    ? Array.from(state.aisWatchlist.keys())
+    : [];
+  if (
+    state.aisDisplayMode === "selected"
+    && !isSearch
+    && !selectedMmsis.length
+  ) {
+    setAisStatus("Add at least one vessel to use Selected vessels only.", "warning");
+    renderAisVessels();
+    return;
+  }
+  state.aisLoading = true;
+  const query = document.getElementById("ais-search").value.trim();
+  const searchButton = document.getElementById("ais-search-button");
+  const refreshButton = document.getElementById("ais-refresh");
+  const clearButton = document.getElementById("ais-clear");
+  searchButton.disabled = true;
+  refreshButton.disabled = true;
+  clearButton.disabled = true;
+  setAisStatus(
+    query && isSearch ? `Searching for “${query}”…` : "Receiving live AIS positions…",
+    "loading"
+  );
+  try {
+    const response = await fetch("/api/ais/snapshot", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...currentAisBounds(),
+        query: query && isSearch ? query : null,
+        mmsis: selectedMmsis,
+        regions: Array.from(state.aisRegions),
+        timeout_sec: 2,
+        max_vessels: 1000
+      })
+    });
+    const json = await response.json();
+    if (!response.ok) {
+      throw new Error(json.detail || "AIS feed request failed.");
+    }
+    const received = json.vessels || [];
+    const retained = new Map(
+      state.aisVessels.map(vessel => [String(vessel.mmsi || vessel.imo), vessel])
+    );
+    let added = 0;
+    received.forEach(vessel => {
+      const key = String(vessel.mmsi || vessel.imo || "");
+      if (!key) return;
+      if (!retained.has(key)) added += 1;
+      retained.set(key, { ...(retained.get(key) || {}), ...vessel });
+    });
+    state.aisVessels = Array.from(retained.values());
+    if (isSearch && received.length) {
+      addAisWatchlistVessels(received);
+    }
+    renderAisVessels();
+    const receivedCount = received.length;
+    const retainedCount = state.aisVessels.length;
+    const sampled = json.sampled_at
+      ? new Date(json.sampled_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      : "now";
+    const shownCount = displayedAisVessels().length;
+    document.getElementById("ais-layer-count").textContent =
+      state.aisDisplayMode === "selected"
+        ? `${shownCount} selected`
+        : `${shownCount} shown`;
+    if (query && isSearch && !receivedCount) {
+      setAisStatus(
+        `No current AIS match for “${query}” in this sample. Name and IMO searches depend on static AIS messages.`,
+        "warning"
+      );
+    } else {
+      const updateText = added
+        ? `${added.toLocaleString()} new, ${Math.max(0, receivedCount - added).toLocaleString()} updated`
+        : `${receivedCount.toLocaleString()} updated`;
+      setAisStatus(
+        `${updateText} at ${sampled}. ${shownCount.toLocaleString()} shown; ${retainedCount.toLocaleString()} retained.`
+      );
+    }
+  } catch (error) {
+    setAisStatus(error.message || "AIS positions could not be loaded.", "error");
+  } finally {
+    state.aisLoading = false;
+    searchButton.disabled = false;
+    refreshButton.disabled = false;
+    clearButton.disabled = false;
+  }
+}
+
+function aisObservationAgeClass(vessel) {
+  const observed = Date.parse(vessel.last_update || "");
+  if (!Number.isFinite(observed)) return "ais-age-unknown";
+  const ageMinutes = Math.max(0, (Date.now() - observed) / 60_000);
+  if (ageMinutes <= 15) return "ais-age-fresh";
+  if (ageMinutes <= 60) return "ais-age-aging";
+  return "ais-age-stale";
+}
+
+function formatAisObservedAt(vessel) {
+  const observed = Date.parse(vessel.last_update || "");
+  if (!Number.isFinite(observed)) return "time unavailable";
+  return new Date(observed).toLocaleString([], {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+function renderAisVessels() {
+  state.aisLayer.clearLayers();
+  const displayed = displayedAisVessels();
+  displayed.forEach(vessel => {
+    const lat = Number(vessel.lat);
+    const lon = Number(vessel.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+    const course = Number(vessel.cog ?? vessel.heading ?? 0);
+    const moving = Number(vessel.sog_kn || 0) >= 0.5;
+    const marker = L.marker([lat, lon], {
+      icon: L.divIcon({
+        className: `ais-vessel-icon ${aisObservationAgeClass(vessel)}`,
+        html: `<span class="${moving ? "moving" : "stationary"}" style="--ais-course:${Number.isFinite(course) ? course : 0}deg"></span>`,
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
+      }),
+      zIndexOffset: 650
+    });
+    const name = vessel.name || `MMSI ${vessel.mmsi}`;
+    marker.bindTooltip(
+      `<strong>${escapeHtml(name)}</strong><br>${formatAisMotion(vessel)}<br><small>Last received ${escapeHtml(formatAisObservedAt(vessel))}</small>`,
+      { className: "asset-tooltip ais-tooltip", direction: "top", opacity: 1 }
+    );
+    marker.on("click", () => showAisVessel(vessel, marker));
+    marker.addTo(state.aisLayer);
+  });
+  document.getElementById("ais-layer-count").textContent = state.aisEnabled
+    ? state.aisDisplayMode === "selected"
+      ? `${displayed.length} selected`
+      : `${displayed.length} shown`
+    : "Off";
+  updateMapStatus();
+}
+
+function formatAisMotion(vessel) {
+  const facts = [aisVesselTypeLabel(vessel.ship_type)];
+  if (vessel.sog_kn != null) facts.push(`${formatNumber(vessel.sog_kn, 1)} kn`);
+  if (vessel.cog != null) facts.push(`COG ${formatNumber(vessel.cog, 0)}°`);
+  if (vessel.destination) facts.push(`To ${vessel.destination}`);
+  return facts.join(" · ") || "Position received";
+}
+
+function aisPopupHtml(vessel, trailCount = null) {
+  const name = vessel.name || "Unnamed AIS target";
+  const fields = [
+    ["MMSI", vessel.mmsi],
+    ["IMO", vessel.imo],
+    ["Vessel type", aisVesselTypeLabel(vessel.ship_type)],
+    ["Call sign", vessel.call_sign],
+    ["Speed", vessel.sog_kn == null ? null : `${formatNumber(vessel.sog_kn, 1)} kn`],
+    ["Course", vessel.cog == null ? null : `${formatNumber(vessel.cog, 0)}°`],
+    ["Heading", vessel.heading == null ? null : `${formatNumber(vessel.heading, 0)}°`],
+    ["Destination", vessel.destination],
+    ["ETA", vessel.eta],
+    ["Last AIS", vessel.last_update],
+    ["Recorded trail", trailCount == null ? "Loading…" : `${trailCount} positions`]
+  ].filter(([, value]) => value !== null && value !== undefined && value !== "");
+  return `
+    <div class="ais-popup">
+      <span class="ais-popup-kicker">LIVE AIS TARGET</span>
+      <h3>${escapeHtml(name)}</h3>
+      <div class="ais-popup-grid">
+        ${fields.map(([label, value]) => `
+          <div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>
+        `).join("")}
+      </div>
+      <small>Trail contains actual observations retained by this dashboard, not a predicted voyage.</small>
+    </div>
+  `;
+}
+
+async function showAisVessel(vessel, marker) {
+  state.selectedAisMmsi = vessel.mmsi;
+  state.aisTrailLayer.clearLayers();
+  marker.bindPopup(aisPopupHtml(vessel), {
+    className: "ais-vessel-popup",
+    minWidth: 290,
+    maxWidth: 360
+  }).openPopup();
+  try {
+    const response = await fetch(`/api/ais/trail/${encodeURIComponent(vessel.mmsi)}?hours=2160&limit=3000`);
+    const json = await response.json();
+    if (!response.ok) throw new Error(json.detail || "Trail unavailable");
+    if (state.selectedAisMmsi !== vessel.mmsi) return;
+    const points = (json.points || [])
+      .map(point => [Number(point.lat), Number(point.lon)])
+      .filter(([lat, lon]) => Number.isFinite(lat) && Number.isFinite(lon));
+    if (points.length >= 2) {
+      L.polyline(points, {
+        color: "#008ea8",
+        weight: 3,
+        opacity: 0.88,
+        dashArray: null,
+        lineJoin: "round"
+      }).addTo(state.aisTrailLayer);
+      L.circleMarker(points[0], {
+        radius: 3,
+        color: "#ffffff",
+        weight: 1,
+        fillColor: "#008ea8",
+        fillOpacity: 1
+      }).bindTooltip("First recorded AIS position").addTo(state.aisTrailLayer);
+    }
+    marker.setPopupContent(aisPopupHtml(vessel, points.length));
+  } catch (error) {
+    marker.setPopupContent(aisPopupHtml(vessel, 0));
+  }
 }
 
 function setMapSkin(skin) {
@@ -1218,7 +1779,8 @@ async function calculateRoute() {
         from_port_id: String(from.id), to_port_id: String(to.id),
         speed_knots: speed, sea_margin_pct: seaMargin,
         port_time_hours: portHours, canal_delay_hours: canalHours,
-        avoid, from_name: from.name, to_name: to.name
+        avoid,
+        from_name: from.name, to_name: to.name
       })
     });
     const route = await response.json();
@@ -1529,6 +2091,9 @@ function updateMapStatus() {
   const parts = [];
   if (ports) parts.push(`${ports.toLocaleString()} ports`);
   if (assets) parts.push(`${assets.toLocaleString()} assets`);
+  if (state.aisEnabled && state.aisVessels.length) {
+    parts.push(`${displayedAisVessels().length.toLocaleString()} AIS vessels`);
+  }
   setStatus(parts.length ? parts.join(" · ") : "No layers selected");
 }
 

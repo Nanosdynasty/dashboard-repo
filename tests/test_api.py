@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, patch
 from fastapi.testclient import TestClient
 
 from app import (
+    AisLiveManager,
     NPP_CACHE_TTL_SECONDS,
     _compute_route,
     _compute_curated_corridor,
@@ -184,6 +185,70 @@ class PortApiTests(unittest.TestCase):
         self.assertIn(route["route_confidence"], {"high", "medium", "low"})
         self.assertGreater(route["waypoint_count"], 10)
 
+    def test_dar_es_salaam_port_qasim_uses_normal_maritime_network(self):
+        baseline = _compute_route(
+            39.3,
+            -6.816667,
+            67.35,
+            24.766667,
+            13,
+            ["northwest"],
+        )
+        with (
+            patch(
+                "app.fetch_weather",
+                new=AsyncMock(return_value={"source": "test"}),
+            ),
+            patch(
+                "app.fetch_bunker_prices",
+                new=AsyncMock(
+                    return_value={
+                        "vlsfo_usd_mt": 580,
+                        "mgo_usd_mt": 820,
+                        "source": "test",
+                    }
+                ),
+            ),
+        ):
+            response = self.client.post(
+                "/api/route",
+                json={
+                    "from_lon": 39.3,
+                    "from_lat": -6.816667,
+                    "to_lon": 67.35,
+                    "to_lat": 24.766667,
+                    "from_port_id": "47010",
+                    "to_port_id": "48605",
+                    "speed_knots": 13,
+                },
+            )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["routing_profile"], "maritime-network")
+        self.assertEqual(
+            payload["method"],
+            "searoute 1.6 maritime network + endpoint connector legs",
+        )
+        self.assertAlmostEqual(payload["distance_nm"], baseline["distance_nm"], delta=1)
+        self.assertNotIn("zones", payload)
+        self.assertNotIn("risk_avoidance", payload)
+
+    def test_nacala_yanbu_has_no_mandatory_risk_waypoints(self):
+        route = _compute_route(
+            40.68,
+            -14.54,
+            38.06,
+            24.09,
+            13,
+            ["northwest"],
+        )
+        self.assertEqual(route["routing_profile"], "maritime-network")
+        self.assertIn("Bab el-Mandeb", route["passages"])
+        self.assertFalse(any(
+            abs(point[0] - 56.2) < 0.05 and abs(point[1] - 22.8) < 0.05
+            for point in route["coordinates"]
+        ))
+
     def test_verified_paradip_richards_bay_corridor_matches_benchmark(self):
         route = _compute_curated_corridor(
             "49535", "46855", 13, ["northwest"]
@@ -239,6 +304,7 @@ class PortApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         payload = response.json()
         self.assertAlmostEqual(payload["distance_nm"], 4496, delta=25)
+        self.assertNotIn("zones", payload)
         self.assertEqual(
             payload["coordinate_source"], "Verified sea-side port approaches"
         )
@@ -472,26 +538,106 @@ class PortApiTests(unittest.TestCase):
         self.assertIn("Coal stock availability", html)
         self.assertIn("Cumulative generation", html)
         self.assertIn("Sector-wise PLF", html)
-        self.assertIn("app.js?v=20260729-6", html)
+        self.assertIn("app.js?v=20260730-11", html)
+        self.assertIn("Cargo + tankers + type pending", html)
+        self.assertIn('id="ais-watchlist" class="ais-watchlist" hidden', html)
+        self.assertIn("positions in the background", html)
+        self.assertIn('id="ais-region-options"', html)
+        self.assertIn('value="india" checked', html)
+        self.assertIn('value="southeast_asia" checked', html)
+        self.assertIn('value="world"', html)
         self.assertIn('id="route-from-input" type="search"', html)
         self.assertIn('id="route-to-input" type="search"', html)
         self.assertIn('list="route-port-options"', html)
         self.assertIn('id="route-port-options"', html)
         self.assertIn('id="map-skin"', html)
+        self.assertNotIn('id="avoid-piracy"', html)
+        self.assertNotIn('id="avoid-jwc"', html)
+        self.assertNotIn("JWC area avoided", html)
+        self.assertNotIn("JWC area traversable", html)
         self.assertNotIn('id="show-eca-zones"', html)
         self.assertNotIn('id="show-piracy-zones"', html)
         self.assertNotIn(">ECA<", html)
         self.assertNotIn("Security watch", html)
 
+    def test_ais_status_and_trail_validation(self):
+        status_response = self.client.get("/api/ais/status")
+        self.assertEqual(status_response.status_code, 200)
+        status = status_response.json()
+        self.assertEqual(status["provider"], "AISStream.io")
+        self.assertIn("configured", status)
+        self.assertIn("trail_observations", status)
+        self.assertIn("trail_vessels", status)
+
+        invalid_trail = self.client.get("/api/ais/trail/not-an-mmsi")
+        self.assertEqual(invalid_trail.status_code, 400)
+
+    def test_ais_cache_filters_viewport_and_selected_mmsi(self):
+        manager = AisLiveManager()
+        manager.vessels = {
+            "111111111": {
+                "mmsi": "111111111",
+                "name": "INDIA BULKER",
+                "lat": 19.0,
+                "lon": 72.0,
+                "last_update": "2026-07-30T00:00:00+00:00",
+            },
+            "222222222": {
+                "mmsi": "222222222",
+                "name": "REMOTE VESSEL",
+                "lat": -30.0,
+                "lon": -40.0,
+                "last_update": "2026-07-30T00:00:00+00:00",
+            },
+        }
+        viewport = manager.snapshot(5, 35, 60, 100, None, [], 100)
+        self.assertEqual([item["mmsi"] for item in viewport], ["111111111"])
+        selected = manager.snapshot(
+            5, 35, 60, 100, None, ["222222222"], 100
+        )
+        self.assertEqual([item["mmsi"] for item in selected], ["222222222"])
+        multi_region = manager.snapshot(
+            -90,
+            90,
+            -180,
+            180,
+            None,
+            [],
+            100,
+            boxes=[
+                [[5, 64], [31, 100]],
+                [[-58, -92], [15, -30]],
+            ],
+        )
+        self.assertEqual(
+            {item["mmsi"] for item in multi_region},
+            {"111111111", "222222222"},
+        )
+
     def test_maritime_zone_overlays_disclose_source_and_boundary_quality(self):
         response = self.client.get("/api/zones")
         self.assertEqual(response.status_code, 200)
-        features = response.json()["features"]
+        payload = response.json()
+        features = payload["features"]
         self.assertTrue(any(
+            item["properties"]["zone_type"] == "jwc_listed_area"
+            for item in features
+        ))
+        self.assertFalse(any(
+            item["properties"]["zone_type"] == "piracy_watch"
+            for item in features
+        ))
+        self.assertFalse(any(
             item["properties"]["zone_type"] == "ECA" for item in features
         ))
-        self.assertTrue(any(
-            item["properties"]["zone_type"] == "piracy" for item in features
+        self.assertIn("PK", payload["listed_country_codes"]["jwc"])
+        self.assertEqual(
+            payload["metadata"]["display_geometry"],
+            "water-only polygons clipped against Natural Earth 1:50m land",
+        )
+        self.assertTrue(all(
+            item["properties"].get("display_scope") == "water_only"
+            for item in features
         ))
         self.assertTrue(all(
             item["properties"].get("source_url")
@@ -516,6 +662,10 @@ class PortApiTests(unittest.TestCase):
         self.assertIn("World_Ocean_Base", javascript)
         self.assertIn("World_Ocean_Reference", javascript)
         self.assertIn("portVisibleAtZoom", javascript)
+        self.assertNotIn("loadRiskZones", javascript)
+        self.assertNotIn("avoid_jwc", javascript)
+        self.assertNotIn("avoid_piracy", javascript)
+        self.assertNotIn("risk_avoidance", javascript)
         self.assertNotIn("show-piracy-zones", javascript)
 
     def test_npp_transform_reconciles_requested_power_visuals(self):

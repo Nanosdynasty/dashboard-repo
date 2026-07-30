@@ -1,6 +1,7 @@
 """Global Energy Transition Dashboard"""
 from __future__ import annotations
-import os, json, io, uuid, asyncio, logging, math, re, zipfile
+import os, json, io, uuid, asyncio, logging, math, re, zipfile, sqlite3
+from functools import lru_cache
 from pathlib import Path
 from typing import Optional, Dict, List, Any
 from datetime import datetime, timedelta, timezone
@@ -23,6 +24,13 @@ log = logging.getLogger("ais")
 logging.basicConfig(level=logging.INFO)
 
 BASE_DIR = Path(__file__).parent
+try:
+    from dotenv import load_dotenv
+    load_dotenv(BASE_DIR / ".env")
+except ImportError:
+    # Hosted environments normally inject variables directly. Local .env
+    # loading becomes available after requirements.txt is installed.
+    pass
 DATA_DIR = BASE_DIR / "data"
 UPLOAD_DIR = BASE_DIR / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
@@ -39,8 +47,57 @@ NPP_HISTORY_URL = "https://npp.gov.in/dashBoard/get_installed_capacity_list"
 NPP_GENERATION_URL = "https://npp.gov.in/dashBoard/getAllZoneGen"
 INDIA_COAL_PORT_SPECS_PATH = DATA_DIR / "india_coal_port_specs.json"
 PORT_APPROACHES_PATH = DATA_DIR / "port_approaches.json"
+RISK_ZONE_SOURCE_PATH = DATA_DIR / "zones_source.json"
 
 AISSTREAM_API_KEY = os.getenv("AISSTREAM_API_KEY", "").strip()
+AIS_REGION_BOXES = {
+    "india": [[[5.0, 64.0], [31.0, 100.0]]],
+    "china": [[[17.0, 105.0], [42.0, 125.0]]],
+    "gulf": [[[12.0, 42.0], [31.5, 62.5]]],
+    "southeast_asia": [[[-12.0, 94.0], [22.0, 132.0]]],
+    "japan_korea": [[[30.0, 124.0], [47.0, 147.0]]],
+    "australia": [[[-47.0, 108.0], [-8.0, 158.0]]],
+    "europe_med": [[[28.0, -12.0], [72.0, 45.0]]],
+    "africa": [[[-38.0, -20.0], [38.0, 58.0]]],
+    "north_america": [[[5.0, -170.0], [72.0, -50.0]]],
+    "south_america": [[[-58.0, -92.0], [15.0, -30.0]]],
+    "world": [[[-90.0, -180.0], [90.0, 180.0]]],
+}
+AIS_BACKGROUND_REGION_IDS = (
+    "india",
+    "china",
+    "gulf",
+    "southeast_asia",
+)
+AIS_DATA_DIR = UPLOAD_DIR / "_ais"
+AIS_DATA_DIR.mkdir(exist_ok=True)
+AIS_TRAIL_DB_PATH = AIS_DATA_DIR / "observations.sqlite3"
+
+
+def _init_ais_trail_db() -> None:
+    with sqlite3.connect(AIS_TRAIL_DB_PATH) as db:
+        db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS ais_observations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                mmsi TEXT NOT NULL,
+                observed_at TEXT NOT NULL,
+                latitude REAL NOT NULL,
+                longitude REAL NOT NULL,
+                sog_kn REAL,
+                cog_deg REAL,
+                heading_deg REAL,
+                vessel_name TEXT
+            )
+            """
+        )
+        db.execute(
+            "CREATE INDEX IF NOT EXISTS idx_ais_observations_mmsi_time "
+            "ON ais_observations (mmsi, observed_at)"
+        )
+
+
+_init_ais_trail_db()
 
 TRACKERS = {
     "coal_plants": {"label": "Coal Plants", "file": "coal_plants.csv.gz", "icon": "🔥"},
@@ -817,6 +874,18 @@ class VesselTrackRequest(BaseModel):
     ids: List[str] = []
     timeout_sec: float = 25.0
 
+
+class AisSnapshotRequest(BaseModel):
+    south: float
+    north: float
+    west: float
+    east: float
+    query: Optional[str] = None
+    mmsis: List[str] = []
+    regions: List[str] = []
+    timeout_sec: float = 6.0
+    max_vessels: int = 500
+
 class RouteRequest(BaseModel):
     from_lon: float
     from_lat: float
@@ -828,6 +897,8 @@ class RouteRequest(BaseModel):
     from_name: Optional[str] = None
     to_name: Optional[str] = None
     avoid: Optional[List[str]] = None
+    avoid_jwc: bool = False
+    avoid_piracy: bool = False
     sea_margin_pct: float = 5.0
     port_time_hours: float = 0.0
     canal_delay_hours: float = 0.0
@@ -848,6 +919,9 @@ PASSAGE_LABELS = {
     "south_africa": "Cape of Good Hope",
 }
 ALLOWED_ROUTE_RESTRICTIONS = set(PASSAGE_LABELS)
+JWC_NAMED_COUNTRY_CODES = set(
+    load_zones().get("listed_country_codes", {}).get("jwc", [])
+)
 
 
 def _load_port_approach_data() -> Dict[str, Any]:
@@ -1092,7 +1166,14 @@ def _length_to_nm(length: float, units: str) -> float:
     if u in ("m", "meter", "meters"): return float(length) / 1852.0
     return float(length) / 1.852
 
-def _compute_route(from_lon, from_lat, to_lon, to_lat, speed_knots, restrictions: Optional[List[str]] = None):
+def _compute_route(
+    from_lon,
+    from_lat,
+    to_lon,
+    to_lat,
+    speed_knots,
+    restrictions: Optional[List[str]] = None,
+):
     import searoute as sr
     restrictions = [
         value for value in (restrictions or ["northwest"])
@@ -1156,7 +1237,349 @@ def _compute_route(from_lon, from_lat, to_lon, to_lat, speed_knots, restrictions
         "passages": passages,
         "passage_ids": passage_ids,
         "restrictions": restrictions,
+        "routing_profile": "maritime-network",
+        "risk_families_avoided": [],
     }
+
+
+@lru_cache(maxsize=1)
+def _piracy_source_polygons():
+    """Return only the large WIO JWC polygon used as the route barrier."""
+    from shapely.geometry import shape
+
+    payload = json.loads(RISK_ZONE_SOURCE_PATH.read_text(encoding="utf-8"))
+    output = []
+    for feature in payload.get("features", []):
+        properties = feature.get("properties") or {}
+        if properties.get("id") != "jwc-jwla033-western-indian-ocean":
+            continue
+        geometry = shape(feature.get("geometry") or {})
+        polygons = list(geometry.geoms) if geometry.geom_type == "MultiPolygon" else [geometry]
+        polygons = [polygon for polygon in polygons if not polygon.is_empty]
+        if polygons:
+            output.append((max(polygons, key=lambda polygon: polygon.area), properties))
+    return tuple(output)
+
+
+def _primary_jwc_exposure_nm(coordinates: List[List[float]]) -> float:
+    """Measure distance inside the avoided WIO JWC polygon; boundary is safe."""
+    from shapely.geometry import LineString
+
+    if len(coordinates) < 2:
+        return 0.0
+    route = LineString(coordinates)
+    distance_nm = 0.0
+    for polygon, _ in _piracy_source_polygons():
+        interior = polygon.buffer(-1e-7)
+        intersection = route.intersection(interior)
+        pending = [intersection]
+        while pending:
+            geometry = pending.pop()
+            if geometry.is_empty:
+                continue
+            if geometry.geom_type == "LineString":
+                distance_nm += _polyline_distance_nm(
+                    [[float(x), float(y)] for x, y in geometry.coords]
+                )
+            elif hasattr(geometry, "geoms"):
+                pending.extend(geometry.geoms)
+    return round(distance_nm, 1)
+
+
+def _join_coordinate_parts(*parts: List[List[float]]) -> List[List[float]]:
+    output: List[List[float]] = []
+    for part in parts:
+        for point in part:
+            normalized = [float(point[0]), float(point[1])]
+            if not output or _haversine_nm(output[-1], normalized) > 0.001:
+                output.append(normalized)
+    return output
+
+
+def _geometry_coordinates(geometry) -> List[List[float]]:
+    if geometry.is_empty:
+        return []
+    if geometry.geom_type == "Point":
+        return [[float(geometry.x), float(geometry.y)]]
+    return [[float(x), float(y)] for x, y in geometry.coords]
+
+
+def _piracy_boundary_arc(polygon, entry, exit, preference: Optional[str]):
+    """Choose an entry-to-exit arc on the watch polygon's outer boundary."""
+    from shapely.geometry import LineString
+    from shapely.ops import substring
+
+    boundary = LineString(polygon.exterior.coords)
+    length = boundary.length
+    entry_distance = boundary.project(entry)
+    exit_distance = boundary.project(exit)
+
+    if entry_distance <= exit_distance:
+        direct = _geometry_coordinates(
+            substring(boundary, entry_distance, exit_distance)
+        )
+        complement = _join_coordinate_parts(
+            _geometry_coordinates(substring(boundary, exit_distance, length)),
+            _geometry_coordinates(substring(boundary, 0.0, entry_distance)),
+        )
+        complement.reverse()
+    else:
+        direct = _join_coordinate_parts(
+            _geometry_coordinates(substring(boundary, entry_distance, length)),
+            _geometry_coordinates(substring(boundary, 0.0, exit_distance)),
+        )
+        complement = _geometry_coordinates(
+            substring(boundary, exit_distance, entry_distance)
+        )
+        complement.reverse()
+
+    candidates = [direct, complement]
+    if preference == "offshore_east_south":
+        return max(
+            candidates,
+            key=lambda points: (
+                sum(point[0] for point in points) / max(1, len(points)),
+                -sum(point[1] for point in points) / max(1, len(points)),
+            ),
+        )
+    return min(candidates, key=_polyline_distance_nm)
+
+
+def _piracy_avoidance_polygon(polygon, properties: Dict[str, Any]):
+    """Return the displayed piracy boundary used by the route engine."""
+    buffer_nm = max(0.0, float(properties.get("avoidance_buffer_nm") or 0.0))
+    if buffer_nm <= 0:
+        return polygon
+    return polygon.buffer(buffer_nm / 60.0, join_style=2)
+
+
+def _mandatory_piracy_detour(
+    avoidance_polygon,
+    properties: Dict[str, Any],
+    entry,
+    exit,
+) -> Optional[List[List[float]]]:
+    """Route on the boundary through the shared piracy/JWC junction."""
+    from shapely.geometry import Point
+
+    junction = properties.get("mandatory_shared_junction")
+    if not (isinstance(junction, list) and len(junction) == 2):
+        return None
+
+    junction_point = avoidance_polygon.exterior.interpolate(
+        avoidance_polygon.exterior.project(
+            Point(float(junction[0]), float(junction[1]))
+        )
+    )
+    entry_to_junction = _piracy_boundary_arc(
+        avoidance_polygon,
+        entry,
+        junction_point,
+        properties.get("preferred_boundary_arc"),
+    )
+    junction_to_exit = _piracy_boundary_arc(
+        avoidance_polygon,
+        junction_point,
+        exit,
+        None,
+    )
+    return _join_coordinate_parts(
+        entry_to_junction,
+        [[float(junction_point.x), float(junction_point.y)]],
+        junction_to_exit,
+    )
+
+
+def _eastbound_piracy_rejoin(
+    baseline_line,
+    baseline_coordinates: List[List[float]],
+    avoidance_polygon,
+    properties: Dict[str, Any],
+    original_exit_distance: float,
+):
+    """Find the first safe network point after the mandatory JWC junction."""
+    from shapely.geometry import LineString, Point
+
+    eastern_exit = properties.get("mandatory_shared_junction")
+    destination = Point(baseline_coordinates[-1])
+    if not (
+        isinstance(eastern_exit, list)
+        and len(eastern_exit) == 2
+        and destination.x >= float(eastern_exit[0])
+    ):
+        return None
+
+    exit_point = avoidance_polygon.exterior.interpolate(
+        avoidance_polygon.exterior.project(
+            Point(float(eastern_exit[0]), float(eastern_exit[1]))
+        )
+    )
+    candidates = []
+    for coordinate in baseline_coordinates:
+        point = Point(coordinate)
+        distance = baseline_line.project(point)
+        if distance <= original_exit_distance + 1e-8:
+            continue
+        connector = LineString([exit_point, point])
+        overlap = connector.intersection(avoidance_polygon)
+        overlap_lines = [
+            geometry
+            for geometry in (
+                list(overlap.geoms) if hasattr(overlap, "geoms") else [overlap]
+            )
+            if geometry.geom_type in {"LineString", "MultiLineString"}
+        ]
+        if sum(geometry.length for geometry in overlap_lines) <= 1e-8:
+            candidates.append((distance, point))
+    if not candidates:
+        return None
+    rejoin_distance, rejoin_point = min(candidates, key=lambda item: item[0])
+    return exit_point, rejoin_distance, rejoin_point
+
+
+def _result_with_replaced_coordinates(
+    baseline: Dict[str, Any],
+    coordinates: List[List[float]],
+    speed_knots: float,
+    routing_profile: str,
+) -> Dict[str, Any]:
+    """Recalculate route metrics after replacing only an exposed route section."""
+    deduplicated: List[List[float]] = []
+    for point in coordinates:
+        normalized = [float(point[0]), float(point[1])]
+        if not deduplicated or _haversine_nm(deduplicated[-1], normalized) > 0.001:
+            deduplicated.append(normalized)
+    distance_nm = _polyline_distance_nm(deduplicated)
+    direct_nm = float(baseline.get("great_circle_nm") or 0.0)
+    duration_hours = distance_nm / speed_knots if speed_knots > 0 else 0.0
+    inferred_via = _infer_passage(deduplicated)
+    passages = inferred_via.split(", ") if inferred_via else []
+    return {
+        **baseline,
+        "distance_nm": round(distance_nm, 1),
+        "network_distance_nm": round(
+            max(
+                0.0,
+                distance_nm
+                - float(baseline.get("origin_connector_nm") or 0.0)
+                - float(baseline.get("destination_connector_nm") or 0.0),
+            ),
+            1,
+        ),
+        "detour_factor": round(distance_nm / direct_nm, 3) if direct_nm else 1.0,
+        "waypoint_count": len(deduplicated),
+        "distance_miles": round(distance_nm * 1.150779, 1),
+        "distance_km": round(distance_nm * 1.852, 1),
+        "duration_hours": round(duration_hours, 2),
+        "duration_days": round(duration_hours / 24.0, 2),
+        "coordinates": deduplicated,
+        "via": ", ".join(passages) if passages else baseline.get("via"),
+        "passages": passages or baseline.get("passages", []),
+        "routing_profile": routing_profile,
+        "risk_families_avoided": ["jwc_western_indian_ocean"],
+    }
+
+
+def _apply_local_piracy_detours(
+    baseline: Dict[str, Any],
+    speed_knots: float,
+    restrictions: Optional[List[str]] = None,
+) -> Dict[str, Any]:
+    """Avoid the large WIO JWC polygon via its shared Oman junction."""
+    from shapely.geometry import LineString, Point
+    from shapely.ops import substring
+
+    coordinates = [
+        [float(point[0]), float(point[1])]
+        for point in (baseline.get("coordinates") or [])
+    ]
+    if len(coordinates) < 2:
+        return baseline
+    baseline_line = LineString(coordinates)
+    detours = []
+    for polygon, properties in _piracy_source_polygons():
+        avoidance_polygon = _piracy_avoidance_polygon(polygon, properties)
+        intersection = baseline_line.intersection(avoidance_polygon)
+        pending = [intersection]
+        exposed_sections = []
+        while pending:
+            geometry = pending.pop()
+            if geometry.is_empty:
+                continue
+            if geometry.geom_type == "LineString":
+                if geometry.length > 1e-8:
+                    exposed_sections.append(geometry)
+            elif hasattr(geometry, "geoms"):
+                pending.extend(geometry.geoms)
+        for section in exposed_sections:
+            endpoints = [Point(section.coords[0]), Point(section.coords[-1])]
+            projected = sorted(
+                (baseline_line.project(point), point) for point in endpoints
+            )
+            entry_distance, entry = projected[0]
+            exit_distance, exit = projected[-1]
+            if exit_distance - entry_distance <= 1e-8:
+                continue
+            eastbound_rejoin = _eastbound_piracy_rejoin(
+                baseline_line,
+                coordinates,
+                avoidance_polygon,
+                properties,
+                exit_distance,
+            )
+            detour_exit = eastbound_rejoin[0] if eastbound_rejoin else exit
+            arc = _mandatory_piracy_detour(
+                avoidance_polygon,
+                properties,
+                entry,
+                detour_exit,
+            ) or _piracy_boundary_arc(
+                avoidance_polygon,
+                entry,
+                detour_exit,
+                properties.get("preferred_boundary_arc"),
+            )
+            if eastbound_rejoin:
+                _, exit_distance, rejoin_point = eastbound_rejoin
+                arc = _join_coordinate_parts(
+                    arc,
+                    [[float(rejoin_point.x), float(rejoin_point.y)]],
+                )
+            detours.append((entry_distance, exit_distance, arc))
+
+    if not detours:
+        return {
+            **baseline,
+            "routing_profile": "normal-route-jwc-clear",
+            "risk_families_avoided": ["jwc_western_indian_ocean"],
+        }
+
+    output: List[List[float]] = []
+    cursor_distance = 0.0
+    for entry_distance, exit_distance, arc in sorted(detours):
+        if entry_distance < cursor_distance - 1e-8:
+            continue
+        output = _join_coordinate_parts(
+            output,
+            _geometry_coordinates(
+                substring(baseline_line, cursor_distance, entry_distance)
+            ),
+            arc,
+        )
+        cursor_distance = exit_distance
+    output = _join_coordinate_parts(
+        output,
+        _geometry_coordinates(
+            substring(baseline_line, cursor_distance, baseline_line.length)
+        ),
+    )
+
+    return _result_with_replaced_coordinates(
+        baseline,
+        output,
+        speed_knots,
+        "local-jwc-boundary-detour",
+    )
 
 
 def _route_reference_ports(
@@ -1945,7 +2368,15 @@ async def export_coal_data(dataset_type: Optional[str] = None):
 
 @app.get("/api/zones")
 async def get_zones():
-    return load_zones()
+    payload = load_zones()
+    return {
+        **payload,
+        "features": [
+            feature
+            for feature in payload.get("features", [])
+            if (feature.get("properties") or {}).get("risk_family") == "jwc"
+        ],
+    }
 
 @app.get("/api/weather")
 async def weather(lat: float = Query(...), lon: float = Query(...)):
@@ -1998,11 +2429,12 @@ async def sea_route(req: RouteRequest):
         )
         route_to_lon = float(to_approach["longitude"] if to_approach else to_lon)
         route_to_lat = float(to_approach["latitude"] if to_approach else to_lat)
-        primary = _compute_curated_corridor(
+        baseline = _compute_curated_corridor(
             req.from_port_id, req.to_port_id, speed, avoid
         ) or _compute_route(
             route_from_lon, route_from_lat, route_to_lon, route_to_lat, speed, avoid
         )
+        primary = baseline
         calm_sea_hours = primary["distance_nm"] / speed
         sea_margin_hours = calm_sea_hours * sea_margin_pct / 100.0
         sailing_hours = calm_sea_hours + sea_margin_hours
@@ -2036,11 +2468,6 @@ async def sea_route(req: RouteRequest):
             except Exception:
                 alt = None
 
-        zone_coordinates = [
-            [((float(lon) + 180.0) % 360.0) - 180.0, float(lat)]
-            for lon, lat in (primary.get("coordinates") or [])
-        ]
-        zone_info = analyze_route_zones(zone_coordinates)
         coords = primary.get("coordinates") or []
         mid = coords[len(coords) // 2] if coords else [from_lon, from_lat]
         bunker, origin_weather, midpoint_weather, destination_weather = (
@@ -2054,7 +2481,7 @@ async def sea_route(req: RouteRequest):
         fuel = estimate_fuel_cost(
             primary["distance_nm"], primary["effective_speed_knots"],
             req.consumption_tpd or 25.0,
-            zone_info.get("eca_fraction") or 0.0,
+            0.0,
             bunker,
         )
 
@@ -2099,7 +2526,6 @@ async def sea_route(req: RouteRequest):
                 else "searoute 1.6 maritime network + endpoint connector legs"
             ),
             "warnings": warnings,
-            "zones": zone_info,
             "fuel": fuel,
             "weather": weather,
             "route_ports": _route_reference_ports(
@@ -2123,7 +2549,191 @@ async def sea_route(req: RouteRequest):
     except Exception as e:
         raise HTTPException(400, f"Route error: {e}")
 
-async def _sample_ais_for_ships(mmsis: List[str], imos: List[str], timeout_sec: float = 25.0) -> Dict[str, Any]:
+def _ais_number(value: Any) -> Optional[float]:
+    try:
+        number = float(value)
+        return number if math.isfinite(number) else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _ais_text(value: Any) -> str:
+    return str(value or "").replace("@", " ").strip()
+
+
+def _store_ais_observations(vessels: List[dict]) -> None:
+    rows = []
+    for vessel in vessels:
+        mmsi = str(vessel.get("mmsi") or "")
+        lat = _ais_number(vessel.get("lat"))
+        lon = _ais_number(vessel.get("lon"))
+        if not mmsi or lat is None or lon is None:
+            continue
+        observed_at = vessel.get("last_update") or datetime.now(timezone.utc).isoformat()
+        rows.append(
+            (
+                mmsi,
+                observed_at,
+                lat,
+                lon,
+                _ais_number(vessel.get("sog_kn")),
+                _ais_number(vessel.get("cog")),
+                _ais_number(vessel.get("heading")),
+                _ais_text(vessel.get("name")),
+            )
+        )
+    if not rows:
+        return
+    with sqlite3.connect(AIS_TRAIL_DB_PATH) as db:
+        for row in rows:
+            previous = db.execute(
+                """
+                SELECT observed_at, latitude, longitude
+                FROM ais_observations
+                WHERE mmsi = ?
+                ORDER BY id DESC
+                LIMIT 1
+                """,
+                (row[0],),
+            ).fetchone()
+            if previous and (
+                previous[0] == row[1]
+                or (
+                    abs(float(previous[1]) - row[2]) < 0.00001
+                    and abs(float(previous[2]) - row[3]) < 0.00001
+                )
+            ):
+                continue
+            db.execute(
+                """
+                INSERT INTO ais_observations (
+                    mmsi, observed_at, latitude, longitude, sog_kn, cog_deg,
+                    heading_deg, vessel_name
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                row,
+            )
+
+
+def _load_latest_ais_observations(limit: int = 20000) -> Dict[str, dict]:
+    """Restore the latest received position for each MMSI after a restart."""
+    with sqlite3.connect(AIS_TRAIL_DB_PATH) as db:
+        rows = db.execute(
+            """
+            SELECT
+                observation.mmsi,
+                observation.observed_at,
+                observation.latitude,
+                observation.longitude,
+                observation.sog_kn,
+                observation.cog_deg,
+                observation.heading_deg,
+                observation.vessel_name
+            FROM ais_observations AS observation
+            JOIN (
+                SELECT mmsi, MAX(id) AS latest_id
+                FROM ais_observations
+                GROUP BY mmsi
+            ) AS latest
+              ON latest.latest_id = observation.id
+            ORDER BY observation.id DESC
+            LIMIT ?
+            """,
+            (max(1, min(int(limit), 25000)),),
+        ).fetchall()
+    vessels: Dict[str, dict] = {}
+    for row in rows:
+        mmsi = str(row[0] or "")
+        if not mmsi:
+            continue
+        vessels[mmsi] = {
+            "mmsi": mmsi,
+            "last_update": row[1],
+            "lat": row[2],
+            "lon": row[3],
+            "sog_kn": row[4],
+            "cog": row[5],
+            "heading": row[6],
+            "name": row[7] or "",
+            "position_source": "retained",
+        }
+    return vessels
+
+
+def _merge_ais_message(vessels: Dict[str, dict], msg: dict) -> Optional[dict]:
+    meta = msg.get("MetaData") or msg.get("Metadata") or {}
+    body = msg.get("Message") or {}
+    message_type = msg.get("MessageType") or ""
+    payload = body.get(message_type) or {}
+    mmsi = str(
+        meta.get("MMSI")
+        or payload.get("UserID")
+        or payload.get("UserId")
+        or ""
+    )
+    if not mmsi:
+        return None
+    rec = vessels.setdefault(mmsi, {"mmsi": mmsi})
+    rec["position_source"] = "live"
+    name = _ais_text(meta.get("ShipName") or payload.get("Name"))
+    if name:
+        rec["name"] = name
+    time_value = meta.get("time_utc") or meta.get("TimeUtc")
+    rec["last_update"] = str(time_value or datetime.now(timezone.utc).isoformat())
+
+    lat = meta.get("Latitude", meta.get("latitude"))
+    lon = meta.get("Longitude", meta.get("longitude"))
+    if lat is None:
+        lat = payload.get("Latitude")
+    if lon is None:
+        lon = payload.get("Longitude")
+    lat_number = _ais_number(lat)
+    lon_number = _ais_number(lon)
+    if lat_number is not None and lon_number is not None:
+        rec["lat"] = lat_number
+        rec["lon"] = lon_number
+
+    field_map = {
+        "Sog": "sog_kn",
+        "Cog": "cog",
+        "TrueHeading": "heading",
+        "NavigationalStatus": "nav_status",
+        "Type": "ship_type",
+        "Destination": "destination",
+        "Eta": "eta",
+    }
+    for source, target in field_map.items():
+        if payload.get(source) is not None:
+            rec[target] = payload.get(source)
+    imo = payload.get("ImoNumber") or payload.get("IMO")
+    if imo:
+        rec["imo"] = str(imo)
+    call_sign = _ais_text(payload.get("CallSign"))
+    if call_sign:
+        rec["call_sign"] = call_sign
+    dimension = payload.get("Dimension") or {}
+    length = (
+        (_ais_number(dimension.get("A")) or 0)
+        + (_ais_number(dimension.get("B")) or 0)
+    )
+    width = (
+        (_ais_number(dimension.get("C")) or 0)
+        + (_ais_number(dimension.get("D")) or 0)
+    )
+    if length:
+        rec["length_m"] = length
+    if width:
+        rec["width_m"] = width
+    return rec
+
+
+async def _sample_ais(
+    bounding_boxes: List[List[List[float]]],
+    timeout_sec: float,
+    max_vessels: int = 500,
+    mmsis: Optional[List[str]] = None,
+    query: Optional[str] = None,
+) -> Dict[str, Any]:
     if not AISSTREAM_API_KEY:
         return {"error": "No AISStream API key configured", "vessels": []}
     try:
@@ -2131,19 +2741,33 @@ async def _sample_ais_for_ships(mmsis: List[str], imos: List[str], timeout_sec: 
     except ImportError:
         return {"error": "Server missing websockets package", "vessels": []}
     vessels: Dict[str, dict] = {}
-    mmsi_set = set(str(m) for m in mmsis)
-    imo_set = set(str(i) for i in imos)
+    mmsi_set = set(str(m) for m in (mmsis or []))
+    query_value = _ais_text(query).casefold()
     sub = {
         "APIKey": AISSTREAM_API_KEY,
-        "BoundingBoxes": [[[-90.0, -180.0], [90.0, 180.0]]],
-        "FilterMessageTypes": ["PositionReport", "ShipStaticData", "StandardClassBPositionReport"],
+        "BoundingBoxes": bounding_boxes,
+        "FilterMessageTypes": [
+            "PositionReport",
+            "ShipStaticData",
+            "StaticDataReport",
+            "StandardClassBPositionReport",
+            "ExtendedClassBPositionReport",
+        ],
     }
     if mmsi_set:
         sub["FiltersShipMMSI"] = list(mmsi_set)[:50]
     try:
-        async with wslib.connect("wss://stream.aisstream.io/v0/stream", open_timeout=15, ping_interval=None, max_size=2**22, close_timeout=5) as upstream:
+        async with wslib.connect(
+            "wss://stream.aisstream.io/v0/stream",
+            open_timeout=15,
+            ping_interval=None,
+            max_size=2**22,
+            close_timeout=5,
+        ) as upstream:
             await upstream.send(json.dumps(sub))
-            deadline = asyncio.get_event_loop().time() + max(8.0, min(timeout_sec, 40.0))
+            deadline = asyncio.get_event_loop().time() + max(
+                2.0, min(timeout_sec, 25.0)
+            )
             while asyncio.get_event_loop().time() < deadline:
                 remaining = deadline - asyncio.get_event_loop().time()
                 try:
@@ -2156,50 +2780,442 @@ async def _sample_ais_for_ships(mmsis: List[str], imos: List[str], timeout_sec: 
                     msg = json.loads(raw)
                 except Exception:
                     continue
-                meta = msg.get("MetaData") or {}
-                mmsi = str(meta.get("MMSI") or "")
-                pr = (msg.get("Message") or {}).get("PositionReport") or (msg.get("Message") or {}).get("StandardClassBPositionReport") or {}
-                sd = (msg.get("Message") or {}).get("ShipStaticData") or {}
-                if sd:
-                    imo = str(sd.get("ImoNumber") or sd.get("IMO") or "")
-                    name = (sd.get("Name") or meta.get("ShipName") or "").strip()
-                    dim = sd.get("Dimension") or {}
-                    length = (dim.get("A") or 0) + (dim.get("B") or 0)
-                    key = mmsi or imo
-                    if not key:
-                        continue
-                    if mmsi_set and mmsi not in mmsi_set and (not imo or imo not in imo_set):
-                        if not imo_set or imo not in imo_set:
-                            continue
-                    if imo_set and not mmsi_set and imo not in imo_set:
-                        continue
-                    rec = vessels.setdefault(key, {"mmsi": mmsi, "imo": imo})
-                    if name: rec["name"] = name
-                    if imo: rec["imo"] = imo
-                    if length: rec["length_m"] = length
+                rec = _merge_ais_message(vessels, msg)
+                if not rec:
                     continue
-                lat = meta.get("Latitude"); lon = meta.get("Longitude")
-                if lat is None: lat = pr.get("Latitude")
-                if lon is None: lon = pr.get("Longitude")
-                if lat is None or lon is None or not mmsi:
-                    continue
-                if mmsi_set and mmsi not in mmsi_set:
-                    if not imo_set or mmsi not in vessels:
-                        continue
-                rec = vessels.setdefault(mmsi, {"mmsi": mmsi})
-                rec["lat"] = float(lat); rec["lon"] = float(lon)
-                if pr.get("Sog") is not None: rec["sog_kn"] = pr.get("Sog")
-                if pr.get("Cog") is not None: rec["cog"] = pr.get("Cog")
-                if meta.get("ShipName"): rec["name"] = str(meta.get("ShipName")).strip()
-                if mmsi_set and all(any(v.get("mmsi") == m and v.get("lat") is not None for v in vessels.values()) for m in mmsi_set):
+                if len(vessels) >= max_vessels:
+                    break
+                if mmsi_set and all(
+                    vessels.get(m, {}).get("lat") is not None for m in mmsi_set
+                ):
                     break
     except Exception as e:
         return {"error": f"AIS sample failed: {e}", "vessels": list(vessels.values())}
-    out = []
-    for v in vessels.values():
-        if mmsi_set and v.get("mmsi") in mmsi_set: out.append(v)
-        elif imo_set and str(v.get("imo") or "") in imo_set: out.append(v)
-    return {"vessels": out, "queried_mmsi": list(mmsi_set), "queried_imo": list(imo_set)}
+    out = [v for v in vessels.values() if v.get("lat") is not None]
+    if query_value:
+        out = [
+            v for v in out
+            if query_value in _ais_text(v.get("name")).casefold()
+            or query_value in str(v.get("mmsi") or "")
+            or query_value in str(v.get("imo") or "")
+            or query_value in _ais_text(v.get("call_sign")).casefold()
+        ]
+    _store_ais_observations(out)
+    return {
+        "vessels": out[:max_vessels],
+        "queried_mmsi": list(mmsi_set),
+        "sampled_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+async def _sample_ais_for_ships(
+    mmsis: List[str], imos: List[str], timeout_sec: float = 25.0
+) -> Dict[str, Any]:
+    # AISStream can filter directly by MMSI. IMO-only lookups require listening
+    # for static messages, so they are sampled globally and may not resolve.
+    query = imos[0] if imos and not mmsis else None
+    result = await _sample_ais(
+        [[[-90.0, -180.0], [90.0, 180.0]]],
+        timeout_sec,
+        max_vessels=100,
+        mmsis=mmsis,
+        query=query,
+    )
+    result["queried_imo"] = imos
+    return result
+
+
+class AisLiveManager:
+    """One upstream AISStream connection with replaceable subscriptions."""
+
+    def __init__(self) -> None:
+        self.vessels: Dict[str, dict] = _load_latest_ais_observations()
+        self.desired_subscription: Optional[dict] = None
+        self.subscription_signature = ""
+        self.subscription_event = asyncio.Event()
+        self.data_event = asyncio.Event()
+        self.task: Optional[asyncio.Task] = None
+        self.stopping = False
+        self.last_error: Optional[str] = None
+        self.connected = False
+        self.last_message_at: Optional[str] = None
+
+    async def configure(
+        self,
+        boxes: List[List[List[float]]],
+        mmsis: Optional[List[str]] = None,
+    ) -> None:
+        clean_mmsis = [
+            str(value)
+            for value in (mmsis or [])
+            if len(str(value)) == 9 and str(value).isdigit()
+        ][:50]
+        subscription = {
+            "APIKey": AISSTREAM_API_KEY,
+            "BoundingBoxes": boxes,
+            "FilterMessageTypes": [
+                "PositionReport",
+                "ShipStaticData",
+                "StaticDataReport",
+                "StandardClassBPositionReport",
+                "ExtendedClassBPositionReport",
+            ],
+        }
+        if clean_mmsis:
+            subscription["FiltersShipMMSI"] = clean_mmsis
+        signature = json.dumps(
+            {key: value for key, value in subscription.items() if key != "APIKey"},
+            sort_keys=True,
+        )
+        if signature != self.subscription_signature:
+            self.desired_subscription = subscription
+            self.subscription_signature = signature
+            self.data_event.clear()
+            self.subscription_event.set()
+        if self.task is None or self.task.done():
+            self.stopping = False
+            self.task = asyncio.create_task(self._run())
+
+    async def _run(self) -> None:
+        try:
+            import websockets as wslib
+        except ImportError:
+            self.last_error = "Server missing websockets package"
+            return
+        retry_delay = 1.0
+        while not self.stopping:
+            if not self.desired_subscription:
+                await asyncio.sleep(0.25)
+                continue
+            try:
+                async with wslib.connect(
+                    "wss://stream.aisstream.io/v0/stream",
+                    open_timeout=15,
+                    ping_interval=20,
+                    ping_timeout=20,
+                    max_size=2**22,
+                    max_queue=4096,
+                    close_timeout=5,
+                ) as upstream:
+                    self.connected = True
+                    self.last_error = None
+                    self.subscription_event.clear()
+                    await upstream.send(json.dumps(self.desired_subscription))
+                    last_subscription_at = asyncio.get_event_loop().time()
+                    retry_delay = 1.0
+                    pending_observations: Dict[str, dict] = {}
+                    last_flush = last_subscription_at
+                    while not self.stopping:
+                        receive_task = asyncio.create_task(upstream.recv())
+                        update_task = asyncio.create_task(
+                            self.subscription_event.wait()
+                        )
+                        done, pending = await asyncio.wait(
+                            {receive_task, update_task},
+                            return_when=asyncio.FIRST_COMPLETED,
+                        )
+                        for task in pending:
+                            task.cancel()
+                        await asyncio.gather(*pending, return_exceptions=True)
+                        if update_task in done and update_task.result():
+                            elapsed = (
+                                asyncio.get_event_loop().time()
+                                - last_subscription_at
+                            )
+                            if elapsed < 1.05:
+                                await asyncio.sleep(1.05 - elapsed)
+                            self.subscription_event.clear()
+                            await upstream.send(
+                                json.dumps(self.desired_subscription)
+                            )
+                            last_subscription_at = asyncio.get_event_loop().time()
+                            continue
+                        raw = receive_task.result()
+                        if isinstance(raw, bytes):
+                            raw = raw.decode("utf-8", errors="ignore")
+                        try:
+                            message = json.loads(raw)
+                        except Exception:
+                            continue
+                        if message.get("error"):
+                            self.last_error = str(message["error"])
+                            continue
+                        record = _merge_ais_message(self.vessels, message)
+                        if record and record.get("lat") is not None:
+                            mmsi = str(record.get("mmsi") or "")
+                            if mmsi:
+                                pending_observations[mmsi] = dict(record)
+                            self.last_message_at = datetime.now(
+                                timezone.utc
+                            ).isoformat()
+                            self.data_event.set()
+                        now = asyncio.get_event_loop().time()
+                        if pending_observations and now - last_flush >= 5.0:
+                            batch = list(pending_observations.values())
+                            pending_observations.clear()
+                            await asyncio.to_thread(
+                                _store_ais_observations, batch
+                            )
+                            last_flush = now
+                        if len(self.vessels) > 25000:
+                            ordered = sorted(
+                                self.vessels.items(),
+                                key=lambda item: str(
+                                    item[1].get("last_update") or ""
+                                ),
+                                reverse=True,
+                            )
+                            self.vessels = dict(ordered[:20000])
+            except asyncio.CancelledError:
+                break
+            except Exception as error:
+                self.connected = False
+                self.last_error = str(error)
+                await asyncio.sleep(retry_delay)
+                retry_delay = min(30.0, retry_delay * 2)
+            finally:
+                self.connected = False
+
+    async def wait_for_data(self, timeout: float = 2.0) -> None:
+        if self.data_event.is_set():
+            return
+        try:
+            await asyncio.wait_for(
+                self.data_event.wait(), timeout=max(0.25, min(timeout, 4.0))
+            )
+        except asyncio.TimeoutError:
+            pass
+
+    def snapshot(
+        self,
+        south: float,
+        north: float,
+        west: float,
+        east: float,
+        query: Optional[str],
+        mmsis: Optional[List[str]],
+        limit: int,
+        boxes: Optional[List[List[List[float]]]] = None,
+    ) -> List[dict]:
+        query_value = _ais_text(query).casefold()
+        mmsi_set = set(str(value) for value in (mmsis or []))
+        output = []
+        for vessel in self.vessels.values():
+            lat = _ais_number(vessel.get("lat"))
+            lon = _ais_number(vessel.get("lon"))
+            if lat is None or lon is None:
+                continue
+            if not mmsi_set:
+                candidate_boxes = boxes or [[[south, west], [north, east]]]
+                in_region = False
+                for box in candidate_boxes:
+                    box_south, box_west = box[0]
+                    box_north, box_east = box[1]
+                    longitude_matches = (
+                        box_west <= lon <= box_east
+                        if box_west <= box_east
+                        else lon >= box_west or lon <= box_east
+                    )
+                    if box_south <= lat <= box_north and longitude_matches:
+                        in_region = True
+                        break
+                if not in_region:
+                    continue
+            if mmsi_set and str(vessel.get("mmsi") or "") not in mmsi_set:
+                continue
+            if query_value and not (
+                query_value in _ais_text(vessel.get("name")).casefold()
+                or query_value in str(vessel.get("mmsi") or "")
+                or query_value in str(vessel.get("imo") or "")
+                or query_value
+                in _ais_text(vessel.get("call_sign")).casefold()
+            ):
+                continue
+            output.append(dict(vessel))
+        output.sort(
+            key=lambda vessel: str(vessel.get("last_update") or ""),
+            reverse=True,
+        )
+        if boxes and len(boxes) > 1 and not mmsi_set and len(output) > limit:
+            buckets: List[List[dict]] = [[] for _ in boxes]
+            for vessel in output:
+                lat = float(vessel["lat"])
+                lon = float(vessel["lon"])
+                for index, box in enumerate(boxes):
+                    box_south, box_west = box[0]
+                    box_north, box_east = box[1]
+                    longitude_matches = (
+                        box_west <= lon <= box_east
+                        if box_west <= box_east
+                        else lon >= box_west or lon <= box_east
+                    )
+                    if box_south <= lat <= box_north and longitude_matches:
+                        buckets[index].append(vessel)
+                        break
+            balanced: List[dict] = []
+            bucket_index = 0
+            while len(balanced) < limit and any(buckets):
+                bucket = buckets[bucket_index % len(buckets)]
+                if bucket:
+                    balanced.append(bucket.pop(0))
+                bucket_index += 1
+            return balanced
+        return output[:limit]
+
+    async def stop(self) -> None:
+        self.stopping = True
+        if self.task and not self.task.done():
+            self.task.cancel()
+            await asyncio.gather(self.task, return_exceptions=True)
+
+
+ais_live_manager = AisLiveManager()
+
+
+@app.on_event("startup")
+async def start_ais_background_collection():
+    """Collect the priority Asia feed even when no browser is showing the layer."""
+    if not AISSTREAM_API_KEY:
+        return
+    boxes: List[List[List[float]]] = []
+    for region in AIS_BACKGROUND_REGION_IDS:
+        boxes.extend(AIS_REGION_BOXES[region])
+    await ais_live_manager.configure(boxes)
+
+
+@app.on_event("shutdown")
+async def stop_ais_live_manager():
+    await ais_live_manager.stop()
+
+
+@app.get("/api/ais/status")
+async def ais_status():
+    with sqlite3.connect(AIS_TRAIL_DB_PATH) as db:
+        observations = db.execute(
+            "SELECT COUNT(*) FROM ais_observations"
+        ).fetchone()[0]
+        vessels = db.execute(
+            "SELECT COUNT(DISTINCT mmsi) FROM ais_observations"
+        ).fetchone()[0]
+    return {
+        "configured": bool(AISSTREAM_API_KEY),
+        "provider": "AISStream.io",
+        "background_collection": bool(
+            AISSTREAM_API_KEY and ais_live_manager.task
+        ),
+        "connected": ais_live_manager.connected,
+        "last_message_at": ais_live_manager.last_message_at,
+        "last_error": ais_live_manager.last_error,
+        "trail_observations": observations,
+        "trail_vessels": vessels,
+    }
+
+
+@app.post("/api/ais/snapshot")
+async def ais_snapshot(req: AisSnapshotRequest):
+    if not AISSTREAM_API_KEY:
+        raise HTTPException(
+            503,
+            "AIS is not configured. Add AISSTREAM_API_KEY to the server environment.",
+        )
+    south = max(-90.0, min(90.0, float(req.south)))
+    north = max(-90.0, min(90.0, float(req.north)))
+    west = max(-180.0, min(180.0, float(req.west)))
+    east = max(-180.0, min(180.0, float(req.east)))
+    if south >= north:
+        raise HTTPException(400, "AIS map bounds are invalid")
+    current_boxes = (
+        [[[south, west], [north, east]]]
+        if west <= east
+        else [[[south, west], [north, 180.0]], [[south, -180.0], [north, east]]]
+    )
+    selected_regions = [
+        str(region)
+        for region in (req.regions or [])
+        if str(region) == "current" or str(region) in AIS_REGION_BOXES
+    ]
+    if "world" in selected_regions:
+        boxes = AIS_REGION_BOXES["world"]
+    elif selected_regions:
+        boxes = []
+        for region in selected_regions:
+            boxes.extend(
+                current_boxes if region == "current" else AIS_REGION_BOXES[region]
+            )
+    else:
+        boxes = current_boxes
+    query = _ais_text(req.query)
+    mmsis = [
+        str(value)
+        for value in (req.mmsis or [])
+        if len(str(value)) == 9 and str(value).isdigit()
+    ][:50]
+    digits = "".join(char for char in query if char.isdigit())
+    if len(digits) == 9:
+        if digits not in mmsis:
+            mmsis.append(digits)
+        boxes = [[[-90.0, -180.0], [90.0, 180.0]]]
+    elif mmsis:
+        boxes = [[[-90.0, -180.0], [90.0, 180.0]]]
+    await ais_live_manager.configure(boxes, mmsis=mmsis)
+    await ais_live_manager.wait_for_data(
+        timeout=min(float(req.timeout_sec or 2.0), 3.0)
+    )
+    vessels = ais_live_manager.snapshot(
+        south,
+        north,
+        west,
+        east,
+        query or None,
+        mmsis,
+        max(1, min(int(req.max_vessels), 1000)),
+        boxes=boxes,
+    )
+    if ais_live_manager.last_error and not vessels:
+        raise HTTPException(
+            502, f"AIS live feed error: {ais_live_manager.last_error}"
+        )
+    return {
+        "vessels": vessels,
+        "sampled_at": datetime.now(timezone.utc).isoformat(),
+        "connected": ais_live_manager.connected,
+        "cached_vessels": len(ais_live_manager.vessels),
+    }
+
+
+@app.get("/api/ais/trail/{mmsi}")
+async def ais_trail(
+    mmsi: str,
+    hours: int = Query(default=168, ge=1, le=24 * 90),
+    limit: int = Query(default=1000, ge=2, le=5000),
+):
+    digits = "".join(char for char in str(mmsi) if char.isdigit())
+    if len(digits) != 9:
+        raise HTTPException(400, "A valid 9-digit MMSI is required")
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
+    with sqlite3.connect(AIS_TRAIL_DB_PATH) as db:
+        rows = db.execute(
+            """
+            SELECT observed_at, latitude, longitude, sog_kn, cog_deg, heading_deg
+            FROM ais_observations
+            WHERE mmsi = ? AND observed_at >= ?
+            ORDER BY observed_at DESC
+            LIMIT ?
+            """,
+            (digits, cutoff, limit),
+        ).fetchall()
+    points = [
+        {
+            "time": row[0],
+            "lat": row[1],
+            "lon": row[2],
+            "sog_kn": row[3],
+            "cog": row[4],
+            "heading": row[5],
+        }
+        for row in reversed(rows)
+    ]
+    return {"mmsi": digits, "hours": hours, "points": points}
 
 @app.post("/api/vessel/track")
 async def track_vessels(req: VesselTrackRequest):
