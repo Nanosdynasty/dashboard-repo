@@ -1,0 +1,37 @@
+{
+  "country": [
+    "India"
+  ],
+  "dataset_type": [
+    "coal_prices",
+    "coal_supply_chain",
+    "imports",
+    "power_stocks",
+    "power_use",
+    "production"
+  ],
+  "frequency": [
+    "monthly",
+    "quarterly",
+    "yearly"
+  ],
+  "coal_type": [
+    "all",
+    "thermal",
+    "coking",
+    "lignite"
+  ],
+  "period": [
+    "12m",
+    "3y",
+    "5y",
+    "10y",
+    "all"
+  ],
+  "release_status": [
+    "provisional",
+    "revised",
+    "final",
+    "unknown"
+  ]
+}

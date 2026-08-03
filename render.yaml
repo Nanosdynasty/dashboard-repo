@@ -7,6 +7,8 @@ services:
     envVars:
       - key: XAI_API_KEY
         sync: false   # set manually in Render dashboard for real Grok
+      - key: AISSTREAM_API_KEY
+        sync: false   # required for background live-vessel collection
       - key: PYTHON_VERSION
         value: "3.12"
 

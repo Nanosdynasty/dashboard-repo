@@ -5,5 +5,6 @@
   "solar": {"rows": 103940, "operating_capacity_mw": 1267798.9, "operating_units": 81377, "countries": 214},
   "wind": {"rows": 33248, "operating_capacity_mw": 1128424.5, "operating_units": 0, "countries": 0},
   "hydro": {"rows": 6772, "operating_capacity_mw": 1275000.0, "operating_units": 4746, "countries": 0},
-  "nuclear": {"rows": 1749, "operating_capacity_mw": 401341.0, "operating_units": 421, "countries": 61}
+  "nuclear": {"rows": 1749, "operating_capacity_mw": 401341.0, "operating_units": 421, "countries": 61},
+  "iron_ore_terminals": {"rows": 46, "operating_units": 46, "countries": 20, "status_counts": {"Operating": 46}}
 }

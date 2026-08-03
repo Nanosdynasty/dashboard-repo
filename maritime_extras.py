@@ -1,12 +1,13 @@
 """
-Maritime helpers: WPI depth/harbor enrichment, ECA/piracy zone analysis,
+Maritime helpers: WPI depth/harbor enrichment, maritime-risk zone analysis,
 Open-Meteo marine weather, EuroOilWatch bunker prices, fuel-cost estimator.
 """
 from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
+import math
 
 import httpx
 
@@ -89,7 +90,7 @@ def enrich_port_fields(row: Dict[str, Any]) -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# Zones (ECA + piracy)
+# Maritime risk zones (JWC + piracy watch)
 # ---------------------------------------------------------------------------
 _zones_cache: Optional[Dict] = None
 
@@ -107,13 +108,21 @@ def load_zones() -> Dict:
 
 
 def _point_in_poly(lon: float, lat: float, poly: List[List[float]]) -> bool:
-    """Ray-casting point-in-polygon (lon, lat order)."""
+    """Ray-casting point-in-polygon; points on the boundary count as outside."""
     n = len(poly)
     inside = False
     j = n - 1
     for i in range(n):
         xi, yi = poly[i][0], poly[i][1]
         xj, yj = poly[j][0], poly[j][1]
+        cross = (lon - xi) * (yj - yi) - (lat - yi) * (xj - xi)
+        tolerance = 1e-9 * (1.0 + abs(xj - xi) + abs(yj - yi))
+        if (
+            abs(cross) <= tolerance
+            and min(xi, xj) - tolerance <= lon <= max(xi, xj) + tolerance
+            and min(yi, yj) - tolerance <= lat <= max(yi, yj) + tolerance
+        ):
+            return False
         if ((yi > lat) != (yj > lat)) and (
             lon < (xj - xi) * (lat - yi) / (yj - yi + 1e-15) + xi
         ):
@@ -122,47 +131,150 @@ def _point_in_poly(lon: float, lat: float, poly: List[List[float]]) -> bool:
     return inside
 
 
+def _geometry_rings(geometry: Dict[str, Any]) -> Iterable[List[List[float]]]:
+    geometry_type = geometry.get("type")
+    coordinates = geometry.get("coordinates") or []
+    if geometry_type == "Polygon" and coordinates:
+        yield coordinates[0]
+    elif geometry_type == "MultiPolygon":
+        for polygon in coordinates:
+            if polygon:
+                yield polygon[0]
+
+
+def _feature_contains(feature: Dict[str, Any], lon: float, lat: float) -> bool:
+    return any(
+        _point_in_poly(lon, lat, ring)
+        for ring in _geometry_rings(feature.get("geometry") or {})
+    )
+
+
+def point_risk_families(
+    lon: float,
+    lat: float,
+    selected_families: Optional[Iterable[str]] = None,
+) -> Set[str]:
+    selected = {
+        str(value).lower() for value in (selected_families or ("jwc", "piracy"))
+    }
+    families: Set[str] = set()
+    for feature in load_zones().get("features", []):
+        family = str(
+            (feature.get("properties") or {}).get("risk_family") or ""
+        ).lower()
+        if family in selected and _feature_contains(feature, lon, lat):
+            families.add(family)
+    return families
+
+
+def _haversine_nm(left: List[float], right: List[float]) -> float:
+    lon1, lat1 = map(math.radians, left)
+    lon2, lat2 = map(math.radians, right)
+    delta_lon = (lon2 - lon1 + math.pi) % (2 * math.pi) - math.pi
+    delta_lat = lat2 - lat1
+    hav = (
+        math.sin(delta_lat / 2) ** 2
+        + math.cos(lat1) * math.cos(lat2) * math.sin(delta_lon / 2) ** 2
+    )
+    return 3440.065 * 2 * math.asin(min(1.0, math.sqrt(hav)))
+
+
+def _segment_samples(
+    left: List[float],
+    right: List[float],
+    max_step_nm: float = 10.0,
+) -> Iterable[Tuple[float, float, float]]:
+    distance_nm = _haversine_nm(left, right)
+    steps = max(1, math.ceil(distance_nm / max_step_nm))
+    step_nm = distance_nm / steps
+    lon_delta = (right[0] - left[0] + 180.0) % 360.0 - 180.0
+    for index in range(steps):
+        fraction = (index + 0.5) / steps
+        lon = (left[0] + lon_delta * fraction + 180.0) % 360.0 - 180.0
+        lat = left[1] + (right[1] - left[1]) * fraction
+        yield lon, lat, step_nm
+
+
 def analyze_route_zones(coords: List[List[float]]) -> Dict[str, Any]:
     """
-    coords: list of [lon, lat] from searoute.
-    Returns which ECA / piracy polygons the route intersects and rough % of
-    track inside ECA (for fuel-switch estimate).
+    Measure route exposure to JWC listed waters and analytical piracy-watch
+    envelopes. Distances are sampled along each segment rather than inferred
+    from the number of route vertices.
     """
     zones = load_zones()
     features = zones.get("features", [])
-    crossed_eca: List[Dict] = []
-    crossed_piracy: List[Dict] = []
-    eca_points = 0
-    total = max(len(coords), 1)
+    exposure_by_id: Dict[str, float] = {}
+    total_distance_nm = 0.0
+    for index in range(1, len(coords)):
+        left, right = coords[index - 1], coords[index]
+        segment_nm = _haversine_nm(left, right)
+        total_distance_nm += segment_nm
+        for lon, lat, step_nm in _segment_samples(left, right):
+            for feature in features:
+                props = feature.get("properties") or {}
+                if _feature_contains(feature, lon, lat):
+                    zone_id = str(props.get("id") or props.get("name"))
+                    exposure_by_id[zone_id] = (
+                        exposure_by_id.get(zone_id, 0.0) + step_nm
+                    )
 
-    for lon, lat in coords:
-        for feat in features:
-            props = feat.get("properties", {})
-            geom = feat.get("geometry", {})
-            if geom.get("type") != "Polygon":
-                continue
-            ring = geom["coordinates"][0]
-            if _point_in_poly(lon, lat, ring):
-                entry = {
-                    "name": props.get("name"),
-                    "zone_type": props.get("zone_type"),
-                    "fuel": props.get("fuel"),
-                    "description": props.get("description"),
-                }
-                if props.get("zone_type") == "ECA":
-                    if entry not in crossed_eca:
-                        crossed_eca.append(entry)
-                    eca_points += 1
-                elif props.get("zone_type") == "piracy":
-                    if entry not in crossed_piracy:
-                        crossed_piracy.append(entry)
+    exposures: List[Dict[str, Any]] = []
+    for feature in features:
+        props = feature.get("properties") or {}
+        zone_id = str(props.get("id") or props.get("name"))
+        distance_nm = exposure_by_id.get(zone_id, 0.0)
+        if distance_nm <= 0.05:
+            continue
+        exposures.append({
+            "id": zone_id,
+            "name": props.get("name"),
+            "risk_family": props.get("risk_family"),
+            "zone_type": props.get("zone_type"),
+            "description": props.get("description"),
+            "boundary_quality": props.get("boundary_quality"),
+            "source_title": props.get("source_title"),
+            "source_url": props.get("source_url"),
+            "distance_nm": round(distance_nm, 1),
+            "fraction": round(
+                distance_nm / total_distance_nm if total_distance_nm else 0.0,
+                4,
+            ),
+        })
 
-    eca_fraction = eca_points / total
+    jwc_distance_nm = sum(
+        item["distance_nm"]
+        for item in exposures
+        if item["risk_family"] == "jwc"
+    )
+    piracy_distance_nm = sum(
+        item["distance_nm"]
+        for item in exposures
+        if item["risk_family"] == "piracy"
+    )
     return {
-        "eca_zones": crossed_eca,
-        "piracy_zones": crossed_piracy,
-        "eca_fraction": round(eca_fraction, 3),
-        "requires_mgo": eca_fraction > 0.01,
+        "exposures": exposures,
+        "jwc_zones": [
+            item for item in exposures if item["risk_family"] == "jwc"
+        ],
+        "piracy_zones": [
+            item for item in exposures if item["risk_family"] == "piracy"
+        ],
+        "jwc_distance_nm": round(jwc_distance_nm, 1),
+        "piracy_distance_nm": round(piracy_distance_nm, 1),
+        "jwc_fraction": round(
+            jwc_distance_nm / total_distance_nm if total_distance_nm else 0.0,
+            4,
+        ),
+        "piracy_fraction": round(
+            piracy_distance_nm / total_distance_nm if total_distance_nm else 0.0,
+            4,
+        ),
+        "route_distance_nm": round(total_distance_nm, 1),
+        # Retained for backward compatibility with the fuel estimator. ECA
+        # overlays were intentionally removed from this dashboard.
+        "eca_zones": [],
+        "eca_fraction": 0.0,
+        "requires_mgo": False,
     }
 
 

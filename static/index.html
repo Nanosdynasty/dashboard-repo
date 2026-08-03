@@ -2,148 +2,619 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Global Energy Transition Dashboard · GEM Style</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Howe Robinson | Global Assets Map</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
-  <link rel="stylesheet" href="/static/css/style.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/style.css?v=20260731-20" />
 </head>
 <body>
-  <header class="header">
-    <div class="brand">
-      <div class="logo">GEM</div>
-      <div>
-        <h1>Global Energy Transition Dashboard</h1>
-        <p class="subtitle">Energy · Vessels · Ports · Sea routes</p>
-      </div>
-    </div>
-    <div class="header-actions">
-      <button id="btn-upload" class="btn btn-orange">⬆ Upload</button>
-      <button id="btn-export" class="btn btn-teal">⬇ Export Excel</button>
-    </div>
-  </header>
-  <div class="layout">
-    <aside class="sidebar">
-      <div class="nav-group" id="group-energy">
-        <button type="button" class="nav-group-header" data-group="energy">
-          <span>⚡ Energy</span><span class="chev">▾</span>
-        </button>
-        <div class="nav-group-body">
-          <div id="tracker-list" class="tracker-list"></div>
-          <h4 class="sub-h">Filters</h4>
-          <div class="filter-group">
-            <label>Status</label>
-            <div class="dd" id="dd-status">
-              <button type="button" class="dd-btn" id="dd-status-btn">Select status…</button>
-              <div class="dd-panel" id="dd-status-panel"></div>
+  <div class="app-shell">
+    <aside class="control-panel">
+      <header class="brand">
+        <img src="/static/img/howe-robinson-logo.svg" alt="Howe Robinson Partners" />
+        <p>Global assets &amp; voyage intelligence</p>
+      </header>
+
+      <div class="panel-scroll">
+        <details class="filter-section" data-mode="energy">
+          <summary>
+            <span><i class="section-icon energy-icon"></i>Energy</span>
+            <span class="section-count" id="energy-active-count">0 active</span>
+          </summary>
+          <div class="section-body">
+            <div class="filter-grid">
+              <div class="field">
+                <label for="energy-country">Country</label>
+                <select id="energy-country"><option value="">All countries</option></select>
+              </div>
+              <div class="field">
+                <label for="energy-status">Status</label>
+                <select id="energy-status">
+                  <option value="operating" selected>Operating</option>
+                  <option value="construction">Under construction</option>
+                  <option value="proposed">Proposed</option>
+                </select>
+              </div>
+            </div>
+            <button type="button" class="filter-button" id="energy-apply">Apply energy filters</button>
+            <label class="overlay-toggle">
+              <input type="checkbox" id="energy-show-ports" />
+              <span>Show ports with energy</span>
+            </label>
+            <p class="group-label">Fossil energy</p>
+            <div class="layer-list" id="energy-layers">
+              <label><input type="checkbox" value="coal_plants" /><i style="--dot:#6f7782"></i><span>Coal plants</span><small>14,509</small></label>
+            </div>
+            <p class="group-label">Renewable energy</p>
+            <div class="layer-list" id="renewable-layers">
+              <label><input type="checkbox" value="solar" /><i style="--dot:#e9a823"></i><span>Solar power</span><small>103,940</small></label>
+              <label><input type="checkbox" value="wind" /><i style="--dot:#55a6c8"></i><span>Wind power</span><small>33,248</small></label>
+              <label><input type="checkbox" value="hydro" /><i style="--dot:#296fba"></i><span>Hydropower</span><small>6,772</small></label>
+              <label><input type="checkbox" value="geothermal" /><i style="--dot:#db5b45"></i><span>Geothermal</span><small>835</small></label>
+              <label><input type="checkbox" value="bioenergy" /><i style="--dot:#629c4d"></i><span>Bioenergy</span><small>4,537</small></label>
+            </div>
+            <p class="group-label">Nuclear</p>
+            <div class="layer-list" id="nuclear-layers">
+              <label><input type="checkbox" value="nuclear" /><i style="--dot:#8b65b6"></i><span>Nuclear power</span><small>1,749</small></label>
             </div>
           </div>
-          <div class="filter-group">
-            <label>Country <span class="hint">(by capacity)</span></label>
-            <div class="dd" id="dd-country">
-              <button type="button" class="dd-btn" id="dd-country-btn">Select countries…</button>
-              <div class="dd-panel" id="dd-country-panel"></div>
+        </details>
+
+        <details class="filter-section" data-mode="ports">
+          <summary>
+            <span><i class="section-icon ports-icon"></i>Ports</span>
+            <span class="section-count" id="port-visible-count">3,669 shown</span>
+          </summary>
+          <div class="section-body">
+            <label class="master-toggle">
+              <span>Show all world ports</span>
+              <input type="checkbox" id="show-ports" checked />
+            </label>
+            <div class="field">
+              <label for="port-country">Country</label>
+              <select id="port-country">
+                <option value="">All countries</option>
+              </select>
             </div>
-          </div>
-          <div class="filter-group">
-            <label>Capacity</label>
-            <div class="range-row">
-              <input type="number" id="filter-min-mw" placeholder="Min" />
-              <input type="number" id="filter-max-mw" placeholder="Max" />
+            <div class="field">
+              <label for="port-size">Harbor size</label>
+              <select id="port-size">
+                <option value="">All sizes</option>
+              </select>
             </div>
-          </div>
-          <div class="filter-group">
-            <label>Search</label>
-            <input type="text" id="filter-search" placeholder="Plant / Owner…" />
-          </div>
-          <button id="btn-apply" class="btn btn-teal full">Apply Filters</button>
-          <button id="btn-reset" class="btn btn-ghost full">Reset</button>
-        </div>
-      </div>
-      <div class="nav-group open" id="group-vessels">
-        <button type="button" class="nav-group-header" data-group="vessels">
-          <span>🚢 Vessels</span><span class="chev">▾</span>
-        </button>
-        <div class="nav-group-body">
-          <div id="vessel-tracker-list" class="tracker-list"></div>
-          <div class="tools-box">
-            <h3>Distance calculator</h3>
-            <label class="hint">From port</label>
-            <input type="text" id="port-from-search" list="port-list" placeholder="Search port name…" autocomplete="off" />
-            <input type="hidden" id="route-from-lat" />
-            <input type="hidden" id="route-from-lon" />
-            <p class="hint" id="port-from-label">—</p>
-            <label class="hint">To port</label>
-            <input type="text" id="port-to-search" list="port-list" placeholder="Search port name…" autocomplete="off" />
-            <input type="hidden" id="route-to-lat" />
-            <input type="hidden" id="route-to-lon" />
-            <p class="hint" id="port-to-label">—</p>
-            <datalist id="port-list"></datalist>
-            <div class="range-row" style="margin-top:0.4rem">
-              <input type="number" id="route-speed" value="12" step="0.5" min="5" max="25" title="Speed knots" />
-              <span class="hint" style="align-self:center">kn</span>
+            <p class="field-label">Port category</p>
+            <div class="layer-list compact" id="port-categories">
+              <label data-category="dry_bulk"><input type="checkbox" value="dry_bulk" /><i style="--dot:#b52a2a"></i><span>Dry bulk</span><small id="count-dry-bulk">—</small></label>
+              <label data-category="coal"><input type="checkbox" value="coal" /><i style="--dot:#db2f34"></i><span>Coal terminal</span><small id="count-coal">—</small></label>
             </div>
-            <button id="btn-route" class="btn btn-orange full">Calculate route</button>
-            <p class="hint" id="route-result">Select two ports by name</p>
+            <p class="source-note">Only port categories classified by the loaded WPI and GEM sources are shown. Unknown values are not treated as zero.</p>
           </div>
-          <div class="tools-box">
-            <h3>Track vessel by IMO / MMSI</h3>
-            <p class="hint">Paste ship IDs to fetch current position (AIS ~25s).</p>
-            <textarea id="imo-list" rows="4" placeholder="MMSI or IMO, one per line"></textarea>
-            <button id="btn-track-imo" class="btn btn-orange full">Find these vessels</button>
-            <button id="btn-clear-imo" class="btn btn-ghost full">Clear vessels from map</button>
-            <p class="hint" id="imo-status">Paste IDs then click Find</p>
-            <div id="vessel-results" class="vessel-results"></div>
+        </details>
+
+        <details class="filter-section coal-section" data-mode="coal">
+          <summary>
+            <span><i class="section-icon coal-icon"></i>Coal</span>
+            <span class="section-count" id="coal-data-status">India workspace</span>
+          </summary>
+          <div class="section-body">
+            <p class="workspace-intro">Indian coal production, seaborne imports, power use and stocks—with verified map context.</p>
+            <div class="view-switch" aria-label="Coal workspace view">
+              <button type="button" class="active" data-coal-view="analytics">Analytics</button>
+              <button type="button" data-coal-view="map">Map</button>
+              <button type="button" data-coal-view="table">Table</button>
+              <button type="button" data-coal-view="cards">Cards</button>
+              <button type="button" data-coal-view="power">India power</button>
+            </div>
+            <div class="field">
+              <label for="coal-asset-status">Asset status</label>
+              <select id="coal-asset-status">
+                <option value="operating" selected>Operating</option>
+                <option value="construction">Under construction</option>
+                <option value="proposed">Proposed</option>
+              </select>
+            </div>
+            <p class="group-label">Map context</p>
+            <div class="layer-list" id="coal-workspace-layers">
+              <label><input type="checkbox" value="coal_mines" checked /><i style="--dot:#242b38"></i><span>India coal mines</span><small id="coal-mine-count">—</small></label>
+              <label><input type="checkbox" value="coal_trade_terminals" checked /><i style="--dot:#db2f34"></i><span>India coal terminals</span><small id="coal-terminal-count">—</small></label>
+              <label><input type="checkbox" value="dry_bulk_ports" checked /><i style="--dot:#003671"></i><span>India dry-bulk ports</span><small id="coal-port-count">—</small></label>
+            </div>
+            <p class="group-label">Coal-consuming industries</p>
+            <div class="layer-list" id="coal-consumer-layers">
+              <label><input type="checkbox" value="power_consumers" /><i style="--dot:#6f7782"></i><span>Power plants</span><small id="coal-power-count">—</small></label>
+              <label><input type="checkbox" value="steel_consumers" /><i style="--dot:#536a7a"></i><span>Steel plants</span><small id="coal-steel-count">—</small></label>
+              <label><input type="checkbox" value="cement_consumers" /><i style="--dot:#9a8a73"></i><span>Cement plants</span><small id="coal-cement-count">—</small></label>
+              <label class="disabled-layer"><input type="checkbox" value="other_consumers" disabled /><i style="--dot:#89939d"></i><span>Other industries</span><small>awaiting source</small></label>
+            </div>
+            <p class="source-note">Industry overlays are optional and status-matched. Retired, cancelled, shelved and mothballed assets are always excluded.</p>
+            <div class="filter-grid">
+              <div class="field">
+                <label for="coal-metric">Dataset</label>
+                <select id="coal-metric">
+                  <option value="production">Production</option>
+                  <option value="imports">Imports</option>
+                  <option value="power_use">Power use</option>
+                  <option value="power_stocks">Stock cover (days)</option>
+                  <option value="renewables">Renewables</option>
+                  <option value="weather">Monsoon &amp; heat</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="coal-frequency">Frequency</label>
+                <select id="coal-frequency">
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly" selected>Monthly</option>
+                  <option value="quarterly">Quarterly</option>
+                  <option value="yearly">Yearly</option>
+                </select>
+              </div>
+            </div>
+            <div class="filter-grid">
+              <div class="field">
+                <label for="coal-grade">Coal type</label>
+                <select id="coal-grade">
+                  <option value="">All coal</option>
+                  <option value="thermal">Thermal coal</option>
+                  <option value="coking">Coking coal</option>
+                  <option value="lignite">Lignite</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="coal-period">Period</label>
+                <select id="coal-period">
+                  <option value="12m">Last 12 months</option>
+                  <option value="3y">Last 3 years</option>
+                  <option value="5y">Last 5 years</option>
+                  <option value="10y">Last 10 years</option>
+                  <option value="all">All available</option>
+                </select>
+              </div>
+            </div>
+            <input id="coal-upload-input" type="file" accept=".xlsx,.xls,.csv,.json" hidden />
+            <button type="button" class="filter-button" id="coal-upload">Upload selected dataset</button>
+            <p id="coal-upload-message" class="source-note">No operational time series uploaded yet. Production, imports, use and stock figures will remain blank until data is supplied.</p>
+            <div class="coal-actions">
+              <button type="button" id="coal-run-analysis" disabled>Run analysis</button>
+              <button type="button" id="coal-export" disabled>Download Excel</button>
+            </div>
+            <div class="coal-question-box">
+              <label for="coal-research-question">Ask the India dry-bulk research desk</label>
+              <textarea id="coal-research-question" rows="4" placeholder="Example: What percentage of India’s electricity came from coal in June 2026, and how did it change from June 2025?"></textarea>
+              <button type="button" id="coal-research-run">Analyse question</button>
+              <small id="coal-research-message">Uses mapped official datasets only. It will not invent missing observations.</small>
+            </div>
+            <p class="data-gap"><strong>Analysis guardrail:</strong> correlations will use aligned time periods and will be labelled as association, not causation.</p>
+            <p class="source-note"><strong>Stock cover:</strong> days of coal remaining at the observed consumption rate. Inventory tonnes remain a supporting field.</p>
           </div>
-        </div>
+        </details>
+
+        <details class="filter-section" data-mode="commodities">
+          <summary>
+            <span><i class="section-icon commodity-icon"></i>Commodities</span>
+            <span class="section-count" id="commodity-active-count">0 active</span>
+          </summary>
+          <div class="section-body">
+            <div class="filter-grid">
+              <div class="field">
+                <label for="commodity-country">Country</label>
+                <select id="commodity-country"><option value="">All countries</option></select>
+              </div>
+              <div class="field">
+                <label for="commodity-status">Status</label>
+                <select id="commodity-status">
+                  <option value="operating" selected>Operating</option>
+                  <option value="construction">Under construction</option>
+                  <option value="proposed">Proposed</option>
+                </select>
+              </div>
+            </div>
+            <button type="button" class="filter-button" id="commodity-apply">Apply commodity filters</button>
+            <label class="overlay-toggle">
+              <input type="checkbox" id="commodity-show-ports" />
+              <span>Show ports with commodities</span>
+            </label>
+            <p class="group-label">Coal</p>
+            <div class="layer-list" id="coal-layers">
+              <label><input type="checkbox" value="coal_mines" /><i style="--dot:#242b38"></i><span>Coal mines</span><small>5,382</small></label>
+              <label><input type="checkbox" value="coal_trade_terminals" /><i style="--dot:#db2f34"></i><span>Coal trade terminals</span><small>519</small></label>
+            </div>
+            <div class="field">
+              <label for="coal-terminal-role">Coal terminal role</label>
+              <select id="coal-terminal-role">
+                <option value="">All roles</option>
+                <option value="Exports">Export terminals</option>
+                <option value="Imports">Import terminals</option>
+                <option value="Domestic">Domestic terminals</option>
+              </select>
+            </div>
+            <p class="group-label">Iron ore &amp; steel</p>
+            <div class="layer-list" id="iron-layers">
+              <label><input type="checkbox" value="iron_ore_mines" /><i style="--dot:#a45332"></i><span>Iron ore mines</span><small>949</small></label>
+              <label><input type="checkbox" value="iron_ore_terminals" /><i style="--dot:#d67a27"></i><span>Iron ore trade terminals</span><small>46</small></label>
+              <label><input type="checkbox" value="steel_plants" /><i style="--dot:#536a7a"></i><span>Iron &amp; steel plants</span><small>1,293</small></label>
+            </div>
+            <div class="field">
+              <label for="iron-terminal-role">Iron ore terminal direction</label>
+              <select id="iron-terminal-role">
+                <option value="">Imports and exports</option>
+                <option value="Exports">Export / loading terminals</option>
+                <option value="Imports">Import / discharge terminals</option>
+              </select>
+            </div>
+            <p class="source-note">The terminal layer is a reviewed catalogue of 46 major facilities, not an exhaustive berth list. Country and direction filters can be combined. Sources and evidence level appear in each terminal detail card.</p>
+            <p class="group-label">Cement</p>
+            <div class="layer-list" id="cement-layers">
+              <label><input type="checkbox" value="cement_plants" /><i style="--dot:#9a8a73"></i><span>Cement plants</span><small>3,513</small></label>
+            </div>
+            <p class="data-gap"><strong>Bauxite &amp; limestone:</strong> awaiting a reviewed source of operational mines. Historical occurrences are intentionally not mapped as active assets.</p>
+          </div>
+        </details>
+
+        <details class="filter-section ais-section">
+          <summary>
+            <span><i class="section-icon ais-icon"></i>Live AIS vessels</span>
+            <span class="section-count" id="ais-layer-count">Off</span>
+          </summary>
+          <div class="ais-card">
+            <label class="ais-toggle">
+              <span>
+                <strong>Show live vessels</strong>
+                <small>Load positions already collected in the background</small>
+              </span>
+              <input id="ais-enabled" type="checkbox" role="switch" />
+            </label>
+            <label class="ais-search-label" for="ais-display-mode">
+              <span>Vessels displayed</span>
+              <select id="ais-display-mode">
+                <option value="all" selected>All live vessels</option>
+                <option value="selected">Selected vessels only</option>
+              </select>
+            </label>
+            <label class="ais-search-label" for="ais-type-filter">
+              <span>Vessel type</span>
+              <select id="ais-type-filter">
+                <option value="cargo_tanker" selected>Cargo + tankers + type pending</option>
+                <option value="cargo">Cargo vessels only</option>
+                <option value="tanker">Tankers only</option>
+                <option value="all">All vessel types</option>
+              </select>
+            </label>
+            <details class="ais-region-picker">
+              <summary>
+                <span>AIS regions</span>
+                <strong id="ais-region-summary">4 selected</strong>
+              </summary>
+              <div id="ais-region-options" class="ais-region-options">
+                <label><input type="checkbox" value="current" />Current map area</label>
+                <label><input type="checkbox" value="india" checked />India &amp; Bay of Bengal</label>
+                <label><input type="checkbox" value="china" checked />China coast</label>
+                <label><input type="checkbox" value="gulf" checked />Arabian/Persian Gulf</label>
+                <label><input type="checkbox" value="southeast_asia" checked />Southeast Asia &amp; Malacca</label>
+                <label><input type="checkbox" value="japan_korea" />Japan &amp; Korea</label>
+                <label><input type="checkbox" value="australia" />Australia</label>
+                <label><input type="checkbox" value="europe_med" />Europe &amp; Mediterranean</label>
+                <label><input type="checkbox" value="africa" />Africa</label>
+                <label><input type="checkbox" value="north_america" />North America</label>
+                <label><input type="checkbox" value="south_america" />South America</label>
+                <label><input type="checkbox" value="world" />Worldwide</label>
+              </div>
+            </details>
+            <label class="ais-search-label" for="ais-search">
+              <span>Find a vessel</span>
+              <input id="ais-search" type="search"
+                placeholder="Vessel name, MMSI or IMO" autocomplete="off" />
+            </label>
+            <div class="ais-actions">
+              <button type="button" id="ais-search-button" class="primary-button">Find &amp; add</button>
+              <button type="button" id="ais-refresh" class="secondary-button">Refresh</button>
+              <button type="button" id="ais-clear" class="secondary-button">Clear vessels</button>
+            </div>
+            <div id="ais-watchlist" class="ais-watchlist" hidden>
+              <span>No selected vessels.</span>
+            </div>
+            <div id="ais-status" class="ais-status">AIS layer is switched off.</div>
+            <p class="source-note">
+              The server collects AISStream.io positions in the background. The
+              map loads them only when this layer is switched on, keeping the
+              rest of the dashboard responsive. Click a vessel for its actual trail.
+            </p>
+          </div>
+        </details>
+
+        <details class="filter-section weather-section">
+          <summary>
+            <span><i class="section-icon weather-icon"></i>Coastal weather</span>
+            <span class="section-count" id="weather-layer-count">Off</span>
+          </summary>
+          <div class="weather-card">
+            <label class="weather-toggle">
+              <span>
+                <strong>Show IMD coastal forecast</strong>
+                <small>Optional map layer; refreshed every five hours</small>
+              </span>
+              <input id="coastal-weather-enabled" type="checkbox" role="switch" />
+            </label>
+            <label class="weather-field" for="coastal-weather-day">
+              <span>Forecast period</span>
+              <select id="coastal-weather-day">
+                <option value="1" selected>Day 1</option>
+                <option value="2">Day 2</option>
+                <option value="3">Day 3</option>
+                <option value="4">Day 4</option>
+                <option value="5">Day 5</option>
+              </select>
+            </label>
+            <fieldset class="weather-parameters">
+              <legend>Map signals</legend>
+              <label><input type="checkbox" value="rain" checked /><span class="weather-param-dot rain"></span>Rainfall</label>
+              <label><input type="checkbox" value="wind" checked /><span class="weather-param-dot wind"></span>Wind &amp; gusts</label>
+              <label><input type="checkbox" value="wave" checked /><span class="weather-param-dot wave"></span>Wave height</label>
+            </fieldset>
+            <label class="weather-animation-toggle">
+              <input id="coastal-weather-animation" type="checkbox" checked />
+              Animate weather symbols
+            </label>
+            <div class="weather-actions">
+              <button type="button" id="coastal-weather-refresh" class="secondary-button">Refresh now</button>
+              <a class="secondary-button" href="/api/imd/coastal-weather/export.csv">Download CSV</a>
+            </div>
+            <div id="coastal-weather-status" class="weather-status">
+              Layer is switched off.
+            </div>
+            <p class="source-note">
+              Official IMD coastal bulletins and five-day fishermen warnings.
+              Shaded regions are generalized offshore display areas—not for navigation.
+              Blank values mean IMD did not quantify that field.
+            </p>
+          </div>
+        </details>
+
+        <details class="filter-section voyage-section">
+          <summary>
+            <span><i class="section-icon voyage-icon"></i>Voyage distance</span>
+            <span class="section-count">Port-to-port</span>
+          </summary>
+          <div class="voyage-card">
+            <div class="voyage-heading">
+              <div>
+                <span>MARITIME NETWORK ROUTING</span>
+                <h2>Distance calculator</h2>
+              </div>
+              <button type="button" class="text-button" id="route-reset">Reset</button>
+            </div>
+            <div class="route-select-grid">
+              <label for="route-from-input">
+                <span>Origin port</span>
+                <input id="route-from-input" type="search" list="route-port-options"
+                  placeholder="Type a port name" autocomplete="off" />
+              </label>
+              <label for="route-to-input">
+                <span>Destination port</span>
+                <input id="route-to-input" type="search" list="route-port-options"
+                  placeholder="Type a port name" autocomplete="off" />
+              </label>
+              <datalist id="route-port-options"></datalist>
+            </div>
+            <button type="button" id="route-pick" class="primary-button">Select two ports on map</button>
+            <div class="route-ports">
+              <div><span>From</span><strong id="route-from-name">Select origin</strong></div>
+              <div><span>To</span><strong id="route-to-name">Select destination</strong></div>
+            </div>
+            <div class="route-assumptions">
+              <label for="route-speed"><span>Speed</span><b><input id="route-speed" type="number" value="12" min="4" max="30" step="0.5" /> kn</b></label>
+              <label for="route-sea-margin"><span>Sea margin</span><b><input id="route-sea-margin" type="number" value="5" min="0" max="50" step="0.5" /> %</b></label>
+              <label for="route-port-hours"><span>Port time</span><b><input id="route-port-hours" type="number" value="0" min="0" max="720" step="1" /> hr</b></label>
+              <label for="route-canal-hours"><span>Canal delay</span><b><input id="route-canal-hours" type="number" value="0" min="0" max="240" step="1" /> hr</b></label>
+            </div>
+            <fieldset class="route-restrictions">
+              <legend>Avoid passage</legend>
+              <label><input type="checkbox" value="suez" />Suez</label>
+              <label><input type="checkbox" value="panama" />Panama</label>
+              <label><input type="checkbox" value="malacca" />Malacca</label>
+            </fieldset>
+            <div id="route-result" class="route-result">Click the button, then choose two port dots.</div>
+          </div>
+        </details>
       </div>
     </aside>
-    <main class="main">
-      <section id="kpi-strip" class="kpi-strip"></section>
-      <div class="view-tabs">
-        <button class="tab active" data-view="map">🗺 Map</button>
-        <button class="tab" data-view="table">📋 Table</button>
-        <button class="tab" data-view="chat">💬 Ask Grok</button>
-      </div>
-      <div id="view-map" class="view active"><div id="map"></div></div>
-      <div id="view-table" class="view">
-        <div class="table-wrap"><table id="data-table"><thead></thead><tbody></tbody></table></div>
-        <div class="table-footer">
-          <span id="table-info"></span>
-          <div>
-            <button id="btn-prev" class="btn btn-ghost">← Prev</button>
-            <button id="btn-next" class="btn btn-ghost">Next →</button>
+
+    <main class="map-panel">
+      <div id="map"></div>
+      <header id="coal-workspace-header" class="coal-workspace-header" hidden>
+        <div>
+          <span>HRP MARKET INTELLIGENCE / INDIA COAL</span>
+          <h1>Flows, fundamentals &amp; power demand</h1>
+        </div>
+        <div class="coal-header-meta">
+          <strong id="coal-header-status">Awaiting operational data</strong>
+          <small>Official data · validated lineage · export ready</small>
+        </div>
+      </header>
+      <section id="coal-data-surface" class="coal-data-surface" hidden>
+        <nav class="coal-analysis-nav" aria-label="Coal analysis sections">
+          <button class="active" type="button" data-coal-dashboard-tab="overview">Overview</button>
+          <button type="button" data-coal-dashboard-tab="supply">Supply</button>
+          <button type="button" data-coal-dashboard-tab="trade">Trade flows</button>
+          <button type="button" data-coal-dashboard-tab="power">Power</button>
+          <button type="button" data-coal-dashboard-tab="stocks">Stocks</button>
+          <button type="button" data-coal-dashboard-tab="table">Data explorer</button>
+        </nav>
+        <div class="coal-kpis" id="coal-kpis">
+          <article><span>Production <em>OFFICIAL</em></span><strong id="coal-kpi-production">-</strong><small id="coal-kpi-production-change">Latest FY · MT</small><i id="coal-kpi-production-bar"></i></article>
+          <article><span>Coal imports <em>OFFICIAL</em></span><strong id="coal-kpi-imports">-</strong><small id="coal-kpi-imports-change">Latest FY · MT</small><i id="coal-kpi-imports-bar"></i></article>
+          <article><span>Off-take <em>FINAL</em></span><strong id="coal-kpi-offtake">-</strong><small id="coal-kpi-offtake-detail">All India raw coal · MT</small><i id="coal-kpi-offtake-bar"></i></article>
+          <article><span>Pit-head stock <em>FINAL</em></span><strong id="coal-kpi-stock">-</strong><small id="coal-kpi-stock-detail">Closing stock · not stock-cover days</small><i id="coal-kpi-stock-bar"></i></article>
+          <article><span>Import dependency <em>DERIVED</em></span><strong id="coal-kpi-dependency">-</strong><small id="coal-kpi-dependency-detail">Imports ÷ production plus imports</small><i id="coal-kpi-dependency-bar"></i></article>
+        </div>
+        <div class="coal-terminal-controls">
+          <div class="coal-range-presets" aria-label="Time range presets">
+            <span>QUICK RANGE</span>
+            <button type="button" data-coal-range="12m">12M</button>
+            <button type="button" data-coal-range="24m">24M</button>
+            <button type="button" data-coal-range="3y" class="active">3Y</button>
+            <button type="button" data-coal-range="max">MAX</button>
           </div>
+          <div id="coal-active-filters" class="coal-active-filters" aria-label="Active filters"></div>
+        </div>
+        <div class="coal-analysis-toolbar">
+          <div>
+            <label for="coal-analysis-from">From</label>
+            <select id="coal-analysis-from"></select>
+          </div>
+          <div>
+            <label for="coal-analysis-to">To</label>
+            <select id="coal-analysis-to"></select>
+          </div>
+          <div>
+            <label for="coal-analysis-frequency">Frequency</label>
+            <select id="coal-analysis-frequency">
+              <option value="monthly">Monthly</option>
+              <option value="quarterly">Quarterly</option>
+              <option value="financial_year">Financial year</option>
+            </select>
+          </div>
+          <div>
+            <label for="coal-analysis-focus">Measure focus</label>
+            <select id="coal-analysis-focus"><option value="all">All measures</option></select>
+          </div>
+          <div>
+            <label for="coal-analysis-comparison">Compare with</label>
+            <select id="coal-analysis-comparison">
+              <option value="previous_period">Previous period</option>
+              <option value="previous_year">Previous year</option>
+              <option value="none">No comparison</option>
+            </select>
+          </div>
+          <button type="button" id="coal-analysis-apply">Apply filters</button>
+          <a id="coal-dashboard-csv" href="#" download>CSV</a>
+          <a id="coal-dashboard-xlsx" href="#" download>Excel</a>
+        </div>
+        <div id="coal-dashboard-availability" class="coal-dashboard-availability"></div>
+        <div id="coal-dashboard-kpis" class="coal-dashboard-kpis"></div>
+        <div id="coal-dashboard-panels" class="coal-dashboard-panels"></div>
+        <article id="coal-research-result" class="coal-research-result" hidden>
+          <header>
+            <div><span>PLAIN-ENGLISH ANALYSIS</span><h2 id="coal-research-title">Research result</h2></div>
+            <div><b id="coal-research-status">OFFICIAL</b><small id="coal-research-unit"></small></div>
+          </header>
+          <p id="coal-research-answer"></p>
+          <div id="coal-research-chart" class="coal-live-chart"></div>
+          <div id="coal-research-table" class="coal-source-catalog"></div>
+          <footer>
+            <div id="coal-research-sources"></div>
+            <div><a id="coal-research-csv" href="#" download>Download CSV</a><a id="coal-research-xlsx" href="#" download>Download Excel</a></div>
+          </footer>
+        </article>
+        <div class="coal-research-prompts" aria-label="Suggested research questions">
+          <button type="button">What percentage of India electricity generation came from coal in June 2026 versus June 2025?</button>
+          <button type="button">How did solar generation share change from June 2025 to June 2026?</button>
+          <button type="button">Compare coal and hydro generation after the monsoon.</button>
+          <button type="button">Show monthly coking and non-coking coal imports in 2024-25.</button>
+          <button type="button">Which Indian ports handled the most coal imports?</button>
+          <button type="button">Which countries supplied India’s coal imports?</button>
+          <button type="button">Show coking coal consumption by steel plant and hot-metal output.</button>
+          <button type="button">How much domestic coal was used by power, cement and sponge iron?</button>
+        </div>
+        <div class="coal-analysis-grid">
+          <article id="coal-analysis-overview" class="coal-analysis-panel coal-analysis-wide" data-analysis-panel="overview supply trade">
+            <header><div><span>SUPPLY BALANCE</span><h3>Production vs coal imports</h3></div><small>Financial year · million tonnes</small></header>
+            <div id="coal-production-imports-chart" class="coal-live-chart"></div>
+          </article>
+          <article class="coal-analysis-panel" data-analysis-panel="overview supply">
+            <header><div><span>YEAR-ON-YEAR</span><h3>Annual change in production and imports</h3></div><small>Percent</small></header>
+            <div id="coal-yoy-chart" class="coal-live-chart"></div>
+          </article>
+          <article class="coal-analysis-panel" data-analysis-panel="overview stocks">
+            <header><div><span>SUPPLY CHAIN</span><h3>Off-take and pit-head closing stock</h3></div><small>Financial year · million tonnes</small></header>
+            <div id="coal-stock-offtake-chart" class="coal-live-chart"></div>
+          </article>
+          <article class="coal-analysis-panel" data-analysis-panel="overview trade">
+            <header><div><span>IMPORT MIX</span><h3>Coking vs non-coking coal imports</h3></div><small>Financial year · million tonnes</small></header>
+            <div id="coal-import-mix-chart" class="coal-live-chart"></div>
+          </article>
+          <article class="coal-analysis-panel coal-analysis-wide" data-analysis-panel="overview supply trade stocks">
+            <header><div><span>ANALYSIS</span><h3>Selected-period findings</h3></div><small>Association, not causation</small></header>
+            <div id="coal-analysis-findings" class="coal-findings"></div>
+          </article>
+          <article id="coal-analysis-table-panel" class="coal-analysis-panel coal-analysis-wide" data-analysis-panel="tables">
+            <header><div><span>OFFICIAL DATA</span><h3>India coal annual series</h3></div><small>Exact values · downloadable</small></header>
+            <div id="coal-analysis-table" class="coal-source-catalog"></div>
+          </article>
+        </div>
+        <div class="coal-surface-heading">
+          <div>
+            <span class="eyebrow">Verified map context</span>
+            <h2 id="coal-surface-title">India coal assets</h2>
+          </div>
+          <p>Operational metrics remain blank until uploaded.</p>
+        </div>
+        <div id="coal-assets-table" class="coal-assets-table"></div>
+        <div id="coal-assets-cards" class="coal-assets-cards" hidden></div>
+      </section>
+      <section id="npp-power-surface" class="npp-power-surface" hidden>
+        <div class="npp-source-bar">
+          <div>
+            <span>OFFICIAL SOURCE / NATIONAL POWER PORTAL</span>
+            <strong id="npp-freshness">Loading latest validated snapshot…</strong>
+          </div>
+          <button type="button" id="npp-refresh">Refresh from NPP</button>
+        </div>
+        <div class="npp-hero-grid">
+          <article class="npp-hero">
+            <span>Installed capacity</span>
+            <strong id="npp-installed-capacity">—</strong>
+            <small id="npp-reported-date">Source date unavailable</small>
+          </article>
+          <article class="npp-demand-hero">
+            <span>Daily demand met</span>
+            <strong id="npp-demand-met">—</strong>
+            <small id="npp-demand-date">Source date unavailable</small>
+          </article>
+        </div>
+        <div class="npp-grid">
+          <article><header><h3>All India status</h3><small>Category-wise capacity status</small></header><div id="npp-status-chart" class="npp-chart"></div></article>
+          <article><header><h3>Category-wise installed capacity</h3><small>Thermal, hydro, nuclear and renewables</small></header><div id="npp-category-chart" class="npp-chart"></div></article>
+          <article><header><h3>Sector-wise installed capacity</h3><small>Central, state and private sector</small></header><div id="npp-sector-chart" class="npp-chart"></div></article>
+          <article><header><h3>Daily demand — All India</h3><small>Requirement, met and reported deficit</small></header><div id="npp-demand-chart" class="npp-chart"></div></article>
+          <article><header><h3>Daily generation summary</h3><small id="npp-generation-period">Actual, programme and prior-year actual · MU</small></header><div id="npp-daily-generation-chart" class="npp-chart"></div></article>
+          <article><header><h3>Coal stock availability</h3><small id="npp-coal-stock-period">Generating-station counts by stock-cover days</small></header><div id="npp-coal-stock-chart" class="npp-chart"></div></article>
+          <article><header><h3>Cumulative generation</h3><small id="npp-cumulative-period">Financial-year-to-date actuals · MU</small></header><div id="npp-cumulative-generation-chart" class="npp-chart"></div></article>
+          <article><header><h3>Sector-wise PLF</h3><small id="npp-plf-period">Thermal and nuclear · actual %</small></header><div id="npp-sector-plf-chart" class="npp-chart"></div></article>
+          <article class="npp-wide"><header><h3>Growth of installed capacity of India</h3><small>Historical NPP series; electricity-consumption history excluded</small></header><div id="npp-history-chart" class="npp-history-chart"></div></article>
+        </div>
+        <p id="npp-quality-note" class="npp-quality-note">Values display only after category and sector totals reconcile to the NPP installed-capacity headline.</p>
+      </section>
+      <div class="map-topbar">
+        <div class="map-status"><span></span><strong id="map-status">Loading ports…</strong></div>
+        <div class="map-tools" aria-label="Map display controls">
+          <label>
+            <span>Map skin</span>
+            <select id="map-skin">
+              <option value="light" selected>HRP light</option>
+              <option value="nautical">Ocean chart</option>
+              <option value="satellite">Satellite</option>
+              <option value="dark">Dark</option>
+            </select>
+          </label>
+          <button type="button" id="fit-world" class="map-button" title="Fit world">World view</button>
         </div>
       </div>
-      <div id="view-chat" class="view">
-        <div id="chat-messages" class="chat-messages"></div>
-        <div class="chat-input-row">
-          <label class="chk"><input type="checkbox" id="use-local-llm" /> Local LLM</label>
-          <input type="text" id="local-llm-url" placeholder="http://localhost:1234/v1" style="display:none" />
-          <input type="text" id="chat-input" placeholder="Ask about capacity, ports, routes…" />
-          <button id="btn-send" class="btn btn-teal">Send</button>
-        </div>
+      <div id="loading-indicator" class="loading-indicator" hidden>Loading layer…</div>
+      <aside id="port-card" class="port-card" aria-hidden="true">
+        <button id="close-port-card" class="close-button" aria-label="Close port details">×</button>
+        <div id="port-card-content"></div>
+      </aside>
+      <div class="map-key">
+        <span><i class="port-key"></i>Port</span>
+        <span><i class="asset-key"></i>Selected asset</span>
+        <span><i class="ais-key"></i>Live AIS vessel</span>
+        <span class="weather-key-item" hidden><i class="weather-key"></i>Coastal weather</span>
+        <span><i class="route-key"></i>Voyage route</span>
       </div>
     </main>
   </div>
-  <div id="upload-modal" class="modal hidden">
-    <div class="modal-card">
-      <h2>Upload data</h2>
-      <p>Excel, CSV or JSON</p>
-      <input type="file" id="file-input" accept=".xlsx,.xls,.csv,.json" />
-      <p id="upload-status"></p>
-      <div class="modal-actions">
-        <button id="btn-cancel-upload" class="btn btn-ghost">Cancel</button>
-        <button id="btn-do-upload" class="btn btn-orange">Upload</button>
-      </div>
-    </div>
-  </div>
+
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-  <script src="/static/js/app.js"></script>
-  <script src="/static/js/app-map.js"></script>
+  <script src="/static/js/app.js?v=20260731-26"></script>
 </body>
 </html>

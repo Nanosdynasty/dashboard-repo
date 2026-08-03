@@ -1,0 +1,1245 @@
+{
+  "generated_at": "2026-07-31T08:54:28+00:00",
+  "sources": [
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-1-indian-coal-economy-overview-2",
+      "title": "Coal Directory chapter 1: Indian coal economy overview",
+      "dataset_type": "production",
+      "sheet_name": "2.1",
+      "rows": 35,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap1.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-1-indian-coal-economy-overview-2",
+      "title": "Coal Directory chapter 1: Indian coal economy overview",
+      "dataset_type": "production",
+      "sheet_name": "2.2",
+      "rows": 75,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap1.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-1-indian-coal-economy-overview-2",
+      "title": "Coal Directory chapter 1: Indian coal economy overview",
+      "dataset_type": "production",
+      "sheet_name": "2.3",
+      "rows": 272,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap1.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-1-indian-coal-economy-overview-2",
+      "title": "Coal Directory chapter 1: Indian coal economy overview",
+      "dataset_type": "production",
+      "sheet_name": "2.4",
+      "rows": 35,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap1.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-1-indian-coal-economy-overview-2",
+      "title": "Coal Directory chapter 1: Indian coal economy overview",
+      "dataset_type": "production",
+      "sheet_name": "2.4 _Revised",
+      "rows": 20,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap1.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-1-indian-coal-economy-overview-2",
+      "title": "Coal Directory chapter 1: Indian coal economy overview",
+      "dataset_type": "production",
+      "sheet_name": "2.5",
+      "rows": 182,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap1.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-1-indian-coal-economy-overview-2",
+      "title": "Coal Directory chapter 1: Indian coal economy overview",
+      "dataset_type": "production",
+      "sheet_name": "2.6",
+      "rows": 71,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap1.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-1-indian-coal-economy-overview-2",
+      "title": "Coal Directory chapter 1: Indian coal economy overview",
+      "dataset_type": "production",
+      "sheet_name": "2.7",
+      "rows": 283,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap1.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-1-indian-coal-economy-overview-2",
+      "title": "Coal Directory chapter 1: Indian coal economy overview",
+      "dataset_type": "production",
+      "sheet_name": "2.8",
+      "rows": 94,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap1.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-1-indian-coal-economy-overview-2",
+      "title": "Coal Directory chapter 1: Indian coal economy overview",
+      "dataset_type": "production",
+      "sheet_name": "2.9 ",
+      "rows": 157,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap1.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-2-coal-and-lignite-resources-3",
+      "title": "Coal Directory chapter 2: Coal and lignite resources",
+      "dataset_type": "production",
+      "sheet_name": "ST6",
+      "rows": 77,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap2.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-2-coal-and-lignite-resources-3",
+      "title": "Coal Directory chapter 2: Coal and lignite resources",
+      "dataset_type": "production",
+      "sheet_name": "DT10",
+      "rows": 57,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap2.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-2-coal-and-lignite-resources-3",
+      "title": "Coal Directory chapter 2: Coal and lignite resources",
+      "dataset_type": "production",
+      "sheet_name": "PT1",
+      "rows": 15,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap2.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-2-coal-and-lignite-resources-3",
+      "title": "Coal Directory chapter 2: Coal and lignite resources",
+      "dataset_type": "production",
+      "sheet_name": "PT2",
+      "rows": 17,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap2.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-2-coal-and-lignite-resources-3",
+      "title": "Coal Directory chapter 2: Coal and lignite resources",
+      "dataset_type": "production",
+      "sheet_name": "PT3",
+      "rows": 15,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap2.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-2-coal-and-lignite-resources-3",
+      "title": "Coal Directory chapter 2: Coal and lignite resources",
+      "dataset_type": "production",
+      "sheet_name": "PT4",
+      "rows": 25,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap2.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-2-coal-and-lignite-resources-3",
+      "title": "Coal Directory chapter 2: Coal and lignite resources",
+      "dataset_type": "production",
+      "sheet_name": "PT5",
+      "rows": 26,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap2.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-2-coal-and-lignite-resources-3",
+      "title": "Coal Directory chapter 2: Coal and lignite resources",
+      "dataset_type": "production",
+      "sheet_name": "PT6",
+      "rows": 23,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap2.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-2-coal-and-lignite-resources-3",
+      "title": "Coal Directory chapter 2: Coal and lignite resources",
+      "dataset_type": "production",
+      "sheet_name": "PT7",
+      "rows": 18,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap2.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-2-coal-and-lignite-resources-3",
+      "title": "Coal Directory chapter 2: Coal and lignite resources",
+      "dataset_type": "production",
+      "sheet_name": "PT8",
+      "rows": 22,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap2.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-2-coal-and-lignite-resources-3",
+      "title": "Coal Directory chapter 2: Coal and lignite resources",
+      "dataset_type": "production",
+      "sheet_name": "PT9",
+      "rows": 55,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap2.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-2-coal-and-lignite-resources-3",
+      "title": "Coal Directory chapter 2: Coal and lignite resources",
+      "dataset_type": "production",
+      "sheet_name": "PT10",
+      "rows": 28,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap2.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-2-coal-and-lignite-resources-3",
+      "title": "Coal Directory chapter 2: Coal and lignite resources",
+      "dataset_type": "production",
+      "sheet_name": "PT6-7_Revised",
+      "rows": 99,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap2.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-2-coal-and-lignite-resources-3",
+      "title": "Coal Directory chapter 2: Coal and lignite resources",
+      "dataset_type": "production",
+      "sheet_name": "PT11",
+      "rows": 57,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap2.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-2-coal-and-lignite-resources-3",
+      "title": "Coal Directory chapter 2: Coal and lignite resources",
+      "dataset_type": "production",
+      "sheet_name": "PT12",
+      "rows": 82,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap2.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-2-coal-and-lignite-resources-3",
+      "title": "Coal Directory chapter 2: Coal and lignite resources",
+      "dataset_type": "production",
+      "sheet_name": "PT13",
+      "rows": 23,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap2.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-2-coal-and-lignite-resources-3",
+      "title": "Coal Directory chapter 2: Coal and lignite resources",
+      "dataset_type": "production",
+      "sheet_name": "PT14.zero",
+      "rows": 207,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap2.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-2-coal-and-lignite-resources-3",
+      "title": "Coal Directory chapter 2: Coal and lignite resources",
+      "dataset_type": "production",
+      "sheet_name": "PT14 & 14a",
+      "rows": 21,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap2.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-2-coal-and-lignite-resources-3",
+      "title": "Coal Directory chapter 2: Coal and lignite resources",
+      "dataset_type": "production",
+      "sheet_name": "PT15",
+      "rows": 56,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap2.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-2-coal-and-lignite-resources-3",
+      "title": "Coal Directory chapter 2: Coal and lignite resources",
+      "dataset_type": "production",
+      "sheet_name": "PT16",
+      "rows": 56,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap2.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-2-coal-and-lignite-resources-3",
+      "title": "Coal Directory chapter 2: Coal and lignite resources",
+      "dataset_type": "production",
+      "sheet_name": "PT17",
+      "rows": 34,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap2.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-2-coal-and-lignite-resources-3",
+      "title": "Coal Directory chapter 2: Coal and lignite resources",
+      "dataset_type": "production",
+      "sheet_name": "PT14_Revised",
+      "rows": 169,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap2.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-2-coal-and-lignite-resources-3",
+      "title": "Coal Directory chapter 2: Coal and lignite resources",
+      "dataset_type": "production",
+      "sheet_name": "PT18",
+      "rows": 35,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap2.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-2-coal-and-lignite-resources-3",
+      "title": "Coal Directory chapter 2: Coal and lignite resources",
+      "dataset_type": "production",
+      "sheet_name": "PT19",
+      "rows": 16,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap2.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-2-coal-and-lignite-resources-3",
+      "title": "Coal Directory chapter 2: Coal and lignite resources",
+      "dataset_type": "production",
+      "sheet_name": "PT20",
+      "rows": 59,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap2.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-2-coal-and-lignite-resources-3",
+      "title": "Coal Directory chapter 2: Coal and lignite resources",
+      "dataset_type": "production",
+      "sheet_name": "PT21",
+      "rows": 57,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap2.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-2-coal-and-lignite-resources-3",
+      "title": "Coal Directory chapter 2: Coal and lignite resources",
+      "dataset_type": "production",
+      "sheet_name": "PT22",
+      "rows": 59,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap2.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-2-coal-and-lignite-resources-3",
+      "title": "Coal Directory chapter 2: Coal and lignite resources",
+      "dataset_type": "production",
+      "sheet_name": "PT23",
+      "rows": 15,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap2.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-2-coal-and-lignite-resources-3",
+      "title": "Coal Directory chapter 2: Coal and lignite resources",
+      "dataset_type": "production",
+      "sheet_name": "PT24",
+      "rows": 39,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap2.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-2-coal-and-lignite-resources-3",
+      "title": "Coal Directory chapter 2: Coal and lignite resources",
+      "dataset_type": "production",
+      "sheet_name": "PT25",
+      "rows": 17,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap2.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-2-coal-and-lignite-resources-3",
+      "title": "Coal Directory chapter 2: Coal and lignite resources",
+      "dataset_type": "production",
+      "sheet_name": "PT26",
+      "rows": 64,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap2.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-2-coal-and-lignite-resources-3",
+      "title": "Coal Directory chapter 2: Coal and lignite resources",
+      "dataset_type": "production",
+      "sheet_name": "PT27",
+      "rows": 30,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap2.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-2-coal-and-lignite-resources-3",
+      "title": "Coal Directory chapter 2: Coal and lignite resources",
+      "dataset_type": "production",
+      "sheet_name": "PT28",
+      "rows": 30,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap2.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-3-production-productivity-and-overburden-4",
+      "title": "Coal Directory chapter 3: Production, productivity and overburden",
+      "dataset_type": "production",
+      "sheet_name": "srl no",
+      "rows": 7,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap3.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-3-production-productivity-and-overburden-4",
+      "title": "Coal Directory chapter 3: Production, productivity and overburden",
+      "dataset_type": "production",
+      "sheet_name": "dt1",
+      "rows": 15,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap3.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-3-production-productivity-and-overburden-4",
+      "title": "Coal Directory chapter 3: Production, productivity and overburden",
+      "dataset_type": "production",
+      "sheet_name": "dt2",
+      "rows": 16,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap3.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-3-production-productivity-and-overburden-4",
+      "title": "Coal Directory chapter 3: Production, productivity and overburden",
+      "dataset_type": "production",
+      "sheet_name": "dt3",
+      "rows": 15,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap3.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-3-production-productivity-and-overburden-4",
+      "title": "Coal Directory chapter 3: Production, productivity and overburden",
+      "dataset_type": "production",
+      "sheet_name": "dt4",
+      "rows": 22,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap3.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-3-production-productivity-and-overburden-4",
+      "title": "Coal Directory chapter 3: Production, productivity and overburden",
+      "dataset_type": "production",
+      "sheet_name": "dt5",
+      "rows": 22,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap3.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-3-production-productivity-and-overburden-4",
+      "title": "Coal Directory chapter 3: Production, productivity and overburden",
+      "dataset_type": "production",
+      "sheet_name": "dt6",
+      "rows": 19,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap3.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-3-production-productivity-and-overburden-4",
+      "title": "Coal Directory chapter 3: Production, productivity and overburden",
+      "dataset_type": "production",
+      "sheet_name": "dt7",
+      "rows": 80,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap3.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-3-production-productivity-and-overburden-4",
+      "title": "Coal Directory chapter 3: Production, productivity and overburden",
+      "dataset_type": "production",
+      "sheet_name": "dt8",
+      "rows": 28,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap3.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-3-production-productivity-and-overburden-4",
+      "title": "Coal Directory chapter 3: Production, productivity and overburden",
+      "dataset_type": "production",
+      "sheet_name": "dt9",
+      "rows": 68,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap3.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-3-production-productivity-and-overburden-4",
+      "title": "Coal Directory chapter 3: Production, productivity and overburden",
+      "dataset_type": "production",
+      "sheet_name": "dt10",
+      "rows": 76,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap3.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-3-production-productivity-and-overburden-4",
+      "title": "Coal Directory chapter 3: Production, productivity and overburden",
+      "dataset_type": "production",
+      "sheet_name": "dt11",
+      "rows": 59,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap3.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-3-production-productivity-and-overburden-4",
+      "title": "Coal Directory chapter 3: Production, productivity and overburden",
+      "dataset_type": "production",
+      "sheet_name": "dt12",
+      "rows": 56,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap3.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-3-production-productivity-and-overburden-4",
+      "title": "Coal Directory chapter 3: Production, productivity and overburden",
+      "dataset_type": "production",
+      "sheet_name": "dt13XX",
+      "rows": 196,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap3.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-3-production-productivity-and-overburden-4",
+      "title": "Coal Directory chapter 3: Production, productivity and overburden",
+      "dataset_type": "production",
+      "sheet_name": "dt13",
+      "rows": 54,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap3.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-3-production-productivity-and-overburden-4",
+      "title": "Coal Directory chapter 3: Production, productivity and overburden",
+      "dataset_type": "production",
+      "sheet_name": "dt14",
+      "rows": 55,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap3.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-3-production-productivity-and-overburden-4",
+      "title": "Coal Directory chapter 3: Production, productivity and overburden",
+      "dataset_type": "production",
+      "sheet_name": "dt15",
+      "rows": 34,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap3.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-3-production-productivity-and-overburden-4",
+      "title": "Coal Directory chapter 3: Production, productivity and overburden",
+      "dataset_type": "production",
+      "sheet_name": "dt16",
+      "rows": 38,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap3.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-3-production-productivity-and-overburden-4",
+      "title": "Coal Directory chapter 3: Production, productivity and overburden",
+      "dataset_type": "production",
+      "sheet_name": "dt17",
+      "rows": 68,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap3.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-3-production-productivity-and-overburden-4",
+      "title": "Coal Directory chapter 3: Production, productivity and overburden",
+      "dataset_type": "production",
+      "sheet_name": "dt18",
+      "rows": 25,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap3.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-3-production-productivity-and-overburden-4",
+      "title": "Coal Directory chapter 3: Production, productivity and overburden",
+      "dataset_type": "production",
+      "sheet_name": "dt19",
+      "rows": 54,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap3.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-3-production-productivity-and-overburden-4",
+      "title": "Coal Directory chapter 3: Production, productivity and overburden",
+      "dataset_type": "production",
+      "sheet_name": "dt20",
+      "rows": 54,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap3.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-3-production-productivity-and-overburden-4",
+      "title": "Coal Directory chapter 3: Production, productivity and overburden",
+      "dataset_type": "production",
+      "sheet_name": "dt21",
+      "rows": 31,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap3.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-3-production-productivity-and-overburden-4",
+      "title": "Coal Directory chapter 3: Production, productivity and overburden",
+      "dataset_type": "production",
+      "sheet_name": "dt22",
+      "rows": 14,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap3.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-3-production-productivity-and-overburden-4",
+      "title": "Coal Directory chapter 3: Production, productivity and overburden",
+      "dataset_type": "production",
+      "sheet_name": "dt23",
+      "rows": 40,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap3.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-3-production-productivity-and-overburden-4",
+      "title": "Coal Directory chapter 3: Production, productivity and overburden",
+      "dataset_type": "production",
+      "sheet_name": "dt24",
+      "rows": 81,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap3.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-3-production-productivity-and-overburden-4",
+      "title": "Coal Directory chapter 3: Production, productivity and overburden",
+      "dataset_type": "production",
+      "sheet_name": "dt25",
+      "rows": 35,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap3.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-3-production-productivity-and-overburden-4",
+      "title": "Coal Directory chapter 3: Production, productivity and overburden",
+      "dataset_type": "production",
+      "sheet_name": "dt26",
+      "rows": 14,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap3.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-3-production-productivity-and-overburden-4",
+      "title": "Coal Directory chapter 3: Production, productivity and overburden",
+      "dataset_type": "production",
+      "sheet_name": "dt27",
+      "rows": 39,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap3.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-3-production-productivity-and-overburden-4",
+      "title": "Coal Directory chapter 3: Production, productivity and overburden",
+      "dataset_type": "production",
+      "sheet_name": "dt28",
+      "rows": 16,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap3.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-3-production-productivity-and-overburden-4",
+      "title": "Coal Directory chapter 3: Production, productivity and overburden",
+      "dataset_type": "production",
+      "sheet_name": "dt29",
+      "rows": 17,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap3.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-3-production-productivity-and-overburden-4",
+      "title": "Coal Directory chapter 3: Production, productivity and overburden",
+      "dataset_type": "production",
+      "sheet_name": "dt30",
+      "rows": 49,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap3.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-3-production-productivity-and-overburden-4",
+      "title": "Coal Directory chapter 3: Production, productivity and overburden",
+      "dataset_type": "production",
+      "sheet_name": "dt31",
+      "rows": 48,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap3.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-3-production-productivity-and-overburden-4",
+      "title": "Coal Directory chapter 3: Production, productivity and overburden",
+      "dataset_type": "production",
+      "sheet_name": "PT32",
+      "rows": 30,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap3.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-3-production-productivity-and-overburden-4",
+      "title": "Coal Directory chapter 3: Production, productivity and overburden",
+      "dataset_type": "production",
+      "sheet_name": "PT33",
+      "rows": 30,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap3.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-4-dispatch-and-off-take-5",
+      "title": "Coal Directory chapter 4: Dispatch and off-take",
+      "dataset_type": "power_use",
+      "sheet_name": "chart 5.1 & 2del",
+      "rows": 16,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap4.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-4-dispatch-and-off-take-5",
+      "title": "Coal Directory chapter 4: Dispatch and off-take",
+      "dataset_type": "power_use",
+      "sheet_name": "ST1",
+      "rows": 15,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap4.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-4-dispatch-and-off-take-5",
+      "title": "Coal Directory chapter 4: Dispatch and off-take",
+      "dataset_type": "power_use",
+      "sheet_name": "ST2",
+      "rows": 17,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap4.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-4-dispatch-and-off-take-5",
+      "title": "Coal Directory chapter 4: Dispatch and off-take",
+      "dataset_type": "power_use",
+      "sheet_name": "ST3",
+      "rows": 21,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap4.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-4-dispatch-and-off-take-5",
+      "title": "Coal Directory chapter 4: Dispatch and off-take",
+      "dataset_type": "power_use",
+      "sheet_name": "ST4",
+      "rows": 18,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap4.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-4-dispatch-and-off-take-5",
+      "title": "Coal Directory chapter 4: Dispatch and off-take",
+      "dataset_type": "power_use",
+      "sheet_name": "ST5",
+      "rows": 44,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap4.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-4-dispatch-and-off-take-5",
+      "title": "Coal Directory chapter 4: Dispatch and off-take",
+      "dataset_type": "power_use",
+      "sheet_name": "ST4-5_Revised",
+      "rows": 91,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap4.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-4-dispatch-and-off-take-5",
+      "title": "Coal Directory chapter 4: Dispatch and off-take",
+      "dataset_type": "power_use",
+      "sheet_name": "ST6",
+      "rows": 30,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap4.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-4-dispatch-and-off-take-5",
+      "title": "Coal Directory chapter 4: Dispatch and off-take",
+      "dataset_type": "power_use",
+      "sheet_name": "ST7",
+      "rows": 59,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap4.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-4-dispatch-and-off-take-5",
+      "title": "Coal Directory chapter 4: Dispatch and off-take",
+      "dataset_type": "power_use",
+      "sheet_name": "ST8",
+      "rows": 82,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap4.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-4-dispatch-and-off-take-5",
+      "title": "Coal Directory chapter 4: Dispatch and off-take",
+      "dataset_type": "power_use",
+      "sheet_name": "ST9",
+      "rows": 64,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap4.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-4-dispatch-and-off-take-5",
+      "title": "Coal Directory chapter 4: Dispatch and off-take",
+      "dataset_type": "power_use",
+      "sheet_name": "ST10",
+      "rows": 14,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap4.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-5-pit-head-closing-stock-6",
+      "title": "Coal Directory chapter 5: Pit-head closing stock",
+      "dataset_type": "power_stocks",
+      "sheet_name": "6.1",
+      "rows": 23,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap5.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-5-pit-head-closing-stock-6",
+      "title": "Coal Directory chapter 5: Pit-head closing stock",
+      "dataset_type": "power_stocks",
+      "sheet_name": "6.2",
+      "rows": 23,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap5.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-5-pit-head-closing-stock-6",
+      "title": "Coal Directory chapter 5: Pit-head closing stock",
+      "dataset_type": "power_stocks",
+      "sheet_name": "6.3",
+      "rows": 76,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap5.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-5-pit-head-closing-stock-6",
+      "title": "Coal Directory chapter 5: Pit-head closing stock",
+      "dataset_type": "power_stocks",
+      "sheet_name": "6.4",
+      "rows": 76,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap5.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-5-pit-head-closing-stock-6",
+      "title": "Coal Directory chapter 5: Pit-head closing stock",
+      "dataset_type": "power_stocks",
+      "sheet_name": "6.5 & 6.6",
+      "rows": 49,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap5.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-5-pit-head-closing-stock-6",
+      "title": "Coal Directory chapter 5: Pit-head closing stock",
+      "dataset_type": "power_stocks",
+      "sheet_name": "6.6-royalty-original",
+      "rows": 31,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap5.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-5-pit-head-closing-stock-6",
+      "title": "Coal Directory chapter 5: Pit-head closing stock",
+      "dataset_type": "power_stocks",
+      "sheet_name": "6.6",
+      "rows": 25,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap5.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-5-pit-head-closing-stock-6",
+      "title": "Coal Directory chapter 5: Pit-head closing stock",
+      "dataset_type": "power_stocks",
+      "sheet_name": "6.7 & 6.8",
+      "rows": 47,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap5.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-5-pit-head-closing-stock-6",
+      "title": "Coal Directory chapter 5: Pit-head closing stock",
+      "dataset_type": "power_stocks",
+      "sheet_name": "6.8",
+      "rows": 23,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap5.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-5-pit-head-closing-stock-6",
+      "title": "Coal Directory chapter 5: Pit-head closing stock",
+      "dataset_type": "power_stocks",
+      "sheet_name": "6.9",
+      "rows": 22,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap5.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-5-pit-head-closing-stock-6",
+      "title": "Coal Directory chapter 5: Pit-head closing stock",
+      "dataset_type": "power_stocks",
+      "sheet_name": "6.10",
+      "rows": 22,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap5.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-5-pit-head-closing-stock-6",
+      "title": "Coal Directory chapter 5: Pit-head closing stock",
+      "dataset_type": "power_stocks",
+      "sheet_name": "Sheet1",
+      "rows": 0,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap5.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-6-coal-washeries-7",
+      "title": "Coal Directory chapter 6: Coal washeries",
+      "dataset_type": "coal_supply_chain",
+      "sheet_name": "tab1a2021-link_m",
+      "rows": 525,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap6.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-6-coal-washeries-7",
+      "title": "Coal Directory chapter 6: Coal washeries",
+      "dataset_type": "coal_supply_chain",
+      "sheet_name": "tab1a22-23-final",
+      "rows": 255,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap6.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-6-coal-washeries-7",
+      "title": "Coal Directory chapter 6: Coal washeries",
+      "dataset_type": "coal_supply_chain",
+      "sheet_name": "tab1a23-24-final",
+      "rows": 265,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap6.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-6-coal-washeries-7",
+      "title": "Coal Directory chapter 6: Coal washeries",
+      "dataset_type": "coal_supply_chain",
+      "sheet_name": "tb7.1",
+      "rows": 57,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap6.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-6-coal-washeries-7",
+      "title": "Coal Directory chapter 6: Coal washeries",
+      "dataset_type": "coal_supply_chain",
+      "sheet_name": "tb7.2&3",
+      "rows": 28,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap6.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-6-coal-washeries-7",
+      "title": "Coal Directory chapter 6: Coal washeries",
+      "dataset_type": "coal_supply_chain",
+      "sheet_name": "tb7.4-5&6",
+      "rows": 36,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap6.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-6-coal-washeries-7",
+      "title": "Coal Directory chapter 6: Coal washeries",
+      "dataset_type": "coal_supply_chain",
+      "sheet_name": "tb7.7",
+      "rows": 38,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap6.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-7-import-and-export-8",
+      "title": "Coal Directory chapter 7: Import and export",
+      "dataset_type": "imports",
+      "sheet_name": "TB8.1",
+      "rows": 25,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap7.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-7-import-and-export-8",
+      "title": "Coal Directory chapter 7: Import and export",
+      "dataset_type": "imports",
+      "sheet_name": "TB8.2",
+      "rows": 25,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap7.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-7-import-and-export-8",
+      "title": "Coal Directory chapter 7: Import and export",
+      "dataset_type": "imports",
+      "sheet_name": "TB8.3",
+      "rows": 47,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap7.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-7-import-and-export-8",
+      "title": "Coal Directory chapter 7: Import and export",
+      "dataset_type": "imports",
+      "sheet_name": "TB8.4",
+      "rows": 59,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap7.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-7-import-and-export-8",
+      "title": "Coal Directory chapter 7: Import and export",
+      "dataset_type": "imports",
+      "sheet_name": "TB8.5",
+      "rows": 73,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap7.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-7-import-and-export-8",
+      "title": "Coal Directory chapter 7: Import and export",
+      "dataset_type": "imports",
+      "sheet_name": "TB8.6",
+      "rows": 55,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap7.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-7-import-and-export-8",
+      "title": "Coal Directory chapter 7: Import and export",
+      "dataset_type": "imports",
+      "sheet_name": "TB8.7",
+      "rows": 31,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap7.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-7-import-and-export-8",
+      "title": "Coal Directory chapter 7: Import and export",
+      "dataset_type": "imports",
+      "sheet_name": "TB8.8",
+      "rows": 31,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap7.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-7-import-and-export-8",
+      "title": "Coal Directory chapter 7: Import and export",
+      "dataset_type": "imports",
+      "sheet_name": "Month 2023-24",
+      "rows": 16,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap7.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-7-import-and-export-8",
+      "title": "Coal Directory chapter 7: Import and export",
+      "dataset_type": "imports",
+      "sheet_name": "word calculation",
+      "rows": 61,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap7.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-8-coal-prices-and-royalties-9",
+      "title": "Coal Directory chapter 8: Coal prices and royalties",
+      "dataset_type": "coal_prices",
+      "sheet_name": "t8.1",
+      "rows": 41,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap8.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-8-coal-prices-and-royalties-9",
+      "title": "Coal Directory chapter 8: Coal prices and royalties",
+      "dataset_type": "coal_prices",
+      "sheet_name": "t8.2",
+      "rows": 54,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap8.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-8-coal-prices-and-royalties-9",
+      "title": "Coal Directory chapter 8: Coal prices and royalties",
+      "dataset_type": "coal_prices",
+      "sheet_name": "TB9.1",
+      "rows": 36,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap8.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-8-coal-prices-and-royalties-9",
+      "title": "Coal Directory chapter 8: Coal prices and royalties",
+      "dataset_type": "coal_prices",
+      "sheet_name": "TB9.2",
+      "rows": 86,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap8.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-8-coal-prices-and-royalties-9",
+      "title": "Coal Directory chapter 8: Coal prices and royalties",
+      "dataset_type": "coal_prices",
+      "sheet_name": "COMMITEE",
+      "rows": 81,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap8.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-8-coal-prices-and-royalties-9",
+      "title": "Coal Directory chapter 8: Coal prices and royalties",
+      "dataset_type": "coal_prices",
+      "sheet_name": "T8.1ckg ws",
+      "rows": 30,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap8.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-8-coal-prices-and-royalties-9",
+      "title": "Coal Directory chapter 8: Coal prices and royalties",
+      "dataset_type": "coal_prices",
+      "sheet_name": "t8.2 ckg ws per",
+      "rows": 66,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap8.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-8-coal-prices-and-royalties-9",
+      "title": "Coal Directory chapter 8: Coal prices and royalties",
+      "dataset_type": "coal_prices",
+      "sheet_name": "t 8.3 NC W FR",
+      "rows": 51,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap8.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-8-coal-prices-and-royalties-9",
+      "title": "Coal Directory chapter 8: Coal prices and royalties",
+      "dataset_type": "coal_prices",
+      "sheet_name": "t 8.4 NC W DATA ",
+      "rows": 99,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap8.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-8-coal-prices-and-royalties-9",
+      "title": "Coal Directory chapter 8: Coal prices and royalties",
+      "dataset_type": "coal_prices",
+      "sheet_name": "t 8.5 POWER capacity",
+      "rows": 49,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap8.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-8-coal-prices-and-royalties-9",
+      "title": "Coal Directory chapter 8: Coal prices and royalties",
+      "dataset_type": "coal_prices",
+      "sheet_name": "t8.6 ele generation",
+      "rows": 44,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap8.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-8-coal-prices-and-royalties-9",
+      "title": "Coal Directory chapter 8: Coal prices and royalties",
+      "dataset_type": "coal_prices",
+      "sheet_name": "t 8.7 cement ",
+      "rows": 29,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap8.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-8-coal-prices-and-royalties-9",
+      "title": "Coal Directory chapter 8: Coal prices and royalties",
+      "dataset_type": "coal_prices",
+      "sheet_name": "8.8cement ",
+      "rows": 27,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap8.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-9-employment-and-safety-10",
+      "title": "Coal Directory chapter 9: Employment and safety",
+      "dataset_type": "source_reference",
+      "sheet_name": "TB10.1",
+      "rows": 34,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap9.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-9-employment-and-safety-10",
+      "title": "Coal Directory chapter 9: Employment and safety",
+      "dataset_type": "source_reference",
+      "sheet_name": "TB10.2 ",
+      "rows": 25,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap9.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-9-employment-and-safety-10",
+      "title": "Coal Directory chapter 9: Employment and safety",
+      "dataset_type": "source_reference",
+      "sheet_name": "TB10.3",
+      "rows": 15,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap9.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-9-employment-and-safety-10",
+      "title": "Coal Directory chapter 9: Employment and safety",
+      "dataset_type": "source_reference",
+      "sheet_name": "TB10.4",
+      "rows": 31,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap9.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-9-employment-and-safety-10",
+      "title": "Coal Directory chapter 9: Employment and safety",
+      "dataset_type": "source_reference",
+      "sheet_name": "TB10.5",
+      "rows": 134,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap9.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-9-employment-and-safety-10",
+      "title": "Coal Directory chapter 9: Employment and safety",
+      "dataset_type": "source_reference",
+      "sheet_name": "TB 10.6",
+      "rows": 60,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap9.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-9-employment-and-safety-10",
+      "title": "Coal Directory chapter 9: Employment and safety",
+      "dataset_type": "source_reference",
+      "sheet_name": "TB 10.7",
+      "rows": 124,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap9.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-9-employment-and-safety-10",
+      "title": "Coal Directory chapter 9: Employment and safety",
+      "dataset_type": "source_reference",
+      "sheet_name": "TB10.8",
+      "rows": 10,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap9.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-1-indian-coal-economy-overview-11",
+      "title": "Coal Directory chapter 1: Indian coal economy overview",
+      "dataset_type": "production",
+      "sheet_name": "T11.1 Reserve",
+      "rows": 55,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap10.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-1-indian-coal-economy-overview-11",
+      "title": "Coal Directory chapter 1: Indian coal economy overview",
+      "dataset_type": "production",
+      "sheet_name": "T11.2Production",
+      "rows": 61,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap10.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-1-indian-coal-economy-overview-11",
+      "title": "Coal Directory chapter 1: Indian coal economy overview",
+      "dataset_type": "production",
+      "sheet_name": "T11.3- Coal Offtake",
+      "rows": 112,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap10.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-1-indian-coal-economy-overview-11",
+      "title": "Coal Directory chapter 1: Indian coal economy overview",
+      "dataset_type": "production",
+      "sheet_name": "T11.4-Prices",
+      "rows": 53,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap10.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-1-indian-coal-economy-overview-11",
+      "title": "Coal Directory chapter 1: Indian coal economy overview",
+      "dataset_type": "production",
+      "sheet_name": "T-11.5-Prdn",
+      "rows": 91,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap10.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-1-indian-coal-economy-overview-11",
+      "title": "Coal Directory chapter 1: Indian coal economy overview",
+      "dataset_type": "production",
+      "sheet_name": "T-11.6-Imp",
+      "rows": 127,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap10.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-1-indian-coal-economy-overview-11",
+      "title": "Coal Directory chapter 1: Indian coal economy overview",
+      "dataset_type": "production",
+      "sheet_name": "T-11.7-Exp",
+      "rows": 83,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap10.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-1-indian-coal-economy-overview-11",
+      "title": "Coal Directory chapter 1: Indian coal economy overview",
+      "dataset_type": "production",
+      "sheet_name": "T-11.8-Supply",
+      "rows": 135,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap10.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-1-indian-coal-economy-overview-11",
+      "title": "Coal Directory chapter 1: Indian coal economy overview",
+      "dataset_type": "production",
+      "sheet_name": "Sheet1",
+      "rows": 21,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap10.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-1-indian-coal-economy-overview-12",
+      "title": "Coal Directory chapter 1: Indian coal economy overview",
+      "dataset_type": "production",
+      "sheet_name": "tab12.1 ",
+      "rows": 72,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap11.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-1-indian-coal-economy-overview-12",
+      "title": "Coal Directory chapter 1: Indian coal economy overview",
+      "dataset_type": "production",
+      "sheet_name": "tab12.2",
+      "rows": 19,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap11.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-1-indian-coal-economy-overview-12",
+      "title": "Coal Directory chapter 1: Indian coal economy overview",
+      "dataset_type": "production",
+      "sheet_name": "tab12.3-5",
+      "rows": 34,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap11.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-1-indian-coal-economy-overview-12",
+      "title": "Coal Directory chapter 1: Indian coal economy overview",
+      "dataset_type": "production",
+      "sheet_name": "Tab12.6",
+      "rows": 55,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap11.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-1-indian-coal-economy-overview-12",
+      "title": "Coal Directory chapter 1: Indian coal economy overview",
+      "dataset_type": "production",
+      "sheet_name": "tab12.7",
+      "rows": 13,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap11.xlsx"
+    },
+    {
+      "source_id": "coal-statistics-coal-directory-chapter-1-indian-coal-economy-overview-12",
+      "title": "Coal Directory chapter 1: Indian coal economy overview",
+      "dataset_type": "production",
+      "sheet_name": "tab12.8 & 9",
+      "rows": 21,
+      "source_url": "https://coal.gov.in/sites/default/files/2024-03/cdchap11.xlsx"
+    }
+  ]
+}

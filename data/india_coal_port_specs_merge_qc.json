@@ -1,0 +1,272 @@
+{
+  "validation": {
+    "valid": true,
+    "errors": [],
+    "warnings": [],
+    "counts": {
+      "master_ports": 31,
+      "patch_ports": 31,
+      "facilities": 41,
+      "commodity_flows": 26,
+      "sources": 25,
+      "conflicts_and_gaps": 31,
+      "resolved_conflicts": 7,
+      "unresolved_conflicts": 24
+    }
+  },
+  "merge": {
+    "ports_changed": 22,
+    "changed_fields_by_asset": {
+      "india-coal-terminal-bedi-port": [
+        "official_website",
+        "documented_berth_count",
+        "specification_note",
+        "data_caveat",
+        "source_as_of",
+        "berth_facilities",
+        "dry_bulk_facilities",
+        "commodity_flows",
+        "sources"
+      ],
+      "india-coal-terminal-dahej-port": [
+        "official_website",
+        "max_documented_draft_m",
+        "documented_berth_count",
+        "documented_dry_bulk_berth_count",
+        "specification_note",
+        "data_caveat",
+        "source_as_of",
+        "berth_facilities",
+        "dry_bulk_facilities",
+        "commodity_flows",
+        "sources"
+      ],
+      "india-coal-terminal-dhamra-port": [
+        "documented_berth_count",
+        "documented_dry_bulk_berth_count",
+        "specification_note",
+        "data_caveat",
+        "source_as_of",
+        "berth_facilities",
+        "dry_bulk_facilities",
+        "commodity_flows",
+        "sources"
+      ],
+      "india-coal-terminal-gangavaram-port": [
+        "documented_berth_count",
+        "documented_dry_bulk_berth_count",
+        "specification_note",
+        "data_caveat",
+        "berth_facilities",
+        "dry_bulk_facilities",
+        "commodity_flows",
+        "sources"
+      ],
+      "india-coal-terminal-hazira-port-essar": [
+        "official_website",
+        "max_documented_draft_m",
+        "documented_berth_count",
+        "documented_dry_bulk_berth_count",
+        "specification_note",
+        "data_caveat",
+        "source_as_of",
+        "berth_facilities",
+        "dry_bulk_facilities",
+        "sources"
+      ],
+      "india-coal-terminal-jaigarh-port": [
+        "specification_note",
+        "berth_facilities",
+        "dry_bulk_facilities",
+        "sources"
+      ],
+      "india-coal-terminal-jsw-dharamtar-port": [
+        "max_documented_draft_m",
+        "documented_dry_bulk_berth_count",
+        "specification_note",
+        "data_caveat",
+        "commodity_flows",
+        "sources"
+      ],
+      "india-coal-terminal-kakinada-port": [
+        "specification_note",
+        "data_caveat",
+        "source_as_of",
+        "berth_facilities",
+        "dry_bulk_facilities",
+        "commodity_flows",
+        "sources"
+      ],
+      "india-coal-terminal-karaikal-port": [
+        "official_website",
+        "max_documented_draft_m",
+        "documented_berth_count",
+        "port_capacity_mtpa",
+        "specification_note",
+        "data_caveat",
+        "source_as_of",
+        "commodity_flows",
+        "sources"
+      ],
+      "india-coal-terminal-kattupalli-port": [
+        "max_documented_draft_m",
+        "documented_berth_count",
+        "documented_dry_bulk_berth_count",
+        "specification_note",
+        "data_caveat",
+        "source_as_of",
+        "berth_facilities",
+        "dry_bulk_facilities",
+        "sources"
+      ],
+      "india-coal-terminal-krishnapatnam-port": [
+        "documented_berth_count",
+        "specification_note",
+        "data_caveat",
+        "commodity_flows",
+        "sources"
+      ],
+      "india-coal-terminal-magadalla-port": [
+        "official_website",
+        "max_documented_draft_m",
+        "specification_note",
+        "data_caveat",
+        "source_as_of",
+        "berth_facilities",
+        "dry_bulk_facilities",
+        "commodity_flows",
+        "sources"
+      ],
+      "india-coal-terminal-muldwarka-port": [
+        "documented_berth_count",
+        "specification_note",
+        "data_caveat",
+        "commodity_flows",
+        "sources"
+      ],
+      "india-coal-terminal-mundra-port": [
+        "max_documented_draft_m",
+        "documented_berth_count",
+        "documented_dry_bulk_berth_count",
+        "specification_note",
+        "data_caveat",
+        "source_as_of",
+        "berth_facilities",
+        "dry_bulk_facilities",
+        "commodity_flows",
+        "sources"
+      ],
+      "india-coal-terminal-navlakhi-port": [
+        "official_website",
+        "documented_berth_count",
+        "documented_dry_bulk_berth_count",
+        "specification_note",
+        "data_caveat",
+        "source_as_of",
+        "berth_facilities",
+        "dry_bulk_facilities",
+        "commodity_flows",
+        "sources"
+      ],
+      "india-coal-terminal-okha-port": [
+        "official_website",
+        "max_documented_draft_m",
+        "documented_berth_count",
+        "documented_dry_bulk_berth_count",
+        "specification_note",
+        "data_caveat",
+        "source_as_of",
+        "berth_facilities",
+        "dry_bulk_facilities",
+        "commodity_flows",
+        "sources"
+      ],
+      "india-coal-terminal-pipavav-port": [
+        "official_website",
+        "max_documented_draft_m",
+        "documented_berth_count",
+        "documented_dry_bulk_berth_count",
+        "specification_note",
+        "data_caveat",
+        "berth_facilities",
+        "dry_bulk_facilities",
+        "commodity_flows",
+        "sources"
+      ],
+      "india-coal-terminal-porbandar-port": [
+        "official_website",
+        "max_documented_draft_m",
+        "documented_berth_count",
+        "documented_dry_bulk_berth_count",
+        "specification_note",
+        "data_caveat",
+        "source_as_of",
+        "berth_facilities",
+        "dry_bulk_facilities",
+        "sources"
+      ],
+      "india-coal-terminal-salaya-port": [
+        "official_port_name",
+        "official_website",
+        "max_documented_draft_m",
+        "documented_berth_count",
+        "documented_dry_bulk_berth_count",
+        "port_capacity_mtpa",
+        "terminal_operating_capacity_mtpa",
+        "specification_note",
+        "data_caveat",
+        "source_as_of",
+        "berth_facilities",
+        "dry_bulk_facilities",
+        "sources"
+      ],
+      "india-coal-terminal-sikka-port": [
+        "official_website",
+        "documented_berth_count",
+        "documented_dry_bulk_berth_count",
+        "specification_note",
+        "data_caveat",
+        "source_as_of",
+        "berth_facilities",
+        "dry_bulk_facilities",
+        "commodity_flows",
+        "sources"
+      ],
+      "india-coal-terminal-trombay-port": [
+        "official_website",
+        "documented_berth_count",
+        "documented_dry_bulk_berth_count",
+        "specification_note",
+        "data_caveat",
+        "berth_facilities",
+        "dry_bulk_facilities",
+        "sources"
+      ],
+      "india-coal-terminal-tuna-tekra-port": [
+        "official_website",
+        "max_documented_draft_m",
+        "documented_berth_count",
+        "documented_dry_bulk_berth_count",
+        "specification_note",
+        "data_caveat",
+        "source_as_of",
+        "berth_facilities",
+        "dry_bulk_facilities",
+        "sources"
+      ]
+    },
+    "quality_after_merge": {
+      "asset_rows": 31,
+      "unique_asset_ids": 31,
+      "matched_to_port_master": 31,
+      "with_official_website": 31,
+      "with_documented_draft": 23,
+      "with_documented_berths": 30,
+      "with_documented_dry_bulk_berths": 23,
+      "with_port_capacity": 21,
+      "with_latest_traffic": 31,
+      "with_facility_records": 27,
+      "with_commodity_flow_records": 15
+    }
+  }
+}
