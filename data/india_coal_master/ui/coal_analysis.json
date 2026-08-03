@@ -1,0 +1,2069 @@
+{
+  "status": "ready",
+  "grain": "India financial year",
+  "unit": "million tonnes",
+  "annual": [
+    {
+      "period": "2015-16",
+      "production_mt": 639.23,
+      "offtake_mt": 632.7780000000002,
+      "closing_stock_mt": 65.36099999999999,
+      "coking_imports_mt": 44.56116899999999,
+      "non_coking_imports_mt": 159.388092,
+      "total_imports_mt": 203.94926099999998,
+      "production_yoy_pct": null,
+      "imports_yoy_pct": null,
+      "import_dependency_pct": 24.188125874694634
+    },
+    {
+      "period": "2016-17",
+      "production_mt": 657.868,
+      "offtake_mt": 646.267,
+      "closing_stock_mt": 76.889,
+      "coking_imports_mt": 41.64378599999999,
+      "non_coking_imports_mt": 149.36482399999997,
+      "total_imports_mt": 191.00860999999998,
+      "production_yoy_pct": 2.915695446083566,
+      "imports_yoy_pct": -6.345034513265535,
+      "import_dependency_pct": 22.501339741237537
+    },
+    {
+      "period": "2017-18",
+      "production_mt": 675.4,
+      "offtake_mt": 690.246,
+      "closing_stock_mt": 62.036000000000016,
+      "coking_imports_mt": 47.003246999999995,
+      "non_coking_imports_mt": 161.24541599999995,
+      "total_imports_mt": 208.24866299999994,
+      "production_yoy_pct": 2.6649723044744444,
+      "imports_yoy_pct": 9.025798889379889,
+      "import_dependency_pct": 23.56690749613005
+    },
+    {
+      "period": "2018-19",
+      "production_mt": 728.718,
+      "offtake_mt": 733.0140000000001,
+      "closing_stock_mt": 57.64,
+      "coking_imports_mt": 51.837682999999984,
+      "non_coking_imports_mt": 183.51032999999993,
+      "total_imports_mt": 235.34801299999992,
+      "production_yoy_pct": 7.894284868226231,
+      "imports_yoy_pct": 13.012976702760382,
+      "import_dependency_pct": 24.412022602854684
+    },
+    {
+      "period": "2019-20",
+      "production_mt": 730.874,
+      "offtake_mt": 707.387,
+      "closing_stock_mt": 81.432,
+      "coking_imports_mt": 51.832753999999994,
+      "non_coking_imports_mt": 196.703827,
+      "total_imports_mt": 248.53658099999998,
+      "production_yoy_pct": 0.29586204814482375,
+      "imports_yoy_pct": 5.603857806949097,
+      "import_dependency_pct": 25.376138038680224
+    },
+    {
+      "period": "2020-21",
+      "production_mt": 716.0830000000001,
+      "offtake_mt": 691.081,
+      "closing_stock_mt": 109.06,
+      "coking_imports_mt": 51.19754099999998,
+      "non_coking_imports_mt": 164.053574,
+      "total_imports_mt": 215.25111499999997,
+      "production_yoy_pct": -2.023741438332727,
+      "imports_yoy_pct": -13.392582237220052,
+      "import_dependency_pct": 23.112126092363745
+    },
+    {
+      "period": "2021-22",
+      "production_mt": 778.2102463,
+      "offtake_mt": 819.40460755,
+      "closing_stock_mt": 68.901415286,
+      "coking_imports_mt": 57.122654088999994,
+      "non_coking_imports_mt": 151.504206256,
+      "total_imports_mt": 208.626860345,
+      "production_yoy_pct": 8.675983971131828,
+      "imports_yoy_pct": -3.0774542817118333,
+      "import_dependency_pct": 21.1409622662325
+    },
+    {
+      "period": "2022-23",
+      "production_mt": 893.1909999999999,
+      "offtake_mt": 877.549,
+      "closing_stock_mt": 84.41600000000003,
+      "coking_imports_mt": 56.052667424,
+      "non_coking_imports_mt": 181.615240977,
+      "total_imports_mt": 237.667908401,
+      "production_yoy_pct": 14.775024390474911,
+      "imports_yoy_pct": 13.92009063836539,
+      "import_dependency_pct": 21.016583645881624
+    },
+    {
+      "period": "2023-24",
+      "production_mt": 997.826,
+      "offtake_mt": 973.168,
+      "closing_stock_mt": 108.746,
+      "coking_imports_mt": 58.813397967,
+      "non_coking_imports_mt": 205.717967744,
+      "total_imports_mt": 264.531365711,
+      "production_yoy_pct": 11.7147396245596,
+      "imports_yoy_pct": 11.30293841130423,
+      "import_dependency_pct": 20.95534694820808
+    },
+    {
+      "period": "2024-25",
+      "production_mt": 1047.522594346,
+      "offtake_mt": 1025.4813095104382,
+      "closing_stock_mt": 130.88716244456333,
+      "coking_imports_mt": 57.576296334,
+      "non_coking_imports_mt": 186.046023609,
+      "total_imports_mt": 243.622319943,
+      "production_yoy_pct": 4.980487013367063,
+      "imports_yoy_pct": -7.904183956333954,
+      "import_dependency_pct": 18.868704608355795
+    }
+  ],
+  "monthly_production": [
+    {
+      "period": "2024-04",
+      "financial_year": "2024-25",
+      "coking_coal_mt": 5.343524284999998,
+      "non_coking_coal_mt": 73.36059368400004,
+      "total_raw_coal_mt": 78.70411796900004,
+      "lignite_mt": 4.034683083,
+      "status": "final"
+    },
+    {
+      "period": "2024-05",
+      "financial_year": "2024-25",
+      "coking_coal_mt": 5.565154244,
+      "non_coking_coal_mt": 78.40297150699998,
+      "total_raw_coal_mt": 83.96812575099997,
+      "lignite_mt": 4.306275081,
+      "status": "final"
+    },
+    {
+      "period": "2024-06",
+      "financial_year": "2024-25",
+      "coking_coal_mt": 5.098288643000001,
+      "non_coking_coal_mt": 79.70343052700002,
+      "total_raw_coal_mt": 84.80171917000003,
+      "lignite_mt": 3.9783551040000003,
+      "status": "final"
+    },
+    {
+      "period": "2024-07",
+      "financial_year": "2024-25",
+      "coking_coal_mt": 4.726478932000001,
+      "non_coking_coal_mt": 69.23779800600002,
+      "total_raw_coal_mt": 73.96427693800003,
+      "lignite_mt": 3.41790507,
+      "status": "final"
+    },
+    {
+      "period": "2024-08",
+      "financial_year": "2024-25",
+      "coking_coal_mt": 4.022309563,
+      "non_coking_coal_mt": 58.633853092,
+      "total_raw_coal_mt": 62.656162655,
+      "lignite_mt": 3.2740395300000005,
+      "status": "final"
+    },
+    {
+      "period": "2024-09",
+      "financial_year": "2024-25",
+      "coking_coal_mt": 4.128109127,
+      "non_coking_coal_mt": 64.730624495,
+      "total_raw_coal_mt": 68.858733622,
+      "lignite_mt": 3.2812644,
+      "status": "final"
+    },
+    {
+      "period": "2024-10",
+      "financial_year": "2024-25",
+      "coking_coal_mt": 4.77936094,
+      "non_coking_coal_mt": 79.81944204199999,
+      "total_raw_coal_mt": 84.598802982,
+      "lignite_mt": 3.0457089910000006,
+      "status": "final"
+    },
+    {
+      "period": "2024-11",
+      "financial_year": "2024-25",
+      "coking_coal_mt": 5.499200373999998,
+      "non_coking_coal_mt": 85.26319234600005,
+      "total_raw_coal_mt": 90.76239272000005,
+      "lignite_mt": 3.2212226910000004,
+      "status": "final"
+    },
+    {
+      "period": "2024-12",
+      "financial_year": "2024-25",
+      "coking_coal_mt": 5.810618188,
+      "non_coking_coal_mt": 92.14169894100003,
+      "total_raw_coal_mt": 97.95231712900004,
+      "lignite_mt": 3.594108436,
+      "status": "final"
+    }
+  ],
+  "monthly_imports": [
+    {
+      "period": "2024-04",
+      "financial_year": "2024-25",
+      "coking_coal_mt": 5.166710889,
+      "non_coking_coal_mt": 17.249779713,
+      "total_coal_mt": 22.416490602,
+      "coke_products_mt": 0.304931593,
+      "status": "final"
+    },
+    {
+      "period": "2024-05",
+      "financial_year": "2024-25",
+      "coking_coal_mt": 5.26945568,
+      "non_coking_coal_mt": 19.765537281,
+      "total_coal_mt": 25.034992961,
+      "coke_products_mt": 0.410818209,
+      "status": "final"
+    },
+    {
+      "period": "2024-06",
+      "financial_year": "2024-25",
+      "coking_coal_mt": 5.385576091,
+      "non_coking_coal_mt": 15.700523294,
+      "total_coal_mt": 21.086099385,
+      "coke_products_mt": 0.518895382,
+      "status": "final"
+    },
+    {
+      "period": "2024-07",
+      "financial_year": "2024-25",
+      "coking_coal_mt": 4.92033156,
+      "non_coking_coal_mt": 16.88831907,
+      "total_coal_mt": 21.808650630000002,
+      "coke_products_mt": 0.476155559,
+      "status": "final"
+    },
+    {
+      "period": "2024-08",
+      "financial_year": "2024-25",
+      "coking_coal_mt": 5.436825722,
+      "non_coking_coal_mt": 15.252231064,
+      "total_coal_mt": 20.689056786000002,
+      "coke_products_mt": 0.392829894,
+      "status": "final"
+    },
+    {
+      "period": "2024-09",
+      "financial_year": "2024-25",
+      "coking_coal_mt": 4.115564922,
+      "non_coking_coal_mt": 14.211221752,
+      "total_coal_mt": 18.326786674,
+      "coke_products_mt": 0.352170851,
+      "status": "final"
+    },
+    {
+      "period": "2024-10",
+      "financial_year": "2024-25",
+      "coking_coal_mt": 4.126972223,
+      "non_coking_coal_mt": 15.738609568,
+      "total_coal_mt": 19.865581791,
+      "coke_products_mt": 0.358887908,
+      "status": "final"
+    },
+    {
+      "period": "2024-11",
+      "financial_year": "2024-25",
+      "coking_coal_mt": 4.778011978,
+      "non_coking_coal_mt": 13.960201203,
+      "total_coal_mt": 18.738213181,
+      "coke_products_mt": 0.600765848,
+      "status": "final"
+    },
+    {
+      "period": "2024-12",
+      "financial_year": "2024-25",
+      "coking_coal_mt": 3.534744187,
+      "non_coking_coal_mt": 11.754948722,
+      "total_coal_mt": 15.289692909,
+      "coke_products_mt": 0.503846478,
+      "status": "final"
+    },
+    {
+      "period": "2025-01",
+      "financial_year": "2024-25",
+      "coking_coal_mt": 6.070874619,
+      "non_coking_coal_mt": 16.137748315,
+      "total_coal_mt": 22.208622933999997,
+      "coke_products_mt": 0.363424157,
+      "status": "final"
+    },
+    {
+      "period": "2025-02",
+      "financial_year": "2024-25",
+      "coking_coal_mt": 4.359653206,
+      "non_coking_coal_mt": 13.500483058,
+      "total_coal_mt": 17.860136264,
+      "coke_products_mt": 0.132675218,
+      "status": "final"
+    },
+    {
+      "period": "2025-03",
+      "financial_year": "2024-25",
+      "coking_coal_mt": 4.411575257,
+      "non_coking_coal_mt": 15.886420569,
+      "total_coal_mt": 20.297995826,
+      "coke_products_mt": 0.46481358,
+      "status": "final"
+    }
+  ],
+  "imports_by_origin": [
+    {
+      "origin_country": "Indonesia",
+      "period": "2024-25",
+      "coking_coal_mt": 2.06850481,
+      "non_coking_coal_mt": 102.582652149,
+      "total_coal_mt": 104.65115695899999,
+      "coke_products_mt": 2.2041816229999998,
+      "status": "final"
+    },
+    {
+      "origin_country": "Australia",
+      "period": "2024-25",
+      "coking_coal_mt": 24.583794282,
+      "non_coking_coal_mt": 8.451273949,
+      "total_coal_mt": 33.035068231,
+      "coke_products_mt": 0.201577022,
+      "status": "final"
+    },
+    {
+      "origin_country": "South Africa",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 31.133411657,
+      "total_coal_mt": 31.133411657,
+      "coke_products_mt": 0.00139489,
+      "status": "final"
+    },
+    {
+      "origin_country": "Russia",
+      "period": "2024-25",
+      "coking_coal_mt": 8.209359227,
+      "non_coking_coal_mt": 15.443271827,
+      "total_coal_mt": 23.652631054,
+      "coke_products_mt": 0.15830512600000002,
+      "status": "final"
+    },
+    {
+      "origin_country": "U S A",
+      "period": "2024-25",
+      "coking_coal_mt": 8.477409175,
+      "non_coking_coal_mt": 11.663709299999999,
+      "total_coal_mt": 20.141118475,
+      "coke_products_mt": 2.7076e-05,
+      "status": "final"
+    },
+    {
+      "origin_country": "Singapore",
+      "period": "2024-25",
+      "coking_coal_mt": 5.697508786,
+      "non_coking_coal_mt": 5.270557177000001,
+      "total_coal_mt": 10.968065963,
+      "coke_products_mt": 0.10797375,
+      "status": "final"
+    },
+    {
+      "origin_country": "Mozambique",
+      "period": "2024-25",
+      "coking_coal_mt": 3.428729459,
+      "non_coking_coal_mt": 4.933593860999999,
+      "total_coal_mt": 8.36232332,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "origin_country": "U Arab Emts",
+      "period": "2024-25",
+      "coking_coal_mt": 2.031568678,
+      "non_coking_coal_mt": 1.181417792,
+      "total_coal_mt": 3.21298647,
+      "coke_products_mt": 0.12448142000000001,
+      "status": "final"
+    },
+    {
+      "origin_country": "Colombia",
+      "period": "2024-25",
+      "coking_coal_mt": 0.08217744,
+      "non_coking_coal_mt": 2.31687792,
+      "total_coal_mt": 2.39905536,
+      "coke_products_mt": 0.177929451,
+      "status": "final"
+    },
+    {
+      "origin_country": "Switzerland",
+      "period": "2024-25",
+      "coking_coal_mt": 0.8486836,
+      "non_coking_coal_mt": 1.244907393,
+      "total_coal_mt": 2.0935909930000003,
+      "coke_products_mt": 0.19906778,
+      "status": "final"
+    },
+    {
+      "origin_country": "Canada",
+      "period": "2024-25",
+      "coking_coal_mt": 1.7474485,
+      "non_coking_coal_mt": 1.8e-05,
+      "total_coal_mt": 1.7474665,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "origin_country": "Hong Kong",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0.785093796,
+      "total_coal_mt": 0.785093796,
+      "coke_products_mt": 0.005197188,
+      "status": "final"
+    },
+    {
+      "origin_country": "Tanzania Rep",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0.50163678,
+      "total_coal_mt": 0.50163678,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "origin_country": "China P Rp",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0.270988655,
+      "total_coal_mt": 0.270988655,
+      "coke_products_mt": 0.5058195320000001,
+      "status": "final"
+    },
+    {
+      "origin_country": "New Zealand",
+      "period": "2024-25",
+      "coking_coal_mt": 0.264442,
+      "non_coking_coal_mt": 0,
+      "total_coal_mt": 0.264442,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "origin_country": "Kazakhstan",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0.164823,
+      "total_coal_mt": 0.164823,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "origin_country": "U K",
+      "period": "2024-25",
+      "coking_coal_mt": 0.120170377,
+      "non_coking_coal_mt": 0.00015030000000000002,
+      "total_coal_mt": 0.120320677,
+      "coke_products_mt": 0.00054906,
+      "status": "final"
+    },
+    {
+      "origin_country": "Netherland",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0.072240694,
+      "total_coal_mt": 0.072240694,
+      "coke_products_mt": 6.14e-05,
+      "status": "final"
+    },
+    {
+      "origin_country": "Saudi Arab",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0.0186814,
+      "total_coal_mt": 0.0186814,
+      "coke_products_mt": 0.00040186,
+      "status": "final"
+    },
+    {
+      "origin_country": "Morocco",
+      "period": "2024-25",
+      "coking_coal_mt": 0.0165,
+      "non_coking_coal_mt": 0,
+      "total_coal_mt": 0.0165,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "origin_country": "Baharain Is",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0.00508562,
+      "total_coal_mt": 0.00508562,
+      "coke_products_mt": 0.000748185,
+      "status": "final"
+    },
+    {
+      "origin_country": "Turkey",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0.003067221,
+      "total_coal_mt": 0.003067221,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "origin_country": "Oman",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0.001107216,
+      "total_coal_mt": 0.001107216,
+      "coke_products_mt": 0.00071985,
+      "status": "final"
+    },
+    {
+      "origin_country": "Germany",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0.0009611169999999999,
+      "total_coal_mt": 0.0009611169999999999,
+      "coke_products_mt": 0.000292359,
+      "status": "final"
+    },
+    {
+      "origin_country": "Vietnam Soc Rep",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0.000294,
+      "total_coal_mt": 0.000294,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "origin_country": "Croatia",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0.00018101,
+      "total_coal_mt": 0.00018101,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "origin_country": "Afghanistan",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 2.071e-05,
+      "total_coal_mt": 2.071e-05,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "origin_country": "Belgium",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 1.06e-06,
+      "total_coal_mt": 1.06e-06,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "origin_country": "Spain",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 5e-09,
+      "total_coal_mt": 5e-09,
+      "coke_products_mt": 0.070467,
+      "status": "final"
+    },
+    {
+      "origin_country": "Bhutan",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0,
+      "total_coal_mt": 0.0,
+      "coke_products_mt": 0.00010252,
+      "status": "final"
+    },
+    {
+      "origin_country": "Estonia",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0,
+      "total_coal_mt": 0.0,
+      "coke_products_mt": 0.00371823,
+      "status": "final"
+    },
+    {
+      "origin_country": "Finland",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0,
+      "total_coal_mt": 0.0,
+      "coke_products_mt": 0.000235132,
+      "status": "final"
+    },
+    {
+      "origin_country": "Japan",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0,
+      "total_coal_mt": 0.0,
+      "coke_products_mt": 0.395076,
+      "status": "final"
+    },
+    {
+      "origin_country": "Latvia",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0,
+      "total_coal_mt": 0.0,
+      "coke_products_mt": 0.011669224,
+      "status": "final"
+    },
+    {
+      "origin_country": "Lithuania",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0,
+      "total_coal_mt": 0.0,
+      "coke_products_mt": 0.005321184,
+      "status": "final"
+    },
+    {
+      "origin_country": "Malaysia",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0,
+      "total_coal_mt": 0.0,
+      "coke_products_mt": 7.5e-05,
+      "status": "final"
+    },
+    {
+      "origin_country": "Norway",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0,
+      "total_coal_mt": 0.0,
+      "coke_products_mt": 0.000494529,
+      "status": "final"
+    },
+    {
+      "origin_country": "Poland",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0,
+      "total_coal_mt": 0.0,
+      "coke_products_mt": 0.7030064859999999,
+      "status": "final"
+    },
+    {
+      "origin_country": "Qatar",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0,
+      "total_coal_mt": 0.0,
+      "coke_products_mt": 0.00127123,
+      "status": "final"
+    },
+    {
+      "origin_country": "Taiwan",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0,
+      "total_coal_mt": 0.0,
+      "coke_products_mt": 1.7e-07,
+      "status": "final"
+    },
+    {
+      "origin_country": "Unspecified",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0,
+      "total_coal_mt": 0.0,
+      "coke_products_mt": 5.04e-05,
+      "status": "final"
+    }
+  ],
+  "imports_by_port": [
+    {
+      "import_port": "Paradip Sea",
+      "period": "2024-25",
+      "coking_coal_mt": 11.555517501,
+      "non_coking_coal_mt": 9.262104751999999,
+      "total_coal_mt": 20.817622253,
+      "coke_products_mt": 0.779373742,
+      "status": "final"
+    },
+    {
+      "import_port": "Dhamra(Chandbali)",
+      "period": "2024-25",
+      "coking_coal_mt": 8.097202421,
+      "non_coking_coal_mt": 12.037702749,
+      "total_coal_mt": 20.13490517,
+      "coke_products_mt": 0.040263124,
+      "status": "final"
+    },
+    {
+      "import_port": "Krishnapatnam",
+      "period": "2024-25",
+      "coking_coal_mt": 3.904137017,
+      "non_coking_coal_mt": 15.312582411,
+      "total_coal_mt": 19.216719427999998,
+      "coke_products_mt": 0.323374,
+      "status": "final"
+    },
+    {
+      "import_port": "Sez Mundra",
+      "period": "2024-25",
+      "coking_coal_mt": 0.00400071,
+      "non_coking_coal_mt": 16.085826570000002,
+      "total_coal_mt": 16.08982728,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "import_port": "Visakhapatnam Sea",
+      "period": "2024-25",
+      "coking_coal_mt": 4.64239208,
+      "non_coking_coal_mt": 10.497512167000002,
+      "total_coal_mt": 15.139904247,
+      "coke_products_mt": 0.875610387,
+      "status": "final"
+    },
+    {
+      "import_port": "Mundra",
+      "period": "2024-25",
+      "coking_coal_mt": 0.38919587,
+      "non_coking_coal_mt": 13.719585202,
+      "total_coal_mt": 14.108781072,
+      "coke_products_mt": 0.00307906,
+      "status": "final"
+    },
+    {
+      "import_port": "Kolkata Sea",
+      "period": "2024-25",
+      "coking_coal_mt": 7.380559583,
+      "non_coking_coal_mt": 4.845559773,
+      "total_coal_mt": 12.226119356,
+      "coke_products_mt": 0.644604938,
+      "status": "final"
+    },
+    {
+      "import_port": "Kandla Sea",
+      "period": "2024-25",
+      "coking_coal_mt": 0.997284679,
+      "non_coking_coal_mt": 11.131616967,
+      "total_coal_mt": 12.128901646,
+      "coke_products_mt": 0.186261,
+      "status": "final"
+    },
+    {
+      "import_port": "Gangavaram Port",
+      "period": "2024-25",
+      "coking_coal_mt": 6.357393791,
+      "non_coking_coal_mt": 4.679379967,
+      "total_coal_mt": 11.036773757999999,
+      "coke_products_mt": 0.022,
+      "status": "final"
+    },
+    {
+      "import_port": "Jaigad",
+      "period": "2024-25",
+      "coking_coal_mt": 5.006051869,
+      "non_coking_coal_mt": 5.982782205,
+      "total_coal_mt": 10.988834074,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "import_port": "Magdalla Port Sea",
+      "period": "2024-25",
+      "coking_coal_mt": 0.529856,
+      "non_coking_coal_mt": 10.091483373,
+      "total_coal_mt": 10.621339373000001,
+      "coke_products_mt": 1.4667328499999999,
+      "status": "final"
+    },
+    {
+      "import_port": "Tuticorin Sea",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 9.066025,
+      "total_coal_mt": 9.066025,
+      "coke_products_mt": 0.000153,
+      "status": "final"
+    },
+    {
+      "import_port": "Ennore Sea",
+      "period": "2024-25",
+      "coking_coal_mt": 1.853452484,
+      "non_coking_coal_mt": 6.502171282,
+      "total_coal_mt": 8.355623766,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "import_port": "Hazira Port, Surat",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 8.344178,
+      "total_coal_mt": 8.344178,
+      "coke_products_mt": 2.5961e-05,
+      "status": "final"
+    },
+    {
+      "import_port": "Newmangalore Sea",
+      "period": "2024-25",
+      "coking_coal_mt": 0.830563258,
+      "non_coking_coal_mt": 7.076082396,
+      "total_coal_mt": 7.906645654,
+      "coke_products_mt": 0.197101,
+      "status": "final"
+    },
+    {
+      "import_port": "Dehej Sea",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 7.772266263,
+      "total_coal_mt": 7.772266263,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "import_port": "Marmagoa Sea",
+      "period": "2024-25",
+      "coking_coal_mt": 5.387781762,
+      "non_coking_coal_mt": 2.3266775600000003,
+      "total_coal_mt": 7.714459322000001,
+      "coke_products_mt": 0.097637,
+      "status": "final"
+    },
+    {
+      "import_port": "Navlakhi",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 7.293348,
+      "total_coal_mt": 7.293348,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "import_port": "Karikal",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 5.530659694,
+      "total_coal_mt": 5.530659694,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "import_port": "Salaya Port, Gujrat",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 4.424889562,
+      "total_coal_mt": 4.424889562,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "import_port": "Dharmatar Sea",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 3.142786,
+      "total_coal_mt": 3.142786,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "import_port": "Mumbai Sea",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 1.924727,
+      "total_coal_mt": 1.924727,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "import_port": "Bhavnagar",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 1.4893146419999999,
+      "total_coal_mt": 1.4893146419999999,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "import_port": "Nhava Sheva Sea",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 1.368141124,
+      "total_coal_mt": 1.368141124,
+      "coke_products_mt": 0.021535297999999998,
+      "status": "final"
+    },
+    {
+      "import_port": "Okha",
+      "period": "2024-25",
+      "coking_coal_mt": 0.057,
+      "non_coking_coal_mt": 1.1953428,
+      "total_coal_mt": 1.2523427999999999,
+      "coke_products_mt": 0.05186795,
+      "status": "final"
+    },
+    {
+      "import_port": "Kakinada Sea",
+      "period": "2024-25",
+      "coking_coal_mt": 0.420456,
+      "non_coking_coal_mt": 0.759184603,
+      "total_coal_mt": 1.179640603,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "import_port": "Sez Jamnagar (Reliance)",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 1.123159,
+      "total_coal_mt": 1.123159,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "import_port": "Gopalpur Port",
+      "period": "2024-25",
+      "coking_coal_mt": 0.087521,
+      "non_coking_coal_mt": 0.705931493,
+      "total_coal_mt": 0.793452493,
+      "coke_products_mt": 0.02,
+      "status": "final"
+    },
+    {
+      "import_port": "Porbandar",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0.507634,
+      "total_coal_mt": 0.507634,
+      "coke_products_mt": 0.0605,
+      "status": "final"
+    },
+    {
+      "import_port": "Bedi Sea",
+      "period": "2024-25",
+      "coking_coal_mt": 0.075925,
+      "non_coking_coal_mt": 0.36638145,
+      "total_coal_mt": 0.44230645,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "import_port": "Kodinar Sea",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0.28012,
+      "total_coal_mt": 0.28012,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "import_port": "Pipavab(Vicyor)",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0.239010177,
+      "total_coal_mt": 0.239010177,
+      "coke_products_mt": 0.0297,
+      "status": "final"
+    },
+    {
+      "import_port": "Jakhav",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0.180464,
+      "total_coal_mt": 0.180464,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "import_port": "Ranpar",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0.1707,
+      "total_coal_mt": 0.1707,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "import_port": "Adani Power Jharkhand Ltd Sez",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0.1608,
+      "total_coal_mt": 0.1608,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "import_port": "Revdanda",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0.142515,
+      "total_coal_mt": 0.142515,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "import_port": "Anrak Aluminium Sez, Vizag Dc",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0.094545,
+      "total_coal_mt": 0.094545,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "import_port": "Sikka",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0.08178259,
+      "total_coal_mt": 0.08178259,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "import_port": "Parri Infra Co Pvt Ltd",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0.0605,
+      "total_coal_mt": 0.0605,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "import_port": "Hetero Infra Sez Nakkapalli Ap",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0.053577,
+      "total_coal_mt": 0.053577,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "import_port": "Appiic Multi Prod Sez Vizag Dc",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0.005,
+      "total_coal_mt": 0.005,
+      "coke_products_mt": 0.054723,
+      "status": "final"
+    },
+    {
+      "import_port": "Htpl Kilaraipur Icd",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0.0036095,
+      "total_coal_mt": 0.0036095,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "import_port": "Chennai Sea",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0.0027199999999999998,
+      "total_coal_mt": 0.0027199999999999998,
+      "coke_products_mt": 0.004060477,
+      "status": "final"
+    },
+    {
+      "import_port": "Icd Ludhiana",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0.0016407099999999999,
+      "total_coal_mt": 0.0016407099999999999,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "import_port": "Icd Sahnewal, Grfl",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0.00150145,
+      "total_coal_mt": 0.00150145,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "import_port": "Concor Icd/Mmlp Khapri Nagpur",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0.00118984,
+      "total_coal_mt": 0.00118984,
+      "coke_products_mt": 0.000236305,
+      "status": "final"
+    },
+    {
+      "import_port": "Icd Sonipat",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0.00046721,
+      "total_coal_mt": 0.00046721,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "import_port": "Icd Kanakpura",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0.000464878,
+      "total_coal_mt": 0.000464878,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "import_port": "Concor Icd Naya Raipur",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0.000162,
+      "total_coal_mt": 0.000162,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "import_port": "Icd Sabarmati",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0.000108,
+      "total_coal_mt": 0.000108,
+      "coke_products_mt": 2e-05,
+      "status": "final"
+    },
+    {
+      "import_port": "Cochin Sea",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 7.83e-05,
+      "total_coal_mt": 7.83e-05,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "import_port": "Icd Bangalore",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 2.8e-05,
+      "total_coal_mt": 2.8e-05,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "import_port": "Bangalore Airport",
+      "period": "2024-25",
+      "coking_coal_mt": 4.455e-06,
+      "non_coking_coal_mt": 5.07e-07,
+      "total_coal_mt": 4.961999999999999e-06,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "import_port": "Kolkata Air",
+      "period": "2024-25",
+      "coking_coal_mt": 5.51e-07,
+      "non_coking_coal_mt": 2.3e-06,
+      "total_coal_mt": 2.851e-06,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "import_port": "Hyderabad Airport",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 4.66e-07,
+      "total_coal_mt": 4.66e-07,
+      "coke_products_mt": 2e-09,
+      "status": "final"
+    },
+    {
+      "import_port": "Chennai Air",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 4.43e-07,
+      "total_coal_mt": 4.43e-07,
+      "coke_products_mt": 7.2e-06,
+      "status": "final"
+    },
+    {
+      "import_port": "Ahmedabad Air Cargo Complex",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 2.28e-07,
+      "total_coal_mt": 2.28e-07,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "import_port": "Mumbai Air",
+      "period": "2024-25",
+      "coking_coal_mt": 1.83e-07,
+      "non_coking_coal_mt": 5e-09,
+      "total_coal_mt": 1.8800000000000002e-07,
+      "coke_products_mt": 9.63e-07,
+      "status": "final"
+    },
+    {
+      "import_port": "Delhi Air",
+      "period": "2024-25",
+      "coking_coal_mt": 1.2e-07,
+      "non_coking_coal_mt": 0,
+      "total_coal_mt": 1.2e-07,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "import_port": "Darranga (Rangia)",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0,
+      "total_coal_mt": 0.0,
+      "coke_products_mt": 3.103e-05,
+      "status": "final"
+    },
+    {
+      "import_port": "Icd Concor Jharsuguda",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0,
+      "total_coal_mt": 0.0,
+      "coke_products_mt": 0,
+      "status": "final"
+    },
+    {
+      "import_port": "Icd Jajpur",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0,
+      "total_coal_mt": 0.0,
+      "coke_products_mt": 0.000499,
+      "status": "final"
+    },
+    {
+      "import_port": "Icd Mandideep",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0,
+      "total_coal_mt": 0.0,
+      "coke_products_mt": 0.0002015,
+      "status": "final"
+    },
+    {
+      "import_port": "Icd Patli",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0,
+      "total_coal_mt": 0.0,
+      "coke_products_mt": 2.5e-05,
+      "status": "final"
+    },
+    {
+      "import_port": "Jaigaon",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0,
+      "total_coal_mt": 0.0,
+      "coke_products_mt": 0.00012189,
+      "status": "final"
+    },
+    {
+      "import_port": "Visakhapatnam Spl Economic Zon",
+      "period": "2024-25",
+      "coking_coal_mt": 0,
+      "non_coking_coal_mt": 0,
+      "total_coal_mt": 0.0,
+      "coke_products_mt": 0.000469,
+      "status": "final"
+    }
+  ],
+  "sector_offtake": [
+    {
+      "period": "2015-16",
+      "power_utility_mt": 483.54900000000004,
+      "power_captive_mt": 34.22,
+      "steel_direct_mt": 0.607,
+      "steel_coke_ovens_mt": 11.666,
+      "steel_boilers_mt": 0.249,
+      "cement_mt": 8.985000000000001,
+      "fertiliser_mt": 2.296,
+      "sponge_iron_mt": 7.762999999999999,
+      "other_metals_mt": 0.44,
+      "chemicals_mt": 0.325,
+      "pulp_paper_mt": 1.2109999999999999,
+      "textiles_mt": 0.267,
+      "bricks_mt": 0.074,
+      "other_mt": 80.79,
+      "total_offtake_mt": 632.7780000000001,
+      "status": "final"
+    },
+    {
+      "period": "2016-17",
+      "power_utility_mt": 508.36799999999994,
+      "power_captive_mt": 26.676,
+      "steel_direct_mt": 0.25,
+      "steel_coke_ovens_mt": 9.881,
+      "steel_boilers_mt": 0.205,
+      "cement_mt": 6.356,
+      "fertiliser_mt": 2.1350000000000002,
+      "sponge_iron_mt": 5.557,
+      "other_metals_mt": 5.038,
+      "chemicals_mt": 0.312,
+      "pulp_paper_mt": 1.181,
+      "textiles_mt": 0.243,
+      "bricks_mt": 0.098939,
+      "other_mt": 79.67699999999999,
+      "total_offtake_mt": 646.2669390000001,
+      "status": "final"
+    },
+    {
+      "period": "2017-18",
+      "power_utility_mt": 540.402,
+      "power_captive_mt": 45.086,
+      "steel_direct_mt": 5.6,
+      "steel_coke_ovens_mt": 5.474,
+      "steel_boilers_mt": 0.373,
+      "cement_mt": 7.708,
+      "fertiliser_mt": 1.883,
+      "sponge_iron_mt": 8.528,
+      "other_metals_mt": 0.8059999999999999,
+      "chemicals_mt": 0.277,
+      "pulp_paper_mt": 1.5100000000000002,
+      "textiles_mt": 0.238,
+      "bricks_mt": 0.115,
+      "other_mt": 72.003,
+      "total_offtake_mt": 690.2460000000004,
+      "status": "final"
+    },
+    {
+      "period": "2018-19",
+      "power_utility_mt": 592.9549999999999,
+      "power_captive_mt": 51.470000000000006,
+      "steel_direct_mt": 6.444,
+      "steel_coke_ovens_mt": 6.071,
+      "steel_boilers_mt": 0.298,
+      "cement_mt": 8.816,
+      "fertiliser_mt": 1.789,
+      "sponge_iron_mt": 12.234000000000002,
+      "other_metals_mt": 1.097,
+      "chemicals_mt": 0.251,
+      "pulp_paper_mt": 1.637,
+      "textiles_mt": 0.20400000000000001,
+      "bricks_mt": 0.093,
+      "other_mt": 49.434999999999995,
+      "total_offtake_mt": 733.0139999999998,
+      "status": "final"
+    },
+    {
+      "period": "2019-20",
+      "power_utility_mt": 572.1490000000001,
+      "power_captive_mt": 54.0,
+      "steel_direct_mt": 6.051,
+      "steel_coke_ovens_mt": 5.623,
+      "steel_boilers_mt": 0.234,
+      "cement_mt": 8.569,
+      "fertiliser_mt": 1.764,
+      "sponge_iron_mt": 10.529,
+      "other_metals_mt": 0.603,
+      "chemicals_mt": 0.209,
+      "pulp_paper_mt": 1.326,
+      "textiles_mt": 0.101,
+      "bricks_mt": 0.026000000000000002,
+      "other_mt": 45.992,
+      "total_offtake_mt": 707.3870000000001,
+      "status": "final"
+    },
+    {
+      "period": "2020-21",
+      "power_utility_mt": 547.494,
+      "power_captive_mt": 45.786,
+      "steel_direct_mt": 5.337,
+      "steel_coke_ovens_mt": 3.5380000000000003,
+      "steel_boilers_mt": 0.1,
+      "cement_mt": 6.753999999999999,
+      "fertiliser_mt": 1.5270000000000001,
+      "sponge_iron_mt": 9.565,
+      "other_metals_mt": 0.683,
+      "chemicals_mt": 0.158,
+      "pulp_paper_mt": 1.068,
+      "textiles_mt": 0.08,
+      "bricks_mt": 0.025,
+      "other_mt": 68.76899999999998,
+      "total_offtake_mt": 691.0810000000001,
+      "status": "final"
+    },
+    {
+      "period": "2021-22",
+      "power_utility_mt": 673.3501576450001,
+      "power_captive_mt": 36.699322085,
+      "steel_direct_mt": 4.25734,
+      "steel_coke_ovens_mt": 4.51602,
+      "steel_boilers_mt": 0.38595099999999993,
+      "cement_mt": 7.30637948,
+      "fertiliser_mt": 1.11059814,
+      "sponge_iron_mt": 9.023376515,
+      "other_metals_mt": 2.93282839,
+      "chemicals_mt": 0.196,
+      "pulp_paper_mt": 1.244,
+      "textiles_mt": 0.08,
+      "bricks_mt": 0.022701540000000003,
+      "other_mt": 78.08864886,
+      "total_offtake_mt": 819.4049546550002,
+      "status": "final"
+    },
+    {
+      "period": "2022-23",
+      "power_utility_mt": 735.1389999999997,
+      "power_captive_mt": 50.257000000000005,
+      "steel_direct_mt": 6.5649999999999995,
+      "steel_coke_ovens_mt": 6.417000000000001,
+      "steel_boilers_mt": 0.4,
+      "cement_mt": 9.309000000000001,
+      "fertiliser_mt": 0.662,
+      "sponge_iron_mt": 8.093,
+      "other_metals_mt": 1.159,
+      "chemicals_mt": 0.195,
+      "pulp_paper_mt": 1.2550000000000001,
+      "textiles_mt": 0.092,
+      "bricks_mt": 0.109,
+      "other_mt": 57.717,
+      "total_offtake_mt": 877.5489999999998,
+      "status": "final"
+    },
+    {
+      "period": "2023-24",
+      "power_utility_mt": 796.0860000000001,
+      "power_captive_mt": 63.250000000000014,
+      "steel_direct_mt": 8.78,
+      "steel_coke_ovens_mt": 8.068,
+      "steel_boilers_mt": 0.496,
+      "cement_mt": 9.163,
+      "fertiliser_mt": 0.7999999999999999,
+      "sponge_iron_mt": 11.965,
+      "other_metals_mt": 6.891,
+      "chemicals_mt": 0.197,
+      "pulp_paper_mt": 1.027,
+      "textiles_mt": 0.173,
+      "bricks_mt": 0.1,
+      "other_mt": 66.01299999999999,
+      "total_offtake_mt": 973.1680000000001,
+      "status": "final"
+    },
+    {
+      "period": "2024-25",
+      "power_utility_mt": 831.7864173124383,
+      "power_captive_mt": 70.15110095100005,
+      "steel_direct_mt": 2.6189050700000003,
+      "steel_coke_ovens_mt": 15.485575728999999,
+      "steel_boilers_mt": 0.49782150000000003,
+      "cement_mt": 8.928725840000013,
+      "fertiliser_mt": 1.0672524399999994,
+      "sponge_iron_mt": 12.23305945000001,
+      "other_metals_mt": 6.955452999999999,
+      "chemicals_mt": 0.20359867,
+      "pulp_paper_mt": 0.81399665,
+      "textiles_mt": 0.23201528000000005,
+      "bricks_mt": 0.0389937,
+      "other_mt": 74.32000461899996,
+      "total_offtake_mt": 1025.4813073804382,
+      "status": "final"
+    }
+  ],
+  "steel_coking_consumption": [
+    {
+      "steel_plant": "BSP",
+      "period": "2013-14",
+      "prime_coking_kt": 352.0,
+      "medium_coking_kt": 536.0,
+      "blendable_kt": 0.0,
+      "imported_coking_kt": 4029.0,
+      "total_coking_kt": 4917.0,
+      "hot_metal_kt": 5377.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "BSP",
+      "period": "2014-15",
+      "prime_coking_kt": 35.0,
+      "medium_coking_kt": 502.0,
+      "blendable_kt": 0.0,
+      "imported_coking_kt": 4287.0,
+      "total_coking_kt": 4824.0,
+      "hot_metal_kt": 5072.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "BSP",
+      "period": "2015-16",
+      "prime_coking_kt": 149.0,
+      "medium_coking_kt": 581.0,
+      "blendable_kt": 0.0,
+      "imported_coking_kt": 4305.0,
+      "total_coking_kt": 5035.0,
+      "hot_metal_kt": 5316.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "BSP",
+      "period": "2016-17",
+      "prime_coking_kt": 664.0,
+      "medium_coking_kt": 412.0,
+      "blendable_kt": 0.0,
+      "imported_coking_kt": 3767.0,
+      "total_coking_kt": 4843.0,
+      "hot_metal_kt": 5041.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "BSP",
+      "period": "2017-18",
+      "prime_coking_kt": 580.0,
+      "medium_coking_kt": 346.0,
+      "blendable_kt": 0.0,
+      "imported_coking_kt": 4403.0,
+      "total_coking_kt": 5329.0,
+      "hot_metal_kt": 4280.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "BSP",
+      "period": "2018-19",
+      "prime_coking_kt": 84.0,
+      "medium_coking_kt": 208.0,
+      "blendable_kt": 0.0,
+      "imported_coking_kt": 4506.0,
+      "total_coking_kt": 4798.0,
+      "hot_metal_kt": 4280.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "BSL",
+      "period": "2013-14",
+      "prime_coking_kt": 220.0,
+      "medium_coking_kt": 162.0,
+      "blendable_kt": 0.0,
+      "imported_coking_kt": 2438.0,
+      "total_coking_kt": 2820.0,
+      "hot_metal_kt": 4100.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "BSL",
+      "period": "2014-15",
+      "prime_coking_kt": 276.0,
+      "medium_coking_kt": 180.0,
+      "blendable_kt": 0.0,
+      "imported_coking_kt": 3155.0,
+      "total_coking_kt": 3611.0,
+      "hot_metal_kt": 4253.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "BSL",
+      "period": "2015-16",
+      "prime_coking_kt": 187.0,
+      "medium_coking_kt": 278.0,
+      "blendable_kt": 0.0,
+      "imported_coking_kt": 3148.0,
+      "total_coking_kt": 3613.0,
+      "hot_metal_kt": 3701.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "BSL",
+      "period": "2016-17",
+      "prime_coking_kt": 459.0,
+      "medium_coking_kt": 265.0,
+      "blendable_kt": 0.0,
+      "imported_coking_kt": 2532.0,
+      "total_coking_kt": 3256.0,
+      "hot_metal_kt": 3411.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "BSL",
+      "period": "2017-18",
+      "prime_coking_kt": 706.0,
+      "medium_coking_kt": 372.0,
+      "blendable_kt": 0.0,
+      "imported_coking_kt": 3505.0,
+      "total_coking_kt": 4583.0,
+      "hot_metal_kt": 4046.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "BSL",
+      "period": "2018-19",
+      "prime_coking_kt": 238.0,
+      "medium_coking_kt": 69.0,
+      "blendable_kt": 0.0,
+      "imported_coking_kt": 3182.0,
+      "total_coking_kt": 3489.0,
+      "hot_metal_kt": 4046.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "DSP",
+      "period": "2013-14",
+      "prime_coking_kt": 244.0,
+      "medium_coking_kt": 188.0,
+      "blendable_kt": 0.0,
+      "imported_coking_kt": 1508.0,
+      "total_coking_kt": 1940.0,
+      "hot_metal_kt": 2191.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "DSP",
+      "period": "2014-15",
+      "prime_coking_kt": 208.0,
+      "medium_coking_kt": 233.0,
+      "blendable_kt": 0.0,
+      "imported_coking_kt": 1684.0,
+      "total_coking_kt": 2125.0,
+      "hot_metal_kt": 2296.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "DSP",
+      "period": "2015-16",
+      "prime_coking_kt": 210.0,
+      "medium_coking_kt": 182.0,
+      "blendable_kt": 0.0,
+      "imported_coking_kt": 1664.0,
+      "total_coking_kt": 2056.0,
+      "hot_metal_kt": 2170.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "DSP",
+      "period": "2016-17",
+      "prime_coking_kt": 315.0,
+      "medium_coking_kt": 113.0,
+      "blendable_kt": 0.0,
+      "imported_coking_kt": 1610.0,
+      "total_coking_kt": 2038.0,
+      "hot_metal_kt": 2317.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "DSP",
+      "period": "2017-18",
+      "prime_coking_kt": 468.0,
+      "medium_coking_kt": 194.0,
+      "blendable_kt": 0.0,
+      "imported_coking_kt": 1987.0,
+      "total_coking_kt": 2649.0,
+      "hot_metal_kt": 2282.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "DSP",
+      "period": "2018-19",
+      "prime_coking_kt": 227.0,
+      "medium_coking_kt": 77.0,
+      "blendable_kt": 0.0,
+      "imported_coking_kt": 1954.0,
+      "total_coking_kt": 2258.0,
+      "hot_metal_kt": 2282.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "Rourkela",
+      "period": "1999-00",
+      "prime_coking_kt": 634.0,
+      "medium_coking_kt": 281.0,
+      "blendable_kt": 42.0,
+      "imported_coking_kt": 137.0,
+      "total_coking_kt": 1094.0,
+      "hot_metal_kt": 731.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "Rourkela",
+      "period": "2013-14",
+      "prime_coking_kt": 295.0,
+      "medium_coking_kt": 170.0,
+      "blendable_kt": 0.0,
+      "imported_coking_kt": 2400.0,
+      "total_coking_kt": 2865.0,
+      "hot_metal_kt": 2538.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "Rourkela",
+      "period": "2014-15",
+      "prime_coking_kt": 218.0,
+      "medium_coking_kt": 139.0,
+      "blendable_kt": 0.0,
+      "imported_coking_kt": 2702.0,
+      "total_coking_kt": 3059.0,
+      "hot_metal_kt": 3156.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "Rourkela",
+      "period": "2015-16",
+      "prime_coking_kt": 123.0,
+      "medium_coking_kt": 126.0,
+      "blendable_kt": 0.0,
+      "imported_coking_kt": 2795.0,
+      "total_coking_kt": 3044.0,
+      "hot_metal_kt": 3042.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "Rourkela",
+      "period": "2016-17",
+      "prime_coking_kt": 261.0,
+      "medium_coking_kt": 99.0,
+      "blendable_kt": 0.0,
+      "imported_coking_kt": 2626.0,
+      "total_coking_kt": 2986.0,
+      "hot_metal_kt": 3094.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "Rourkela",
+      "period": "2017-18",
+      "prime_coking_kt": 482.0,
+      "medium_coking_kt": 156.0,
+      "blendable_kt": 0.0,
+      "imported_coking_kt": 3484.0,
+      "total_coking_kt": 4122.0,
+      "hot_metal_kt": 3321.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "Rourkela",
+      "period": "2018-19",
+      "prime_coking_kt": 369.0,
+      "medium_coking_kt": 161.3,
+      "blendable_kt": 0.0,
+      "imported_coking_kt": 3327.0,
+      "total_coking_kt": 3857.3,
+      "hot_metal_kt": 3321.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "ISP",
+      "period": "2013-14",
+      "prime_coking_kt": 331.0,
+      "medium_coking_kt": 0.0,
+      "blendable_kt": 0.0,
+      "imported_coking_kt": 1079.0,
+      "total_coking_kt": 1410.0,
+      "hot_metal_kt": 220.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "ISP",
+      "period": "2014-15",
+      "prime_coking_kt": 244.0,
+      "medium_coking_kt": 0.0,
+      "blendable_kt": 0.0,
+      "imported_coking_kt": 1092.0,
+      "total_coking_kt": 1336.0,
+      "hot_metal_kt": 565.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "ISP",
+      "period": "2015-16",
+      "prime_coking_kt": 241.0,
+      "medium_coking_kt": 0.0,
+      "blendable_kt": 0.0,
+      "imported_coking_kt": 1361.0,
+      "total_coking_kt": 1602.0,
+      "hot_metal_kt": 1430.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "ISP",
+      "period": "2016-17",
+      "prime_coking_kt": 262.0,
+      "medium_coking_kt": 7.0,
+      "blendable_kt": 0.0,
+      "imported_coking_kt": 1521.0,
+      "total_coking_kt": 1790.0,
+      "hot_metal_kt": 1811.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "ISP",
+      "period": "2017-18",
+      "prime_coking_kt": 325.0,
+      "medium_coking_kt": 8.0,
+      "blendable_kt": 0.0,
+      "imported_coking_kt": 1966.0,
+      "total_coking_kt": 2299.0,
+      "hot_metal_kt": 2055.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "ISP",
+      "period": "2018-19",
+      "prime_coking_kt": 104.0,
+      "medium_coking_kt": 0.0,
+      "blendable_kt": 0.0,
+      "imported_coking_kt": 1962.0,
+      "total_coking_kt": 2066.0,
+      "hot_metal_kt": 2055.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "DPL",
+      "period": "2013-14",
+      "prime_coking_kt": null,
+      "medium_coking_kt": null,
+      "blendable_kt": null,
+      "imported_coking_kt": null,
+      "total_coking_kt": null,
+      "hot_metal_kt": null,
+      "status": "final"
+    },
+    {
+      "steel_plant": "DPL",
+      "period": "2014-15",
+      "prime_coking_kt": null,
+      "medium_coking_kt": null,
+      "blendable_kt": null,
+      "imported_coking_kt": null,
+      "total_coking_kt": null,
+      "hot_metal_kt": null,
+      "status": "final"
+    },
+    {
+      "steel_plant": "DPL",
+      "period": "2015-16",
+      "prime_coking_kt": null,
+      "medium_coking_kt": null,
+      "blendable_kt": null,
+      "imported_coking_kt": null,
+      "total_coking_kt": null,
+      "hot_metal_kt": null,
+      "status": "final"
+    },
+    {
+      "steel_plant": "DPL",
+      "period": "2016-17",
+      "prime_coking_kt": null,
+      "medium_coking_kt": null,
+      "blendable_kt": null,
+      "imported_coking_kt": null,
+      "total_coking_kt": null,
+      "hot_metal_kt": null,
+      "status": "final"
+    },
+    {
+      "steel_plant": "DPL",
+      "period": "2017-18",
+      "prime_coking_kt": null,
+      "medium_coking_kt": null,
+      "blendable_kt": null,
+      "imported_coking_kt": null,
+      "total_coking_kt": null,
+      "hot_metal_kt": null,
+      "status": "final"
+    },
+    {
+      "steel_plant": "DPL",
+      "period": "2018-19",
+      "prime_coking_kt": null,
+      "medium_coking_kt": null,
+      "blendable_kt": null,
+      "imported_coking_kt": null,
+      "total_coking_kt": null,
+      "hot_metal_kt": null,
+      "status": "final"
+    },
+    {
+      "steel_plant": "VSP(RINL)",
+      "period": "2013-14",
+      "prime_coking_kt": 0.0,
+      "medium_coking_kt": 404.0,
+      "blendable_kt": 0.0,
+      "imported_coking_kt": 3642.0,
+      "total_coking_kt": 4046.0,
+      "hot_metal_kt": 3769.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "Visakhapatnam",
+      "period": "2014-15",
+      "prime_coking_kt": 0.0,
+      "medium_coking_kt": 430.0,
+      "blendable_kt": 0.0,
+      "imported_coking_kt": 4089.0,
+      "total_coking_kt": 4519.0,
+      "hot_metal_kt": 3780.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "Visakhapatnam",
+      "period": "2015-16",
+      "prime_coking_kt": 0.0,
+      "medium_coking_kt": 387.0,
+      "blendable_kt": 0.0,
+      "imported_coking_kt": 4070.0,
+      "total_coking_kt": 4457.0,
+      "hot_metal_kt": 3780.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "Visakhapatnam",
+      "period": "2016-17",
+      "prime_coking_kt": 0.0,
+      "medium_coking_kt": 496.0,
+      "blendable_kt": 0.0,
+      "imported_coking_kt": 3930.0,
+      "total_coking_kt": 4426.0,
+      "hot_metal_kt": 4386.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "Visakhapatnam",
+      "period": "2017-18",
+      "prime_coking_kt": 0.0,
+      "medium_coking_kt": 440.0,
+      "blendable_kt": 0.0,
+      "imported_coking_kt": 4005.0,
+      "total_coking_kt": 4445.0,
+      "hot_metal_kt": 5132.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "Visakhapatnam",
+      "period": "2018-19",
+      "prime_coking_kt": 0.0,
+      "medium_coking_kt": 440.0,
+      "blendable_kt": 0.0,
+      "imported_coking_kt": 4005.0,
+      "total_coking_kt": 4445.0,
+      "hot_metal_kt": 5132.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "TISCO",
+      "period": "2013-14",
+      "prime_coking_kt": 1042.0,
+      "medium_coking_kt": 2643.0,
+      "blendable_kt": 0.0,
+      "imported_coking_kt": 3341.0,
+      "total_coking_kt": 7026.0,
+      "hot_metal_kt": 9899.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "Jamshedpur",
+      "period": "2014-15",
+      "prime_coking_kt": 0.0,
+      "medium_coking_kt": 0.0,
+      "blendable_kt": 3196.0,
+      "imported_coking_kt": 4554.0,
+      "total_coking_kt": 7750.0,
+      "hot_metal_kt": 10163.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "Jamshedpur",
+      "period": "2015-16",
+      "prime_coking_kt": 0.0,
+      "medium_coking_kt": 0.0,
+      "blendable_kt": 3367.0,
+      "imported_coking_kt": 3636.0,
+      "total_coking_kt": 7003.0,
+      "hot_metal_kt": 10163.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "Jamshedpur",
+      "period": "2016-17",
+      "prime_coking_kt": 0.0,
+      "medium_coking_kt": 0.0,
+      "blendable_kt": 3295.0,
+      "imported_coking_kt": 5548.0,
+      "total_coking_kt": 6935.0,
+      "hot_metal_kt": 13051.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "Jamshedpur",
+      "period": "2017-18",
+      "prime_coking_kt": 0.0,
+      "medium_coking_kt": 0.0,
+      "blendable_kt": 2795.0,
+      "imported_coking_kt": 3982.0,
+      "total_coking_kt": 6777.0,
+      "hot_metal_kt": 10949.0,
+      "status": "final"
+    },
+    {
+      "steel_plant": "Jamshedpur",
+      "period": "2018-19",
+      "prime_coking_kt": 0.0,
+      "medium_coking_kt": 0.0,
+      "blendable_kt": 2795.0,
+      "imported_coking_kt": 3982.0,
+      "total_coking_kt": 6777.0,
+      "hot_metal_kt": 10949.0,
+      "status": "final"
+    }
+  ],
+  "latest": {
+    "period": "2024-25",
+    "production_mt": 1047.522594346,
+    "offtake_mt": 1025.4813095104382,
+    "closing_stock_mt": 130.88716244456333,
+    "coking_imports_mt": 57.576296334,
+    "non_coking_imports_mt": 186.046023609,
+    "total_imports_mt": 243.622319943,
+    "production_yoy_pct": 4.980487013367063,
+    "imports_yoy_pct": -7.904183956333954,
+    "import_dependency_pct": 18.868704608355795
+  },
+  "analysis": {
+    "aligned_periods": 10,
+    "production_import_correlation": 0.7500596987238771,
+    "production_cagr_pct": 5.641370762541942,
+    "imports_cagr_pct": 1.9946085248880863,
+    "production_change_mt": 408.292594346,
+    "imports_change_mt": 39.67305894300003
+  },
+  "sources": [
+    {
+      "series": [
+        "production_mt",
+        "offtake_mt",
+        "closing_stock_mt"
+      ],
+      "title": "Coal Directory 2024-25, Table 4.28: Availability and Off-take of Indian Raw Coal from Public & Private Sector during last Ten Years",
+      "url": "https://coal.gov.in/sites/default/files/2024-03/cdchap3.xlsx"
+    },
+    {
+      "series": [
+        "coking_imports_mt",
+        "non_coking_imports_mt",
+        "total_imports_mt"
+      ],
+      "title": "Coal Directory 2024-25, Table 8.1: Year Wise Import of Coal, Coke & Other Coal Products to India during last Ten Years",
+      "url": "https://coal.gov.in/sites/default/files/2024-03/cdchap7.xlsx"
+    }
+  ],
+  "methodology": [
+    "Production, off-take and closing stock use All India fields in Table 4.28.",
+    "Imports use quantity fields in Table 8.1; monetary value fields are excluded.",
+    "Correlation is Pearson correlation across matched financial years and is association, not causation.",
+    "Stock is pit-head closing stock, not power-station stock-cover days.",
+    "Monthly production and imports currently cover the complete official 2024-25 Coal Directory year.",
+    "Country and port tables report customs origin/clearance location; they do not prove the mine origin or physical loading port.",
+    "Provisional and tentative official observations are retained only when explicitly labelled by the source."
+  ]
+}

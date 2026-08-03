@@ -1,0 +1,76 @@
+{
+  "generated_at": "2026-07-31T12:19:37+00:00",
+  "policy": "Official observations only; missing periods are never interpolated and stale granular tables are labelled at their true coverage.",
+  "datasets": [
+    {
+      "dataset": "National coal imports \u2014 monthly",
+      "file": "coal_imports_monthly.csv",
+      "latest_period": "2026-04",
+      "status": "current",
+      "release_status": "provisional",
+      "source": "https://coal.gov.in/major-statistics/production-and-supplies"
+    },
+    {
+      "dataset": "National coal imports \u2014 annual",
+      "file": "coal_india_annual.csv",
+      "latest_period": "2025-26",
+      "status": "current",
+      "release_status": "provisional",
+      "source": "https://coal.gov.in/major-statistics/production-and-supplies"
+    },
+    {
+      "dataset": "Coal production and dispatch \u2014 monthly",
+      "file": "coal_monthly_official.csv",
+      "latest_period": "2026-06",
+      "status": "current",
+      "release_status": "provisional",
+      "source": "https://coal.gov.in/public-information/monthly-statistics-at-glance"
+    },
+    {
+      "dataset": "Electricity generation \u2014 monthly",
+      "file": "india_power_mix_monthly.csv",
+      "latest_period": "2026-06",
+      "status": "current",
+      "release_status": "official reported",
+      "source": "https://cea.nic.in/renewable-generation-report/?lang=en"
+    },
+    {
+      "dataset": "Coal imports by reported country",
+      "file": "coal_imports_by_origin.csv",
+      "latest_period": "2024-25",
+      "status": "latest granular official release",
+      "release_status": "final",
+      "limitation": "Customs reporting country is not treated as physical mine origin."
+    },
+    {
+      "dataset": "Coal imports by Indian port",
+      "file": "coal_imports_by_port.csv",
+      "latest_period": "2024-25",
+      "status": "latest granular official release",
+      "release_status": "final"
+    },
+    {
+      "dataset": "Coal production by coal type \u2014 monthly",
+      "file": "coal_production_monthly.csv",
+      "latest_period": "2024-12",
+      "status": "historical only",
+      "release_status": "final",
+      "limitation": "No later compatible all-India coking/non-coking monthly series has been loaded."
+    },
+    {
+      "dataset": "Coal off-take by consuming sector",
+      "file": "coal_offtake_by_sector.csv",
+      "latest_period": "2024-25",
+      "status": "latest granular official release",
+      "release_status": "final"
+    },
+    {
+      "dataset": "Plant-level coking coal consumption",
+      "file": "steel_plant_coking_coal.csv",
+      "latest_period": "2018-19",
+      "status": "historical only",
+      "release_status": "final",
+      "limitation": "Not used for current-period claims."
+    }
+  ]
+}

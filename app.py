@@ -1,6 +1,6 @@
 """Global Energy Transition Dashboard"""
 from __future__ import annotations
-import os, json, io, uuid, asyncio, logging, math, re, zipfile, sqlite3
+import os, json, io, csv, uuid, asyncio, logging, math, re, zipfile, sqlite3
 from functools import lru_cache
 from pathlib import Path
 from typing import Optional, Dict, List, Any
@@ -19,6 +19,7 @@ from maritime_extras import (
     fetch_weather, fetch_bunker_prices, estimate_fuel_cost,
 )
 from port_catalog import PortCatalog
+from imd_coastal_weather import ImdCoastalWeatherManager
 
 log = logging.getLogger("ais")
 logging.basicConfig(level=logging.INFO)
@@ -45,9 +46,49 @@ NPP_CACHE_TTL_SECONDS = int(os.getenv("NPP_CACHE_TTL_SECONDS", "43200"))
 NPP_ALL_INDIA_URL = "https://npp.gov.in/dashBoard/getAllZone"
 NPP_HISTORY_URL = "https://npp.gov.in/dashBoard/get_installed_capacity_list"
 NPP_GENERATION_URL = "https://npp.gov.in/dashBoard/getAllZoneGen"
+CEA_POWER_STATION_LIST_URL = (
+    "https://cea.nic.in/wp-content/uploads/pdm/2025/09/"
+    "List_of_Power_Station_as_on_31.03.2025.pdf"
+)
+NPP_PUBLISHED_REPORTS_URL = "https://npp.gov.in/publishedReports"
+MINISTRY_COAL_LINKAGE_URL = (
+    "https://coal.gov.in/public-information/standing-linkage-committee1"
+)
 INDIA_COAL_PORT_SPECS_PATH = DATA_DIR / "india_coal_port_specs.json"
+INDIA_COAL_MASTER_PATH = DATA_DIR / "india_coal_master" / "india_coal_master.json"
+INDIA_COAL_ANALYSIS_PATH = (
+    DATA_DIR / "india_coal_master" / "ui" / "coal_analysis.json"
+)
+INDIA_COAL_ANNUAL_CSV_PATH = (
+    DATA_DIR / "india_coal_master" / "canonical" / "coal_india_annual.csv"
+)
+INDIA_COAL_CANONICAL_DIR = DATA_DIR / "india_coal_master" / "canonical"
+INDIA_COAL_DASHBOARD_QUALITY_PATH = (
+    DATA_DIR / "india_coal_master" / "ui" / "coal_dashboard_quality.json"
+)
+INDIA_POWER_MIX_PATH = (
+    DATA_DIR / "india_coal_master" / "ui" / "india_power_mix.json"
+)
 PORT_APPROACHES_PATH = DATA_DIR / "port_approaches.json"
 RISK_ZONE_SOURCE_PATH = DATA_DIR / "zones_source.json"
+
+# Exact location-level matches that have been checked against the official CEA
+# station register.  Keeping this explicit prevents a fuzzy name match from
+# being presented as government verification.
+CEA_VERIFIED_COAL_PLANTS: Dict[str, Dict[str, Any]] = {
+    "L100000102436": {
+        "cea_verified": True,
+        "cea_project_name": "WARDHA WARORA TPP",
+        "cea_organisation": "WPCL",
+        "cea_sector": "Private Sector",
+        "cea_region": "WR",
+        "cea_unit_count": 4,
+        "cea_capacity_mw": 540,
+        "cea_commissioning": "2010–2011",
+        "cea_source_as_of": "2025-03-31",
+        "cea_source_url": CEA_POWER_STATION_LIST_URL,
+    },
+}
 
 AISSTREAM_API_KEY = os.getenv("AISSTREAM_API_KEY", "").strip()
 AIS_REGION_BOXES = {
@@ -72,6 +113,8 @@ AIS_BACKGROUND_REGION_IDS = (
 AIS_DATA_DIR = UPLOAD_DIR / "_ais"
 AIS_DATA_DIR.mkdir(exist_ok=True)
 AIS_TRAIL_DB_PATH = AIS_DATA_DIR / "observations.sqlite3"
+IMD_COASTAL_CACHE_DIR = UPLOAD_DIR / "_imd_coastal_weather"
+IMD_COASTAL_CACHE_PATH = IMD_COASTAL_CACHE_DIR / "latest.json"
 
 
 def _init_ais_trail_db() -> None:
@@ -179,6 +222,680 @@ def _coal_dataset_metadata() -> List[Dict[str, Any]]:
     return sorted(datasets, key=lambda item: item.get("uploaded_at", ""), reverse=True)
 
 
+def _india_coal_master() -> Dict[str, Any]:
+    if not INDIA_COAL_MASTER_PATH.exists():
+        return {
+            "dataset": "India coal official master",
+            "coverage": {"status": "not_fetched"},
+            "sources": [],
+            "source_tables": [],
+            "ui_views": {},
+        }
+    try:
+        payload = json.loads(INDIA_COAL_MASTER_PATH.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict):
+            raise ValueError("Invalid India coal master shape")
+        return payload
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        log.warning("Could not load India coal master: %s", exc)
+        return {
+            "dataset": "India coal official master",
+            "coverage": {"status": "unreadable", "error": str(exc)},
+            "sources": [],
+            "source_tables": [],
+            "ui_views": {},
+        }
+
+
+def _india_coal_analysis() -> Dict[str, Any]:
+    if not INDIA_COAL_ANALYSIS_PATH.exists():
+        return {
+            "status": "not_mapped",
+            "annual": [],
+            "analysis": {},
+            "sources": [],
+            "methodology": [],
+        }
+    try:
+        payload = json.loads(
+            INDIA_COAL_ANALYSIS_PATH.read_text(encoding="utf-8")
+        )
+        if not isinstance(payload, dict):
+            raise ValueError("Invalid India coal analysis shape")
+        return payload
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        log.warning("Could not load India coal analysis: %s", exc)
+        return {
+            "status": "unreadable",
+            "annual": [],
+            "analysis": {},
+            "sources": [],
+            "methodology": [str(exc)],
+        }
+
+
+def _india_power_mix() -> Dict[str, Any]:
+    if not INDIA_POWER_MIX_PATH.exists():
+        return {"records": [], "quality": {"status": "not_fetched"}}
+    try:
+        payload = json.loads(INDIA_POWER_MIX_PATH.read_text(encoding="utf-8"))
+        return payload if isinstance(payload, dict) else {"records": []}
+    except (OSError, json.JSONDecodeError) as exc:
+        log.warning("Could not load India power mix: %s", exc)
+        return {"records": [], "quality": {"status": "unreadable"}}
+
+
+class CoalResearchQuery(BaseModel):
+    question: str
+
+
+def _canonical_frame(name: str) -> pd.DataFrame:
+    path = INDIA_COAL_CANONICAL_DIR / name
+    return pd.read_csv(path) if path.exists() else pd.DataFrame()
+
+
+COAL_DASHBOARD_TABS = {"overview", "supply", "trade", "power", "stocks", "table"}
+
+
+def _dashboard_quality() -> Dict[str, Any]:
+    try:
+        return json.loads(INDIA_COAL_DASHBOARD_QUALITY_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {"generated_at": None, "coal": {}, "power": {}}
+
+
+def _json_records(frame: pd.DataFrame) -> List[Dict[str, Any]]:
+    return frame.astype(object).where(pd.notna(frame), None).to_dict(orient="records")
+
+
+def _filter_months(frame: pd.DataFrame, start: str, end: str) -> pd.DataFrame:
+    if frame.empty or "period" not in frame.columns:
+        return frame.copy()
+    periods = frame["period"].astype(str)
+    return frame.loc[(periods >= start) & (periods <= end)].copy()
+
+
+def _aggregate_dashboard(frame: pd.DataFrame, frequency: str, flow_columns: List[str]) -> pd.DataFrame:
+    if frame.empty or frequency == "monthly":
+        return frame.copy()
+    dates = pd.to_datetime(frame["period"].astype(str) + "-01", errors="coerce")
+    result = frame.assign(_date=dates).dropna(subset=["_date"])
+    if frequency == "quarterly":
+        result["period"] = result["_date"].dt.to_period("Q").astype(str)
+    else:
+        year = result["_date"].dt.year.where(result["_date"].dt.month >= 4, result["_date"].dt.year - 1)
+        result["period"] = year.astype(int).astype(str) + "-" + (year + 1).astype(int).astype(str).str[-2:]
+    available = [column for column in flow_columns if column in result.columns]
+    return result.groupby("period", as_index=False)[available].sum(min_count=1)
+
+
+def _coal_dashboard_payload(
+    tab: str, start: str, end: str, frequency: str,
+    focus: str = "all", comparison: str = "previous_period",
+) -> Dict[str, Any]:
+    if tab not in COAL_DASHBOARD_TABS:
+        raise HTTPException(400, "Unknown coal dashboard tab")
+    if frequency not in {"monthly", "quarterly", "financial_year"}:
+        raise HTTPException(400, "Frequency must be monthly, quarterly or financial_year")
+    if comparison not in {"none", "previous_period", "previous_year"}:
+        raise HTTPException(400, "Unknown comparison mode")
+    if not re.fullmatch(r"\d{4}-\d{2}", start) or not re.fullmatch(r"\d{4}-\d{2}", end) or start > end:
+        raise HTTPException(400, "Use a valid From/To month range")
+
+    coal_all = _canonical_frame("coal_monthly_official.csv")
+    power_all = _canonical_frame("india_power_generation_monthly.csv")
+    try:
+        mix_all = _canonical_frame("india_power_mix_monthly.csv")
+    except FileNotFoundError:
+        mix_all = _canonical_frame("india_power_mix_june.csv")
+    imports_all = _canonical_frame("coal_imports_monthly.csv")
+    annual_all = _canonical_frame("coal_india_annual.csv")
+    quality = _dashboard_quality()
+    sources = {
+        "coal": {"title": "Ministry of Coal — Monthly Statistics at a Glance", "url": "https://coal.gov.in/public-information/monthly-statistics-at-glance"},
+        "power": {"title": "National Power Portal — Published Reports", "url": "https://npp.gov.in/publishedReports"},
+        "renewable": {"title": "CEA — Monthly Renewable Generation Report", "url": "https://cea.nic.in/renewable-generation-report/?lang=en"},
+        "directory": {"title": "Coal Directory 2024-25", "url": "https://coal.gov.in/major-statistics/coal-statistics"},
+        "imports_latest": {"title": "Ministry of Coal — Production and Supplies (DDG import totals)", "url": "https://coal.gov.in/major-statistics/production-and-supplies"},
+        "imports_quarterly": {"title": "Ministry of Coal — Quarterly Booklet, Q4 FY2025-26 (Table 33)", "url": "https://coal.gov.in/sites/default/files/2025-09/29-06-2026a-qety.pdf"},
+    }
+
+    if tab in {"overview", "supply", "table"}:
+        frame = _filter_months(coal_all, start, end)
+        frame = _aggregate_dashboard(
+            frame, frequency,
+            ["production_mt", "production_prior_year_mt", "production_ytd_mt",
+             "dispatch_mt", "dispatch_prior_year_mt", "dispatch_ytd_mt"],
+        )
+        if tab == "overview":
+            power_summary = _aggregate_dashboard(
+                _filter_months(power_all, start, end), frequency,
+                ["coal_generation_gwh", "large_hydro_generation_gwh", "conventional_generation_gwh"],
+            )
+            frame = frame.merge(power_summary, on="period", how="outer").sort_values("period")
+            frame["coal_share_conventional_pct"] = frame["coal_generation_gwh"] / frame["conventional_generation_gwh"] * 100
+            mix_flow = [
+                "coal_generation_gwh", "lignite_generation_gwh", "thermal_generation_gwh",
+                "nuclear_generation_gwh", "large_hydro_generation_gwh", "bhutan_import_gwh",
+                "wind_generation_gwh", "solar_generation_gwh", "biomass_generation_gwh",
+                "bagasse_generation_gwh", "small_hydro_generation_gwh",
+                "other_renewables_generation_gwh", "renewables_ex_large_hydro_gwh",
+                "total_generation_gwh",
+            ]
+            mix_frame = _aggregate_dashboard(_filter_months(mix_all, start, end), frequency, mix_flow)
+            if not mix_frame.empty:
+                mix_frame["other_thermal_generation_gwh"] = (
+                    mix_frame["thermal_generation_gwh"] - mix_frame["coal_generation_gwh"] - mix_frame["lignite_generation_gwh"]
+                ).clip(lower=0)
+                mix_frame["other_renewables_total_gwh"] = (
+                    mix_frame["renewables_ex_large_hydro_gwh"] - mix_frame["wind_generation_gwh"] - mix_frame["solar_generation_gwh"]
+                ).clip(lower=0)
+                mix_frame["coal_share_pct"] = mix_frame["coal_generation_gwh"] / mix_frame["total_generation_gwh"] * 100
+                mix_frame["renewables_share_pct"] = (
+                    mix_frame["renewables_ex_large_hydro_gwh"] + mix_frame["large_hydro_generation_gwh"]
+                ) / mix_frame["total_generation_gwh"] * 100
+        if not frame.empty:
+            frame["production_yoy_pct"] = frame["production_mt"].pct_change() * 100
+            if "dispatch_mt" in frame:
+                frame["dispatch_yoy_pct"] = frame["dispatch_mt"].pct_change() * 100
+        charts = [
+            {"id": "supply-volume", "title": "Domestic production and dispatch", "subtitle": "Official national totals; gaps are retained, never interpolated", "x_label": "Reporting period", "y_label": "Million tonnes (MT)", "type": "line", "series": [
+                {"key": "production_mt", "label": "Production", "color": "#003671"},
+                {"key": "dispatch_mt", "label": "Dispatch", "color": "#db2f34"},
+            ]},
+            {"id": "supply-yoy", "title": "Period-on-period change", "subtitle": "Recomputed at the selected aggregation frequency", "x_label": "Reporting period", "y_label": "Change (%)", "type": "column", "series": [
+                {"key": "production_yoy_pct", "label": "Production change", "color": "#003671"},
+                {"key": "dispatch_yoy_pct", "label": "Dispatch change", "color": "#d8902f"},
+            ]},
+        ]
+        if tab == "overview":
+            charts = [
+                charts[0],
+                {"id": "overview-power", "title": "All-source electricity generation mix", "subtitle": "NPP conventional generation merged month-for-month with CEA renewable generation; installed capacity is never used as generation", "x_label": "Reporting period", "y_label": "Generation (GWh)", "type": "stacked_column", "rows": _json_records(mix_frame), "series": [
+                    {"key": "coal_generation_gwh", "label": "Coal", "color": "#26344f"},
+                    {"key": "lignite_generation_gwh", "label": "Lignite", "color": "#705747"},
+                    {"key": "other_thermal_generation_gwh", "label": "Other thermal", "color": "#a46f5a"},
+                    {"key": "nuclear_generation_gwh", "label": "Nuclear", "color": "#7d5ca6"},
+                    {"key": "large_hydro_generation_gwh", "label": "Large hydro", "color": "#2e78b7"},
+                    {"key": "wind_generation_gwh", "label": "Wind", "color": "#43a2ca"},
+                    {"key": "solar_generation_gwh", "label": "Solar", "color": "#e4a72e"},
+                    {"key": "other_renewables_total_gwh", "label": "Other renewables", "color": "#54a66f"},
+                ]},
+            ]
+        latest = frame.dropna(subset=["production_mt"]).iloc[-1].to_dict() if not frame.dropna(subset=["production_mt"]).empty else {}
+        latest_dispatch = frame.dropna(subset=["dispatch_mt"]).iloc[-1].to_dict() if "dispatch_mt" in frame and not frame.dropna(subset=["dispatch_mt"]).empty else {}
+        kpis = [
+            {"label": "Latest production", "value": latest.get("production_mt"), "unit": "MT", "detail": latest.get("period", "—")},
+            {"label": "Latest dispatch", "value": latest_dispatch.get("dispatch_mt"), "unit": "MT", "detail": latest_dispatch.get("period", "—")},
+            {"label": "Periods returned", "value": len(frame), "unit": "", "detail": f"{start} to {end}"},
+            {"label": "Latest official month", "value": None, "display": quality.get("coal", {}).get("latest", "—"), "unit": "", "detail": "Provisional bulletin"},
+        ]
+        if tab == "overview" and not mix_frame.empty:
+            power_latest = mix_frame.dropna(subset=["coal_share_pct"]).iloc[-1]
+            kpis[2] = {"label": "Coal share of all generation", "value": power_latest["coal_share_pct"], "unit": "%", "detail": f"Coal ÷ all-source total · {power_latest['period']}"}
+        tab_sources = [sources["coal"], sources["power"], sources["renewable"]] if tab == "overview" else [sources["coal"]]
+        availability = {"start": str(coal_all.period.min()), "end": str(coal_all.period.max()), "grain": "monthly", "status": "provisional"}
+    elif tab == "power":
+        frame = _filter_months(power_all, start, end)
+        flow = ["coal_generation_gwh", "lignite_generation_gwh", "thermal_generation_gwh",
+                "nuclear_generation_gwh", "large_hydro_generation_gwh", "bhutan_import_gwh",
+                "conventional_generation_gwh"]
+        frame = _aggregate_dashboard(frame, frequency, flow)
+        if not frame.empty:
+            frame["coal_share_conventional_pct"] = frame["coal_generation_gwh"] / frame["conventional_generation_gwh"] * 100
+        mix_flow = [
+            "coal_generation_gwh", "lignite_generation_gwh", "thermal_generation_gwh",
+            "nuclear_generation_gwh", "large_hydro_generation_gwh", "bhutan_import_gwh",
+            "wind_generation_gwh", "solar_generation_gwh", "biomass_generation_gwh",
+            "bagasse_generation_gwh", "small_hydro_generation_gwh",
+            "other_renewables_generation_gwh", "renewables_ex_large_hydro_gwh",
+            "total_generation_gwh",
+        ]
+        mix_frame = _aggregate_dashboard(_filter_months(mix_all, start, end), frequency, mix_flow)
+        if not mix_frame.empty:
+            mix_frame["other_thermal_generation_gwh"] = (
+                mix_frame["thermal_generation_gwh"] - mix_frame["coal_generation_gwh"] - mix_frame["lignite_generation_gwh"]
+            ).clip(lower=0)
+            mix_frame["other_renewables_total_gwh"] = (
+                mix_frame["renewables_ex_large_hydro_gwh"] - mix_frame["wind_generation_gwh"] - mix_frame["solar_generation_gwh"]
+            ).clip(lower=0)
+            mix_frame["coal_share_pct"] = mix_frame["coal_generation_gwh"] / mix_frame["total_generation_gwh"] * 100
+            mix_frame["solar_share_pct"] = mix_frame["solar_generation_gwh"] / mix_frame["total_generation_gwh"] * 100
+            mix_frame["renewables_share_pct"] = (
+                mix_frame["renewables_ex_large_hydro_gwh"] + mix_frame["large_hydro_generation_gwh"]
+            ) / mix_frame["total_generation_gwh"] * 100
+            frame = mix_frame.copy()
+        charts = [
+            {"id": "power-generation", "title": "Monthly conventional generation by source", "subtitle": "NPP monthly actuals. This chart is explicitly conventional-only; renewables are shown in the all-source chart below.", "x_label": "Reporting period", "y_label": "Generation (GWh)", "type": "line", "series": [
+                {"key": "coal_generation_gwh", "label": "Coal", "color": "#26344f"},
+                {"key": "lignite_generation_gwh", "label": "Lignite", "color": "#705747"},
+                {"key": "large_hydro_generation_gwh", "label": "Large hydro", "color": "#2e78b7"},
+                {"key": "nuclear_generation_gwh", "label": "Nuclear", "color": "#7d5ca6"},
+            ]},
+            {"id": "power-all-source", "title": "All-source generation mix", "subtitle": "Monthly NPP + CEA actual generation, including wind, solar and other renewables", "x_label": "Reporting period", "y_label": "Generation (GWh)", "type": "stacked_column", "rows": _json_records(mix_frame), "series": [
+                {"key": "coal_generation_gwh", "label": "Coal", "color": "#26344f"},
+                {"key": "lignite_generation_gwh", "label": "Lignite", "color": "#705747"},
+                {"key": "other_thermal_generation_gwh", "label": "Other thermal", "color": "#a46f5a"},
+                {"key": "nuclear_generation_gwh", "label": "Nuclear", "color": "#7d5ca6"},
+                {"key": "large_hydro_generation_gwh", "label": "Large hydro", "color": "#2e78b7"},
+                {"key": "wind_generation_gwh", "label": "Wind", "color": "#43a2ca"},
+                {"key": "solar_generation_gwh", "label": "Solar", "color": "#e4a72e"},
+                {"key": "other_renewables_total_gwh", "label": "Other renewables", "color": "#54a66f"},
+            ]},
+            {"id": "power-share", "title": "All-source generation shares", "subtitle": "Coal and renewable shares use total generation as the denominator; renewables include large hydro", "x_label": "Reporting period", "y_label": "Share (%)", "type": "line", "rows": _json_records(mix_frame), "series": [
+                {"key": "coal_share_pct", "label": "Coal share", "color": "#db2f34"},
+                {"key": "renewables_share_pct", "label": "Renewables incl. large hydro", "color": "#2f8f56"},
+                {"key": "solar_share_pct", "label": "Solar share", "color": "#e4a72e"},
+            ]},
+        ]
+        latest = mix_frame.iloc[-1].to_dict() if not mix_frame.empty else {}
+        kpis = [
+            {"label": "Coal generation", "value": latest.get("coal_generation_gwh"), "unit": "GWh", "detail": latest.get("period", "—")},
+            {"label": "Coal share of all generation", "value": latest.get("coal_share_pct"), "unit": "%", "detail": "All-source denominator"},
+            {"label": "Renewables incl. large hydro", "value": latest.get("renewables_share_pct"), "unit": "%", "detail": latest.get("period", "—")},
+            {"label": "Solar generation", "value": latest.get("solar_generation_gwh"), "unit": "GWh", "detail": latest.get("period", "—")},
+        ]
+        tab_sources = [sources["power"], sources["renewable"]]
+        availability = {"start": str(mix_all.period.min()), "end": str(mix_all.period.max()), "grain": "monthly", "status": "official reported", "limitation": "NPP provides the conventional series; CEA Monthly Renewable Generation supplies wind, solar, biomass, bagasse, small hydro and other renewables."}
+    elif tab == "trade":
+        monthly = _filter_months(imports_all, start, end)
+        if frequency == "financial_year":
+            frame = annual_all[[column for column in [
+                "period", "coking_imports_mt", "non_coking_imports_mt",
+                "total_imports_mt", "status", "source_url",
+            ] if column in annual_all.columns]].copy()
+            frame = frame.rename(columns={
+                "coking_imports_mt": "coking_coal_mt",
+                "non_coking_imports_mt": "non_coking_coal_mt",
+                "total_imports_mt": "total_coal_mt",
+            })
+            frame = frame.loc[(frame["period"] >= "2021-22") & (frame["period"] <= "2025-26")]
+        else:
+            frame = _aggregate_dashboard(
+                monthly, frequency,
+                ["coking_coal_mt", "non_coking_coal_mt", "total_coal_mt", "coke_products_mt"],
+            )
+        annual_imports = annual_all[[column for column in [
+            "period", "coking_imports_mt", "non_coking_imports_mt",
+            "total_imports_mt", "imports_yoy_pct", "status",
+        ] if column in annual_all.columns]].copy()
+        annual_imports = annual_imports.loc[annual_imports["period"] >= "2015-16"]
+        charts = [
+            {"id": "trade-volume", "title": "Monthly coal imports by coal type", "subtitle": "FY2024-25 final; FY2025-26 and April 2026 provisional. Values come from official DGCI&S/DDG tables and no missing month is interpolated.", "x_label": "Reporting period", "y_label": "Import quantity (MT)", "type": "column", "rows": _json_records(monthly), "series": [
+                {"key": "coking_coal_mt", "label": "Coking coal", "color": "#8c2e3d"},
+                {"key": "non_coking_coal_mt", "label": "Non-coking coal", "color": "#d8902f"},
+            ]},
+            {"id": "trade-annual", "title": "Annual coal imports and change", "subtitle": "Official financial-year totals through FY2025-26. Monthly rounded components can differ from the published annual total by 0.01 MT.", "x_label": "Financial year", "y_label": "Import quantity (MT)", "type": "column", "rows": _json_records(annual_imports), "series": [
+                {"key": "coking_imports_mt", "label": "Coking coal", "color": "#8c2e3d"},
+                {"key": "non_coking_imports_mt", "label": "Non-coking coal", "color": "#d8902f"},
+            ]},
+        ]
+        latest = imports_all.sort_values("period").iloc[-1].to_dict() if not imports_all.empty else {}
+        latest_annual = annual_all.sort_values("period").iloc[-1].to_dict() if not annual_all.empty else {}
+        kpis = [
+            {"label": "Latest imports", "value": latest.get("total_coal_mt"), "unit": "MT", "detail": latest.get("period", "No rows in range")},
+            {"label": "Coking coal", "value": latest.get("coking_coal_mt"), "unit": "MT", "detail": latest.get("period", "—")},
+            {"label": "Non-coking coal", "value": latest.get("non_coking_coal_mt"), "unit": "MT", "detail": latest.get("period", "—")},
+            {"label": "FY2025-26 imports", "value": latest_annual.get("total_imports_mt"), "unit": "MT", "detail": "Published annual total"},
+        ]
+        tab_sources = [sources["imports_latest"], sources["imports_quarterly"], sources["directory"]]
+        availability = {"start": str(imports_all.period.min()), "end": str(imports_all.period.max()), "grain": "monthly", "status": "final through 2025-03; provisional thereafter", "limitation": "Country and Indian-port breakdowns remain at FY2024-25, their latest loaded official granular release. Customs reporting country is not presented as physical mine origin."}
+    else:  # stocks
+        frame = annual_all[[column for column in ["period", "closing_stock_mt", "offtake_mt", "production_mt", "status"] if column in annual_all.columns]].copy()
+        charts = [
+            {"id": "stock-level", "title": "Pit-head closing stock", "subtitle": "Annual inventory at coal producers; not power-station stock-cover days", "x_label": "Financial year", "y_label": "Closing stock (MT)", "type": "column", "series": [
+                {"key": "closing_stock_mt", "label": "Pit-head stock", "color": "#d8902f"},
+            ]},
+            {"id": "stock-flow", "title": "Production and off-take", "subtitle": "Annual supply-chain context", "x_label": "Financial year", "y_label": "Million tonnes (MT)", "type": "line", "series": [
+                {"key": "production_mt", "label": "Production", "color": "#003671"},
+                {"key": "offtake_mt", "label": "Off-take", "color": "#2e6d92"},
+            ]},
+        ]
+        latest = frame.iloc[-1].to_dict() if not frame.empty else {}
+        latest_stock_frame = frame.dropna(subset=["closing_stock_mt"]) if "closing_stock_mt" in frame else pd.DataFrame()
+        latest_stock = latest_stock_frame.iloc[-1].to_dict() if not latest_stock_frame.empty else {}
+        kpis = [
+            {"label": "Pit-head closing stock", "value": latest_stock.get("closing_stock_mt"), "unit": "MT", "detail": latest_stock.get("period", "—")},
+            {"label": "Annual off-take", "value": latest.get("offtake_mt"), "unit": "MT", "detail": latest.get("period", "—")},
+            {"label": "Annual production", "value": latest.get("production_mt"), "unit": "MT", "detail": latest.get("period", "—")},
+            {"label": "Stock-cover days", "value": None, "display": "Not substituted", "unit": "", "detail": "Requires plant inventory and burn rate"},
+        ]
+        tab_sources = [sources["directory"]]
+        availability = {"start": str(frame.period.min()), "end": str(frame.period.max()), "grain": "financial year", "status": "final"}
+
+    focus_options = {
+        "overview": [("all", "All measures"), ("coal", "Coal"), ("renewables", "Renewables"), ("solar", "Solar"), ("hydro", "Large hydro")],
+        "supply": [("all", "Production + dispatch"), ("production", "Production"), ("dispatch", "Dispatch")],
+        "trade": [("all", "All coal imports"), ("coking", "Coking coal"), ("non_coking", "Non-coking coal")],
+        "power": [("all", "All generation sources"), ("coal", "Coal"), ("renewables", "Renewables"), ("solar", "Solar"), ("hydro", "Large hydro")],
+        "stocks": [("all", "Stocks + supply"), ("stock", "Pit-head stock"), ("production", "Production"), ("offtake", "Off-take")],
+        "table": [("all", "All measures"), ("production", "Production"), ("dispatch", "Dispatch")],
+    }
+    allowed_focus = {item[0] for item in focus_options[tab]}
+    if focus not in allowed_focus:
+        focus = "all"
+    focus_keys = {
+        "coal": {"coal_generation_gwh", "coal_share_pct", "coal_share_conventional_pct"},
+        "renewables": {"renewables_share_pct", "renewables_ex_large_hydro_gwh", "wind_generation_gwh", "solar_generation_gwh", "other_renewables_total_gwh", "large_hydro_generation_gwh"},
+        "solar": {"solar_generation_gwh", "solar_share_pct"},
+        "hydro": {"large_hydro_generation_gwh"},
+        "production": {"production_mt", "production_yoy_pct", "production_prior_year_mt", "production_ytd_mt"},
+        "dispatch": {"dispatch_mt", "dispatch_yoy_pct", "dispatch_prior_year_mt", "dispatch_ytd_mt"},
+        "coking": {"coking_coal_mt", "coking_imports_mt"},
+        "non_coking": {"non_coking_coal_mt", "non_coking_imports_mt"},
+        "stock": {"closing_stock_mt"},
+        "offtake": {"offtake_mt"},
+    }.get(focus)
+    context_columns = {"period", "financial_year", "status", "source_url"}
+    if focus_keys:
+        focused_charts = []
+        for chart in charts:
+            filtered_series = [series for series in chart.get("series", []) if series.get("key") in focus_keys]
+            if filtered_series:
+                chart["series"] = filtered_series
+                if chart.get("rows"):
+                    chart_columns = context_columns | {series["key"] for series in filtered_series}
+                    chart["rows"] = [
+                        {key: value for key, value in row.items() if key in chart_columns}
+                        for row in chart["rows"]
+                    ]
+                focused_charts.append(chart)
+            elif not (tab == "overview" and focus in {"renewables", "solar", "hydro"}):
+                focused_charts.append(chart)
+        charts = focused_charts
+        selected_columns = [column for column in frame.columns if column in context_columns or column in focus_keys]
+        if len(selected_columns) > 1:
+            frame = frame[selected_columns]
+
+    return {
+        "tab": tab, "frequency": frequency, "filters": {"from": start, "to": end},
+        "focus": focus, "comparison": comparison,
+        "focus_options": [{"id": item[0], "label": item[1]} for item in focus_options[tab]],
+        "available_range": availability, "kpis": kpis, "charts": charts,
+        "columns": list(frame.columns), "rows": _json_records(frame), "sources": tab_sources,
+        "quality": {"generated_at": quality.get("generated_at"), "missing_values_retained": True,
+                    "note": "Official values only. Missing observations remain blank and are excluded from calculations."},
+    }
+
+
+def _research_payload(question: str) -> Dict[str, Any]:
+    text = " ".join(question.lower().split())
+    sources: List[Dict[str, str]] = []
+    unit = "million tonnes"
+    chart_type = "line"
+    category = "period"
+    status = "official final"
+
+    if any(token in text for token in ("electric", "generation", "solar", "hydro", "renewable", "power mix")):
+        all_source_june = (
+            any(token in text for token in ("solar", "renewable", "all-source", "all source"))
+            or ("percentage" in text and "june 2026" in text and "june 2025" in text)
+        )
+        frame = _canonical_frame("india_power_mix_june.csv" if all_source_june else "india_power_generation_monthly.csv")
+        title = "India electricity generation mix — June comparison" if all_source_june else "India monthly conventional generation mix"
+        if "solar" in text:
+            columns = ["period", "solar_generation_gwh", "solar_share_pct", "total_generation_gwh", "status"]
+            series = [{"key": "solar_share_pct", "label": "Solar share", "color": "#d8902f"}]
+            unit = "% of all-source generation"
+        elif "hydro" in text or "monsoon" in text or "reservoir" in text:
+            columns = ["period", "coal_generation_gwh", "large_hydro_generation_gwh", "coal_share_conventional_pct", "status"]
+            series = [
+                {"key": "coal_generation_gwh", "label": "Coal", "color": "#1f2a3f"},
+                {"key": "large_hydro_generation_gwh", "label": "Large hydro", "color": "#296fba"},
+            ]
+            unit = "GWh"
+            title = "Monthly coal and large-hydro generation"
+        else:
+            if all_source_june:
+                columns = ["period", "coal_generation_gwh", "coal_share_pct", "solar_generation_gwh", "solar_share_pct", "large_hydro_generation_gwh", "wind_generation_gwh", "nuclear_generation_gwh", "total_generation_gwh", "status"]
+                series = [
+                    {"key": "coal_share_pct", "label": "Coal share", "color": "#1f2a3f"},
+                    {"key": "solar_share_pct", "label": "Solar share", "color": "#d8902f"},
+                ]
+                unit = "% of all-source generation"
+            else:
+                columns = ["period", "coal_generation_gwh", "lignite_generation_gwh", "large_hydro_generation_gwh", "nuclear_generation_gwh", "conventional_generation_gwh", "coal_share_conventional_pct", "status"]
+                series = [
+                    {"key": "coal_generation_gwh", "label": "Coal", "color": "#1f2a3f"},
+                    {"key": "large_hydro_generation_gwh", "label": "Large hydro", "color": "#296fba"},
+                ]
+                unit = "GWh"
+        sources = [
+            {"title": "NPP Monthly Actual Generation Report", "url": "https://npp.gov.in/publishedReports"},
+            {"title": "CEA Renewable Generation Report", "url": "https://cea.nic.in/renewable-generation-report/?lang=en"},
+        ]
+    elif any(token in text for token in ("steel", "hot metal", "coking consumption", "coking coal consumption", "blend")):
+        frame = _canonical_frame("steel_plant_coking_coal.csv")
+        title = "Steel-plant coking coal consumption"
+        category = "steel_plant"
+        columns = ["steel_plant", "period", "prime_coking_kt", "medium_coking_kt", "blendable_kt", "imported_coking_kt", "total_coking_kt", "hot_metal_kt", "status"]
+        series = [{"key": "total_coking_kt", "label": "Total coking coal", "color": "#8c2e3d"}]
+        unit = "thousand tonnes"
+        chart_type = "bar"
+        sources = [{"title": "Coal Directory 2024-25, Table 8.2", "url": "https://coal.gov.in/sites/default/files/2024-03/cdchap8.xlsx"}]
+    elif re.search(r"\b(ports?|clearance|discharge)\b", text):
+        frame = _canonical_frame("coal_imports_by_port.csv")
+        title = "Coal imports by Indian customs port"
+        category = "import_port"
+        columns = ["import_port", "period", "coking_coal_mt", "non_coking_coal_mt", "total_coal_mt", "status"]
+        series = [{"key": "total_coal_mt", "label": "Total coal", "color": "#003671"}]
+        chart_type = "bar"
+        sources = [{"title": "Coal Directory 2024-25, Table 8.5", "url": "https://coal.gov.in/sites/default/files/2024-03/cdchap7.xlsx"}]
+    elif any(token in text for token in ("origin", "supplier", "country", "australia", "indonesia", "south africa")):
+        frame = _canonical_frame("coal_imports_by_origin.csv")
+        title = "Coal imports by reported country of origin"
+        category = "origin_country"
+        columns = ["origin_country", "period", "coking_coal_mt", "non_coking_coal_mt", "total_coal_mt", "status"]
+        series = [{"key": "total_coal_mt", "label": "Total coal", "color": "#db2f34"}]
+        chart_type = "bar"
+        sources = [{"title": "Coal Directory 2024-25, Table 8.3", "url": "https://coal.gov.in/sites/default/files/2024-03/cdchap7.xlsx"}]
+    elif any(token in text for token in ("sector", "used", "use", "cement", "sponge", "offtake", "off-take")):
+        frame = _canonical_frame("coal_offtake_by_sector.csv")
+        title = "Domestic coal off-take by consuming sector"
+        columns = list(frame.columns)
+        series = [
+            {"key": "power_utility_mt", "label": "Utility power", "color": "#003671"},
+            {"key": "cement_mt", "label": "Cement", "color": "#d8902f"},
+            {"key": "sponge_iron_mt", "label": "Sponge iron", "color": "#8c2e3d"},
+        ]
+        sources = [{"title": "Coal Directory 2024-25, Table 4.22", "url": "https://coal.gov.in/sites/default/files/2024-03/cdchap3.xlsx"}]
+    elif "import" in text and any(token in text for token in ("month", "monthly", "2024-25", "coking", "non-coking")):
+        frame = _canonical_frame("coal_imports_monthly.csv")
+        title = "Monthly coal imports by coal type"
+        columns = list(frame.columns)
+        series = [
+            {"key": "coking_coal_mt", "label": "Coking", "color": "#8c2e3d"},
+            {"key": "non_coking_coal_mt", "label": "Non-coking", "color": "#d8902f"},
+        ]
+        sources = [{"title": "Coal Directory 2024-25, Table 8.7", "url": "https://coal.gov.in/sites/default/files/2024-03/cdchap7.xlsx"}]
+    elif "production" in text and any(token in text for token in ("month", "monthly", "2024-25", "coking", "lignite")):
+        detailed_type = any(token in text for token in ("coking", "lignite", "non-coking", "non coking"))
+        frame = _canonical_frame("coal_production_monthly.csv" if detailed_type else "coal_monthly_official.csv")
+        title = "Monthly domestic coal production by type" if detailed_type else "Monthly domestic coal production and dispatch"
+        columns = list(frame.columns)
+        series = ([
+            {"key": "coking_coal_mt", "label": "Coking", "color": "#8c2e3d"},
+            {"key": "non_coking_coal_mt", "label": "Non-coking", "color": "#003671"},
+        ] if detailed_type else [
+            {"key": "production_mt", "label": "Production", "color": "#003671"},
+            {"key": "dispatch_mt", "label": "Dispatch", "color": "#db2f34"},
+        ])
+        sources = ([{"title": "Coal Directory 2024-25, Table 3.6", "url": "https://coal.gov.in/sites/default/files/2024-03/cdchap2.xlsx"}]
+                   if detailed_type else [{"title": "Ministry of Coal — Monthly Statistics at a Glance", "url": "https://coal.gov.in/public-information/monthly-statistics-at-glance"}])
+    else:
+        frame = _canonical_frame("coal_india_annual.csv")
+        title = "India coal supply balance"
+        columns = list(frame.columns)
+        series = [
+            {"key": "production_mt", "label": "Production", "color": "#003671"},
+            {"key": "total_imports_mt", "label": "Imports", "color": "#db2f34"},
+        ]
+        sources = [{"title": "Coal Directory 2024-25 annual tables", "url": "https://coal.gov.in/major-statistics/coal-statistics"}]
+
+    if "weekly" in text and title.startswith("Monthly"):
+        raise HTTPException(409, "No official weekly series is loaded for this dataset. Monthly is the finest verified frequency currently available.")
+    if "quarter" in text and title.startswith("Monthly") and not frame.empty:
+        dates = pd.to_datetime(frame["period"].astype(str) + "-01", errors="coerce")
+        numeric_columns = [column for column in frame.columns if pd.api.types.is_numeric_dtype(frame[column])]
+        # Dashboard quarter labels use calendar quarters.  A fiscal year ending
+        # in March would label Apr-Jun 2026 as 2027Q1, which is technically a
+        # fiscal-period convention but misleading in a calendar date filter.
+        frame = frame.assign(period=dates.dt.to_period("Q").astype(str))
+        frame = frame.groupby("period", as_index=False)[numeric_columns].sum(min_count=1)
+        title = title.replace("Monthly", "Quarterly")
+        columns = list(frame.columns)
+    grade_tokens = None
+    if "non-coking" in text or "non coking" in text or "thermal coal" in text:
+        grade_tokens = ("period", "financial_year", "non_coking", "total", "status")
+    elif "coking" in text and "non-coking" not in text and "non coking" not in text:
+        grade_tokens = ("period", "financial_year", "coking", "status")
+    elif "lignite" in text:
+        grade_tokens = ("period", "financial_year", "lignite", "status")
+    if grade_tokens and title.startswith(("Monthly", "Quarterly")):
+        selected = [column for column in frame.columns if any(token in column.lower() for token in grade_tokens)]
+        if selected:
+            frame = frame[selected]
+            columns = selected
+            series = [item for item in series if item["key"] in selected]
+    requested_years = sorted(set(re.findall(r"\b20\d{2}\b", text)))
+    if requested_years and "period" in frame.columns:
+        period_text = frame["period"].astype(str)
+        frame = frame[period_text.str[:4].isin(requested_years)].copy()
+    if frame.empty:
+        raise HTTPException(404, "The requested official research dataset is not available.")
+    frame = frame[[column for column in columns if column in frame.columns]].copy()
+    if category in frame.columns and chart_type == "bar":
+        numeric_key = series[0]["key"]
+        frame = frame.sort_values(numeric_key, ascending=False).head(20)
+    records = frame.astype(object).where(pd.notna(frame), None).to_dict(orient="records")
+    period_values = [str(item.get("period")) for item in records if item.get("period")]
+    latest = max(period_values) if period_values else "available period"
+    answer = f"Returned {len(records)} official observations through {latest}. Hover the chart for exact values and download the filtered result below."
+    if len(records) >= 2 and "coal_share_pct" in frame.columns:
+        first, last = records[0], records[-1]
+        delta = float(last["coal_share_pct"]) - float(first["coal_share_pct"])
+        answer = (
+            f"Coal-fired plants supplied {float(last['coal_share_pct']):.2f}% of all-source "
+            f"generation in {last['period']}, versus {float(first['coal_share_pct']):.2f}% "
+            f"in {first['period']} ({delta:+.2f} percentage points). The denominator includes "
+            "thermal, nuclear, large hydro, Bhutan imports and CEA renewables without double-counting large hydro."
+        )
+    elif len(records) >= 2 and "solar_share_pct" in frame.columns:
+        first, last = records[0], records[-1]
+        delta = float(last["solar_share_pct"]) - float(first["solar_share_pct"])
+        generation_growth = (float(last["solar_generation_gwh"]) / float(first["solar_generation_gwh"]) - 1) * 100
+        answer = (
+            f"Solar supplied {float(last['solar_share_pct']):.2f}% of all-source generation in "
+            f"{last['period']}, up {delta:.2f} percentage points from {first['period']}; "
+            f"solar output increased {generation_growth:.1f}% year on year."
+        )
+    elif len(records) >= 2 and "large_hydro_generation_gwh" in frame.columns and "coal_generation_gwh" in frame.columns:
+        first, last = records[0], records[-1]
+        coal_growth = (float(last["coal_generation_gwh"]) / float(first["coal_generation_gwh"]) - 1) * 100
+        hydro_growth = (float(last["large_hydro_generation_gwh"]) / float(first["large_hydro_generation_gwh"]) - 1) * 100
+        answer = (
+            f"In the June comparison, coal generation changed {coal_growth:+.1f}% while large-hydro "
+            f"generation changed {hydro_growth:+.1f}%. This is a descriptive comparison, not a "
+            "monsoon-effect estimate; that requires aligned multi-year rainfall, reservoir and monthly generation data."
+        )
+    return {
+        "question": question,
+        "title": title,
+        "answer": answer,
+        "unit": unit,
+        "status": status,
+        "chart": {"type": chart_type, "category": category, "series": series},
+        "columns": list(frame.columns),
+        "rows": records,
+        "sources": sources,
+        "guardrail": "Associations and comparisons are descriptive; they do not by themselves establish causation.",
+    }
+
+
+def _period_limit(frame: pd.DataFrame, period: str) -> pd.DataFrame:
+    limits = {"12m": 1, "3y": 3, "5y": 5, "10y": 10}
+    count = limits.get(period)
+    if not count or "period" not in frame.columns or frame.empty:
+        return frame
+    values = frame["period"].astype(str)
+    if values.str.fullmatch(r"\d{4}-\d{2}").all():
+        dates = pd.to_datetime(values + "-01", errors="coerce")
+        latest = dates.max()
+        if pd.notna(latest):
+            first = latest - pd.DateOffset(months=count * 12 - 1)
+            return frame.loc[dates >= first].copy()
+    years = pd.to_numeric(values.str[:4], errors="coerce")
+    if years.notna().any():
+        return frame.loc[years >= years.max() - count + 1].copy()
+    return frame
+
+
+def _filtered_official_frame(
+    dataset_type: str, frequency: str, coal_type: str, period: str
+) -> tuple[pd.DataFrame, str, str]:
+    if dataset_type == "production":
+        if frequency == "yearly":
+            frame = _canonical_frame("coal_india_annual.csv")
+            label = "Official annual production"
+        elif frequency in {"monthly", "quarterly"}:
+            frame = _canonical_frame("coal_monthly_official.csv")
+            label = "Official Ministry monthly production"
+        else:
+            raise HTTPException(409, "No official weekly production series is loaded. Choose monthly, quarterly or yearly.")
+    elif dataset_type == "imports":
+        if frequency == "yearly":
+            frame = _canonical_frame("coal_india_annual.csv")
+            label = "Official annual imports"
+        elif frequency in {"monthly", "quarterly"}:
+            frame = _canonical_frame("coal_imports_monthly.csv")
+            label = "Official monthly imports"
+        else:
+            raise HTTPException(409, "No official weekly import series is loaded. Choose monthly, quarterly or yearly.")
+    elif dataset_type == "power_use":
+        if frequency != "yearly":
+            raise HTTPException(409, "The loaded official sector off-take series is yearly. Choose yearly.")
+        frame = _canonical_frame("coal_offtake_by_sector.csv")
+        label = "Official coal off-take by sector"
+    elif dataset_type == "renewables":
+        if frequency not in {"monthly", "yearly"}:
+            raise HTTPException(409, "The loaded official power-mix comparison is monthly (June snapshots).")
+        frame = _canonical_frame("india_power_generation_monthly.csv")
+        label = "Official NPP monthly generation mix"
+    elif dataset_type == "power_stocks":
+        raise HTTPException(409, "Plant-level stock-cover days are not yet present in the canonical store; pit-head stock will not be substituted.")
+    else:
+        raise HTTPException(409, "No canonical official weather/driver series is loaded for this selection.")
+    if frame.empty:
+        raise HTTPException(404, "The selected canonical dataset is unavailable.")
+
+    if frequency == "quarterly" and "period" in frame.columns:
+        dates = pd.to_datetime(frame["period"].astype(str) + "-01", errors="coerce")
+        numeric = [column for column in frame.columns if pd.api.types.is_numeric_dtype(frame[column])]
+        frame = frame.assign(period=dates.dt.to_period("Q").astype(str))
+        frame = frame.groupby("period", as_index=False)[numeric].sum(min_count=1)
+        label = label.replace("monthly", "quarterly")
+
+    grade = coal_type.strip().lower()
+    if grade and grade != "thermal":
+        tokens = {
+            "coking": ("period", "financial_year", "coking", "status"),
+            "lignite": ("period", "financial_year", "lignite", "status"),
+        }.get(grade)
+        if tokens:
+            selected = [column for column in frame.columns if any(token in column.lower() for token in tokens)]
+            if selected:
+                frame = frame[selected]
+    elif grade == "thermal":
+        selected = [
+            column for column in frame.columns
+            if any(token in column.lower() for token in ("period", "financial_year", "non_coking", "total", "status"))
+        ]
+        if selected:
+            frame = frame[selected]
+    frame = _period_limit(frame, period)
+    return frame, label, "Official values only; status columns identify final/provisional observations."
+
+
 def _india_coal_port_specs() -> Dict[str, Any]:
     if not INDIA_COAL_PORT_SPECS_PATH.exists():
         return {
@@ -279,9 +996,26 @@ def _coal_asset_rows(status_group: str = "operating") -> List[Dict[str, Any]]:
         frame = con.execute(
             'SELECT "Plant name" AS name, LOWER(TRIM(CAST("Status" AS VARCHAR))) '
             'AS source_status, SUM(TRY_CAST("Capacity (MW)" AS DOUBLE)) AS capacity, '
+            'COUNT(*) AS unit_count, '
+            'MIN(TRY_CAST("Start year" AS INTEGER)) AS commissioning_start_year, '
+            'MAX(TRY_CAST("Start year" AS INTEGER)) AS commissioning_end_year, '
             'AVG(TRY_CAST("Latitude" AS DOUBLE)) AS lat, '
             'AVG(TRY_CAST("Longitude" AS DOUBLE)) AS lon, '
-            'MAX(CAST("Country/Area" AS VARCHAR)) AS country '
+            'MAX(CAST("Country/Area" AS VARCHAR)) AS country, '
+            'MAX(CAST("GEM location ID" AS VARCHAR)) AS gem_location_id, '
+            'MAX(CAST("Owner" AS VARCHAR)) AS owner, '
+            'MAX(CAST("Parent" AS VARCHAR)) AS parent_company, '
+            'MAX(CAST("Combustion technology" AS VARCHAR)) AS combustion_technology, '
+            'MAX(CAST("Coal type" AS VARCHAR)) AS coal_type, '
+            'MAX(CAST("Coal source" AS VARCHAR)) AS coal_source, '
+            'MAX(CAST("Location" AS VARCHAR)) AS location, '
+            'MAX(CAST("Major area (prefecture, district)" AS VARCHAR)) AS district, '
+            'MAX(CAST("Subnational unit (province, state)" AS VARCHAR)) AS state, '
+            'MAX(CAST("Permits" AS VARCHAR)) AS permits, '
+            'MAX(CAST("Captive industry use" AS VARCHAR)) AS captive_use, '
+            'AVG(TRY_CAST("Capacity factor" AS DOUBLE)) AS capacity_factor, '
+            'SUM(TRY_CAST("Annual CO2 (million tonnes / annum)" AS DOUBLE)) AS annual_co2_mtpa, '
+            'MAX(CAST("Wiki URL" AS VARCHAR)) AS source_url '
             'FROM coal_plants WHERE LOWER(CAST("Country/Area" AS VARCHAR)) = ? '
             f'AND LOWER(TRIM(CAST("Status" AS VARCHAR))) IN ({placeholders}) '
             'GROUP BY 1, 2',
@@ -309,7 +1043,14 @@ def _coal_asset_rows(status_group: str = "operating") -> List[Dict[str, Any]]:
                     "source_text": "Global Energy Monitor coal plant tracker",
                     "asset_kind": "power_consumers",
                     "asset_label": "Coal-fired power plant",
+                    "npp_source_url": NPP_PUBLISHED_REPORTS_URL,
+                    "ministry_coal_source_url": MINISTRY_COAL_LINKAGE_URL,
                 }
+            )
+            record.update(
+                CEA_VERIFIED_COAL_PLANTS.get(
+                    str(record.get("gem_location_id") or ""), {}
+                )
             )
             rows.append(record)
 
@@ -1896,6 +2637,65 @@ async def get_map_points(
             + ")"
         )
         params.extend(value.lower() for value in values)
+    if tracker_id == "coal_plants":
+        partition = '"Plant name", LOWER(TRIM(CAST("Status" AS VARCHAR)))'
+        sql = (
+            'SELECT CAST("GEM unit/phase ID" AS VARCHAR) AS id, '
+            'CAST("GEM location ID" AS VARCHAR) AS gem_location_id, '
+            '"Plant name" AS name, "Unit name" AS unit, "Status" AS status, '
+            'TRY_CAST("Capacity (MW)" AS DOUBLE) AS capacity, '
+            'SUM(TRY_CAST("Capacity (MW)" AS DOUBLE)) OVER '
+            f'(PARTITION BY {partition}) AS plant_capacity, '
+            f'COUNT(*) OVER (PARTITION BY {partition}) AS unit_count, '
+            'MIN(TRY_CAST("Start year" AS INTEGER)) OVER '
+            f'(PARTITION BY {partition}) AS commissioning_start_year, '
+            'MAX(TRY_CAST("Start year" AS INTEGER)) OVER '
+            f'(PARTITION BY {partition}) AS commissioning_end_year, '
+            'TRY_CAST("Start year" AS INTEGER) AS unit_start_year, '
+            'TRY_CAST("Latitude" AS DOUBLE) AS lat, '
+            'TRY_CAST("Longitude" AS DOUBLE) AS lon, '
+            '"Country/Area" AS country, "Owner" AS owner, '
+            '"Parent" AS parent_company, '
+            '"Combustion technology" AS combustion_technology, '
+            '"Coal type" AS coal_type, "Coal source" AS coal_source, '
+            '"Location" AS location, '
+            '"Major area (prefecture, district)" AS district, '
+            '"Subnational unit (province, state)" AS state, '
+            '"Location accuracy" AS location_accuracy, "Permits" AS permits, '
+            '"Captive industry use" AS captive_use, '
+            'AVG(TRY_CAST("Capacity factor" AS DOUBLE)) OVER '
+            f'(PARTITION BY {partition}) AS capacity_factor, '
+            'SUM(TRY_CAST("Annual CO2 (million tonnes / annum)" AS DOUBLE)) '
+            f'OVER (PARTITION BY {partition}) AS annual_co2_mtpa, '
+            '"Wiki URL" AS source_url '
+            'FROM coal_plants WHERE '
+            + " AND ".join(clauses)
+            + " LIMIT "
+            + str(limit)
+        )
+        frame = con.execute(sql, params).fetchdf()
+        records = json.loads(frame.to_json(orient="records"))
+        for record in records:
+            record.update(
+                {
+                    "capacity_unit": "MW",
+                    "source_text": "Global Energy Monitor coal plant tracker",
+                    "coverage_note": (
+                        "Plant and unit attributes are from Global Energy "
+                        "Monitor. Official CEA verification is shown only "
+                        "where an exact station match has been reviewed."
+                    ),
+                }
+            )
+            if str(record.get("country") or "").lower() == "india":
+                record["npp_source_url"] = NPP_PUBLISHED_REPORTS_URL
+                record["ministry_coal_source_url"] = MINISTRY_COAL_LINKAGE_URL
+            record.update(
+                CEA_VERIFIED_COAL_PLANTS.get(
+                    str(record.get("gem_location_id") or ""), {}
+                )
+            )
+        return records
     name_expr = (
         '"Plant name"' if "Plant name" in columns
         else '"Project Name"' if "Project Name" in columns
@@ -2045,6 +2845,9 @@ async def port_detail(port_id: str):
 async def coal_summary():
     """Describe verified India map coverage and uploaded analytical datasets."""
     datasets = _coal_dataset_metadata()
+    official_master = _india_coal_master()
+    official_analysis = _india_coal_analysis()
+    official_coverage = official_master.get("coverage") or {}
     assets = _coal_asset_rows()
     counts = {
         key: sum(row["asset_kind"] == key for row in assets)
@@ -2060,12 +2863,37 @@ async def coal_summary():
     available_types = sorted(
         {item.get("dataset_type") for item in datasets if item.get("dataset_type")}
     )
+    if official_analysis.get("annual"):
+        available_types = sorted(
+            set(available_types)
+            | {"production", "imports", "power_stocks", "power_use"}
+        )
     return {
-        "status": "ready" if datasets else "awaiting_data",
+        "status": (
+            "ready"
+            if datasets or official_analysis.get("annual")
+            else "awaiting_data"
+        ),
         "country": "India",
         "map_assets": counts,
         "datasets": datasets,
+        "official_master": {
+            "status": official_master.get("quality", {}).get(
+                "status", official_coverage.get("status", "available")
+            ),
+            "generated_at": official_master.get("generated_at"),
+            "source_file_count": official_coverage.get("source_file_count", 0),
+            "extracted_file_count": official_coverage.get("extracted_file_count", 0),
+            "normalized_row_count": official_coverage.get("normalized_row_count", 0),
+            "source_table_count": len(official_master.get("source_tables", [])),
+            "ui_views": official_master.get("ui_views", {}),
+        },
         "available_dataset_types": available_types,
+        "official_analysis": {
+            "status": official_analysis.get("status"),
+            "period_count": len(official_analysis.get("annual", [])),
+            "latest": official_analysis.get("latest", {}),
+        },
         "dataset_types": [
             {"id": key, "label": label}
             for key, label in COAL_DATASET_TYPES.items()
@@ -2098,8 +2926,9 @@ async def coal_summary():
             }
         },
         "quality_note": (
-            "Map assets use GEM and WPI sources. Operational production, trade, "
-            "use, stocks and driver metrics are shown only after user data is uploaded."
+            "Map assets use GEM and WPI sources. Official Coal Directory "
+            "financial-year production, imports, off-take and pit-head stocks "
+            "are mapped separately with source and methodology notes."
         ),
         "status_policy": {
             "default": "operating",
@@ -2211,6 +3040,164 @@ async def coal_datasets():
     return {"data": _coal_dataset_metadata()}
 
 
+@app.get("/api/coal/master")
+async def coal_master(
+    include_records: bool = Query(False),
+):
+    payload = _india_coal_master()
+    if not include_records and "records" in payload:
+        payload = dict(payload)
+        payload["records"] = []
+        payload["records_omitted"] = True
+    return payload
+
+
+@app.get("/api/coal/master/source-table-catalog.csv")
+async def export_coal_master_source_table_catalog():
+    payload = _india_coal_master()
+    rows = payload.get("source_tables", [])
+    frame = pd.DataFrame(rows)
+    buffer = io.StringIO()
+    frame.to_csv(buffer, index=False)
+    return StreamingResponse(
+        iter([buffer.getvalue()]),
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": (
+                "attachment; filename=india_coal_source_table_catalog.csv"
+            )
+        },
+    )
+
+
+@app.get("/api/coal/analysis")
+async def coal_analysis():
+    return _india_coal_analysis()
+
+
+@app.get("/api/coal/dashboard")
+async def coal_dashboard(
+    tab: str = Query("overview"),
+    start: str = Query("2023-05"),
+    end: str = Query("2026-06"),
+    frequency: str = Query("monthly"),
+    focus: str = Query("all"),
+    comparison: str = Query("previous_period"),
+):
+    return _coal_dashboard_payload(tab, start, end, frequency, focus, comparison)
+
+
+@app.get("/api/coal/dashboard/export")
+async def export_coal_dashboard(
+    tab: str = Query("overview"),
+    start: str = Query("2023-05"),
+    end: str = Query("2026-06"),
+    frequency: str = Query("monthly"),
+    focus: str = Query("all"),
+    comparison: str = Query("previous_period"),
+    format: str = Query("xlsx", pattern="^(xlsx|csv)$"),
+):
+    payload = _coal_dashboard_payload(tab, start, end, frequency, focus, comparison)
+    frame = pd.DataFrame(payload["rows"], columns=payload["columns"])
+    filename = f"india_coal_{tab}_{frequency}_{start}_to_{end}"
+    if format == "csv":
+        buffer = io.StringIO()
+        frame.to_csv(buffer, index=False)
+        return StreamingResponse(
+            iter([buffer.getvalue()]), media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="{filename}.csv"'},
+        )
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        frame.to_excel(writer, index=False, sheet_name="Filtered data")
+        used_sheets = {"Filtered data", "Sources", "Selection"}
+        for index, chart in enumerate(payload.get("charts", []), start=1):
+            chart_rows = chart.get("rows")
+            if not chart_rows:
+                continue
+            base_name = re.sub(r"[^A-Za-z0-9 _-]", "", chart.get("title", f"Chart {index}"))[:31].strip() or f"Chart {index}"
+            sheet_name = base_name
+            suffix = 2
+            while sheet_name in used_sheets:
+                tail = f" {suffix}"
+                sheet_name = f"{base_name[:31 - len(tail)]}{tail}"
+                suffix += 1
+            used_sheets.add(sheet_name)
+            pd.DataFrame(chart_rows).to_excel(writer, index=False, sheet_name=sheet_name)
+        pd.DataFrame(payload["sources"]).to_excel(writer, index=False, sheet_name="Sources")
+        pd.DataFrame([
+            {"field": "Dashboard tab", "value": tab},
+            {"field": "Requested from", "value": start},
+            {"field": "Requested to", "value": end},
+            {"field": "Frequency", "value": frequency},
+            {"field": "Measure focus", "value": focus},
+            {"field": "Comparison", "value": comparison},
+            {"field": "Returned rows", "value": len(frame)},
+            {"field": "Available start", "value": payload["available_range"].get("start")},
+            {"field": "Available end", "value": payload["available_range"].get("end")},
+            {"field": "Limitation", "value": payload["available_range"].get("limitation", "")},
+        ]).to_excel(writer, index=False, sheet_name="Selection")
+    output.seek(0)
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}.xlsx"'},
+    )
+
+
+@app.get("/api/coal/analysis.csv")
+async def export_coal_analysis_csv():
+    if not INDIA_COAL_ANNUAL_CSV_PATH.exists():
+        raise HTTPException(404, "Mapped India coal analysis is unavailable")
+    return FileResponse(
+        INDIA_COAL_ANNUAL_CSV_PATH,
+        media_type="text/csv; charset=utf-8",
+        filename="india_coal_annual_analysis.csv",
+    )
+
+
+@app.post("/api/coal/research/query")
+async def coal_research_query(request: CoalResearchQuery):
+    question = request.question.strip()
+    if len(question) < 4:
+        raise HTTPException(400, "Write a more specific research question.")
+    return _research_payload(question)
+
+
+@app.get("/api/coal/research/export")
+async def export_coal_research(
+    q: str = Query(..., min_length=4),
+    format: str = Query("xlsx", pattern="^(xlsx|csv)$"),
+):
+    payload = _research_payload(q)
+    frame = pd.DataFrame(payload["rows"])
+    if format == "csv":
+        buffer = io.StringIO()
+        frame.to_csv(buffer, index=False)
+        return StreamingResponse(
+            iter([buffer.getvalue()]),
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": 'attachment; filename="india_coal_research.csv"'},
+        )
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        frame.to_excel(writer, index=False, sheet_name="Research result")
+        pd.DataFrame(payload["sources"]).to_excel(writer, index=False, sheet_name="Sources")
+        pd.DataFrame([{
+            "question": q,
+            "answer": payload["answer"],
+            "unit": payload["unit"],
+            "status": payload["status"],
+            "guardrail": payload["guardrail"],
+        }]).to_excel(writer, index=False, sheet_name="Methodology")
+    output.seek(0)
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": 'attachment; filename="india_coal_research.xlsx"'},
+    )
+
+
 @app.get("/api/npp/power-dashboard")
 async def npp_power_dashboard(force: bool = Query(False)):
     return await _get_npp_power_dashboard(force=force)
@@ -2315,21 +3302,27 @@ async def upload_coal_dataset(
 
 
 @app.get("/api/coal/export")
-async def export_coal_data(dataset_type: Optional[str] = None):
+async def export_coal_data(
+    dataset_type: str = Query("production"),
+    frequency: str = Query("yearly", pattern="^(weekly|monthly|quarterly|yearly)$"),
+    coal_type: str = Query(""),
+    period: str = Query("all", pattern="^(12m|3y|5y|10y|all)$"),
+):
+    if dataset_type not in COAL_DATASET_TYPES:
+        raise HTTPException(400, "Unknown coal dataset type")
     datasets = _coal_dataset_metadata()
-    if dataset_type:
-        datasets = [
-            item for item in datasets
-            if item.get("dataset_type") == dataset_type
-        ]
-    if not datasets:
-        raise HTTPException(
-            409,
-            "No matching coal dataset has been uploaded; no workbook was generated.",
-        )
+    datasets = [
+        item for item in datasets if item.get("dataset_type") == dataset_type
+    ]
+    official_analysis = _india_coal_analysis()
+    official_frame, official_label, selection_note = _filtered_official_frame(
+        dataset_type, frequency, coal_type, period
+    )
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         used_sheets: set[str] = set()
+        official_frame.to_excel(writer, index=False, sheet_name="Filtered official data")
+        used_sheets.add("Filtered official data")
         for index, metadata in enumerate(datasets):
             csv_path = COAL_UPLOAD_DIR / str(metadata.get("csv_file", ""))
             if not csv_path.exists():
@@ -2343,25 +3336,25 @@ async def export_coal_data(dataset_type: Optional[str] = None):
                 suffix += 1
             used_sheets.add(sheet)
             frame.to_excel(writer, index=False, sheet_name=sheet)
-        methodology = pd.DataFrame(
-            [
-                {
-                    "note": (
-                        "Raw uploaded data only. No inferred or synthetic values. "
-                        "Correlation analysis must align compatible periods and "
-                        "does not establish causation."
-                    )
-                }
-            ]
-        )
+        methodology = pd.DataFrame([
+            {"field": "Dataset", "value": official_label},
+            {"field": "Frequency", "value": frequency},
+            {"field": "Coal type", "value": coal_type or "all coal"},
+            {"field": "Period", "value": period},
+            {"field": "Quality", "value": selection_note},
+            {"field": "Guardrail", "value": "Correlation is association, not causation."},
+        ])
         methodology.to_excel(writer, index=False, sheet_name="Methodology")
+        pd.DataFrame(official_analysis.get("sources", [])).to_excel(
+            writer, index=False, sheet_name="Sources"
+        )
     output.seek(0)
     return StreamingResponse(
         output,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={
             "Content-Disposition": (
-                'attachment; filename="india_coal_workspace_export.xlsx"'
+                f'attachment; filename="india_coal_{dataset_type}_{frequency}.xlsx"'
             )
         },
     )
@@ -3070,6 +4063,9 @@ class AisLiveManager:
 
 
 ais_live_manager = AisLiveManager()
+imd_coastal_weather_manager = ImdCoastalWeatherManager(
+    IMD_COASTAL_CACHE_PATH
+)
 
 
 @app.on_event("startup")
@@ -3083,9 +4079,97 @@ async def start_ais_background_collection():
     await ais_live_manager.configure(boxes)
 
 
+@app.on_event("startup")
+async def start_imd_coastal_weather_collection():
+    """Refresh official coastal bulletins without delaying app startup."""
+    imd_coastal_weather_manager.start()
+
+
 @app.on_event("shutdown")
 async def stop_ais_live_manager():
     await ais_live_manager.stop()
+
+
+@app.on_event("shutdown")
+async def stop_imd_coastal_weather_collection():
+    await imd_coastal_weather_manager.stop()
+
+
+def _imd_weather_payload(day: int) -> Dict[str, Any]:
+    payload = dict(imd_coastal_weather_manager.payload)
+    payload["rows"] = [
+        row for row in payload.get("rows", [])
+        if int(row.get("day") or 0) == day
+    ]
+    payload["day"] = day
+    payload["last_error"] = imd_coastal_weather_manager.last_error
+    return payload
+
+
+@app.get("/api/imd/coastal-weather")
+async def imd_coastal_weather(day: int = Query(1, ge=1, le=5)):
+    if not imd_coastal_weather_manager.payload:
+        try:
+            await imd_coastal_weather_manager.refresh(force=True)
+        except Exception as exc:
+            raise HTTPException(
+                503, f"IMD coastal weather is temporarily unavailable: {exc}"
+            ) from exc
+    return _imd_weather_payload(day)
+
+
+@app.post("/api/imd/coastal-weather/refresh")
+async def refresh_imd_coastal_weather(
+    day: int = Query(1, ge=1, le=5),
+):
+    try:
+        await imd_coastal_weather_manager.refresh(force=True)
+    except Exception as exc:
+        if not imd_coastal_weather_manager.payload:
+            raise HTTPException(
+                503, f"IMD coastal weather refresh failed: {exc}"
+            ) from exc
+    return _imd_weather_payload(day)
+
+
+@app.get("/api/imd/coastal-weather/export.csv")
+async def export_imd_coastal_weather_csv():
+    if not imd_coastal_weather_manager.payload:
+        try:
+            await imd_coastal_weather_manager.refresh(force=True)
+        except Exception as exc:
+            raise HTTPException(
+                503, f"IMD coastal weather is temporarily unavailable: {exc}"
+            ) from exc
+    fields = [
+        "zone_id",
+        "zone_name",
+        "day",
+        "valid_date",
+        "rainfall_category",
+        "wind_speed_min_kmph",
+        "wind_speed_max_kmph",
+        "gust_kmph",
+        "wave_height_min_m",
+        "wave_height_max_m",
+        "severity",
+        "summary",
+        "source_issue_time",
+        "source_url",
+    ]
+    buffer = io.StringIO()
+    writer = csv.DictWriter(buffer, fieldnames=fields, extrasaction="ignore")
+    writer.writeheader()
+    writer.writerows(imd_coastal_weather_manager.payload.get("rows", []))
+    return StreamingResponse(
+        iter([buffer.getvalue()]),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": (
+                'attachment; filename="imd_coastal_weather_latest.csv"'
+            )
+        },
+    )
 
 
 @app.get("/api/ais/status")

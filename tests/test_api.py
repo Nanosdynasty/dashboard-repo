@@ -1,6 +1,8 @@
 import unittest
+import io
 from unittest.mock import AsyncMock, patch
 
+import pandas as pd
 from fastapi.testclient import TestClient
 
 from app import (
@@ -84,6 +86,55 @@ class PortApiTests(unittest.TestCase):
                 )
                 self.assertEqual(response.status_code, 200)
                 self.assertEqual(len(response.json()), count)
+
+    def test_india_coal_plant_cards_expose_rich_and_official_fields(self):
+        response = self.client.get(
+            "/api/map/coal_plants",
+            params={
+                "country": "India",
+                "status": "operating",
+                "limit": 150_000,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        wardha = next(
+            item
+            for item in response.json()
+            if item["name"] == "Wardha Warora Power Plant"
+        )
+        self.assertEqual(wardha["plant_capacity"], 540)
+        self.assertEqual(wardha["unit_count"], 4)
+        self.assertEqual(wardha["state"], "Maharashtra")
+        self.assertEqual(wardha["coal_source"], "Western Coalfields")
+        self.assertTrue(wardha["cea_verified"])
+        self.assertEqual(wardha["cea_capacity_mw"], 540)
+        self.assertEqual(wardha["cea_commissioning"], "2010–2011")
+        self.assertIn("cea.nic.in", wardha["cea_source_url"])
+        self.assertIn("npp.gov.in", wardha["npp_source_url"])
+        self.assertIn("coal.gov.in", wardha["ministry_coal_source_url"])
+
+    def test_sidebar_workspace_and_route_ui_regressions(self):
+        html = self.client.get("/").text
+        javascript = self.client.get("/static/js/app.js").text
+        self.assertNotIn('data-mode="ports" open', html)
+        self.assertIn("state.routePorts[state.routePickIndex] = port", javascript)
+        start_route = javascript.split("function startRoutePicking()", 1)[1]
+        start_route = start_route.split("function updateRouteSelection()", 1)[0]
+        self.assertNotIn("resetRoute(", start_route)
+        self.assertIn(
+            'document.querySelector(".voyage-section").open',
+            javascript,
+        )
+        self.assertIn(
+            "state.routePorts[state.routePickIndex] = port",
+            javascript,
+        )
+        activate_mode = javascript.split("function activateMode(mode)", 1)[1]
+        activate_mode = activate_mode.split("function loadAisPreferences()", 1)[0]
+        self.assertIn(
+            "[state.aisLayer, state.aisTrailLayer, state.routeLayer]",
+            activate_mode,
+        )
 
     def test_layer_facets_support_country_status_and_terminal_role_filters(self):
         energy = self.client.get(
@@ -538,7 +589,7 @@ class PortApiTests(unittest.TestCase):
         self.assertIn("Coal stock availability", html)
         self.assertIn("Cumulative generation", html)
         self.assertIn("Sector-wise PLF", html)
-        self.assertIn("app.js?v=20260730-11", html)
+        self.assertIn("app.js?v=20260731-26", html)
         self.assertIn("Cargo + tankers + type pending", html)
         self.assertIn('id="ais-watchlist" class="ais-watchlist" hidden', html)
         self.assertIn("positions in the background", html)
@@ -791,6 +842,134 @@ class PortApiTests(unittest.TestCase):
             "Historical growth of electricity consumption",
             payload["excluded_visuals"],
         )
+
+    def test_plain_english_power_mix_research_is_source_backed(self):
+        response = self.client.post(
+            "/api/coal/research/query",
+            json={
+                "question": (
+                    "What percentage of India electricity generation came "
+                    "from coal in June 2026 versus June 2025?"
+                )
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(len(payload["rows"]), 2)
+        self.assertAlmostEqual(payload["rows"][-1]["coal_share_pct"], 65.7616, places=3)
+        self.assertIn("NPP Monthly Actual", payload["sources"][0]["title"])
+
+    def test_granular_export_rejects_unavailable_weekly_frequency(self):
+        response = self.client.get(
+            "/api/coal/export",
+            params={
+                "dataset_type": "imports",
+                "frequency": "weekly",
+                "coal_type": "coking",
+                "period": "3y",
+            },
+        )
+        self.assertEqual(response.status_code, 409)
+        self.assertIn("monthly", response.json()["detail"].lower())
+
+    def test_coal_dashboard_tabs_are_distinct_and_current(self):
+        expected_titles = {
+            "overview": "All-source electricity generation mix",
+            "supply": "Period-on-period change",
+            "trade": "Monthly coal imports by coal type",
+            "power": "All-source generation mix",
+            "stocks": "Pit-head closing stock",
+        }
+        seen = set()
+        for tab, expected in expected_titles.items():
+            response = self.client.get(
+                "/api/coal/dashboard",
+                params={"tab": tab, "start": "2023-05", "end": "2026-06", "frequency": "monthly"},
+            )
+            self.assertEqual(response.status_code, 200)
+            payload = response.json()
+            titles = tuple(chart["title"] for chart in payload["charts"])
+            self.assertIn(expected, titles)
+            self.assertNotIn(titles, seen)
+            seen.add(titles)
+        power = self.client.get(
+            "/api/coal/dashboard",
+            params={"tab": "power", "start": "2023-05", "end": "2026-06", "frequency": "monthly"},
+        ).json()
+        self.assertEqual(len(power["rows"]), 38)
+        self.assertEqual(power["available_range"]["end"], "2026-06")
+        all_source_chart = next(chart for chart in power["charts"] if chart["id"] == "power-all-source")
+        series_keys = {series["key"] for series in all_source_chart["series"]}
+        self.assertTrue({"wind_generation_gwh", "solar_generation_gwh", "other_renewables_total_gwh"}.issubset(series_keys))
+        self.assertTrue(all_source_chart["rows"])
+        latest_mix = all_source_chart["rows"][-1]
+        self.assertAlmostEqual(latest_mix["coal_share_pct"], 65.7616, places=3)
+        coal_share_kpi = next(kpi for kpi in power["kpis"] if kpi["label"] == "Coal share of all generation")
+        self.assertAlmostEqual(coal_share_kpi["value"], 65.7616, places=3)
+        self.assertNotAlmostEqual(coal_share_kpi["value"], 82.9, places=1)
+        quarterly = self.client.get(
+            "/api/coal/dashboard",
+            params={"tab": "power", "start": "2024-07", "end": "2026-06", "frequency": "quarterly"},
+        ).json()
+        self.assertEqual(quarterly["rows"][-1]["period"], "2026Q2")
+        self.assertNotIn("2027Q1", {row["period"] for row in quarterly["rows"]})
+
+    def test_trade_dashboard_uses_latest_official_import_release(self):
+        payload = self.client.get(
+            "/api/coal/dashboard",
+            params={"tab": "trade", "start": "2024-04", "end": "2026-06", "frequency": "monthly"},
+        ).json()
+        self.assertEqual(payload["available_range"]["end"], "2026-04")
+        self.assertEqual(len(payload["rows"]), 25)
+        latest = payload["rows"][-1]
+        self.assertEqual(latest["period"], "2026-04")
+        self.assertAlmostEqual(latest["total_coal_mt"], 21.13, places=2)
+        self.assertAlmostEqual(latest["coking_coal_mt"], 6.01, places=2)
+        self.assertAlmostEqual(latest["non_coking_coal_mt"], 15.11, places=2)
+        annual_chart = next(chart for chart in payload["charts"] if chart["id"] == "trade-annual")
+        self.assertEqual(annual_chart["rows"][-1]["period"], "2025-26")
+        self.assertAlmostEqual(annual_chart["rows"][-1]["total_imports_mt"], 246.37, places=2)
+        self.assertIn("Customs reporting country", payload["available_range"]["limitation"])
+
+    def test_dashboard_measure_focus_controls_charts_rows_and_export(self):
+        params = {
+            "tab": "trade", "start": "2024-04", "end": "2026-04",
+            "frequency": "monthly", "focus": "coking", "comparison": "previous_year",
+        }
+        payload = self.client.get("/api/coal/dashboard", params=params).json()
+        self.assertEqual(payload["focus"], "coking")
+        self.assertEqual(payload["comparison"], "previous_year")
+        self.assertIn("coking_coal_mt", payload["columns"])
+        self.assertNotIn("non_coking_coal_mt", payload["columns"])
+        for chart in payload["charts"]:
+            self.assertTrue(all("coking" in series["key"] for series in chart["series"]))
+        exported = self.client.get(
+            "/api/coal/dashboard/export", params={**params, "format": "xlsx"}
+        )
+        self.assertEqual(exported.status_code, 200)
+        frame = pd.read_excel(io.BytesIO(exported.content), sheet_name="Filtered data")
+        self.assertIn("coking_coal_mt", frame.columns)
+        self.assertNotIn("non_coking_coal_mt", frame.columns)
+
+    def test_three_year_monthly_export_matches_active_filter(self):
+        params = {
+            "tab": "supply", "start": "2023-07", "end": "2026-06",
+            "frequency": "monthly", "format": "xlsx",
+        }
+        response = self.client.get("/api/coal/dashboard/export", params=params)
+        self.assertEqual(response.status_code, 200)
+        frame = pd.read_excel(io.BytesIO(response.content), sheet_name="Filtered data")
+        self.assertEqual(len(frame), 36)
+        self.assertEqual(frame.iloc[0]["period"], "2023-07")
+        self.assertEqual(frame.iloc[-1]["period"], "2026-06")
+
+        legacy = self.client.get(
+            "/api/coal/export",
+            params={"dataset_type": "production", "frequency": "monthly", "coal_type": "thermal", "period": "3y"},
+        )
+        self.assertEqual(legacy.status_code, 200)
+        legacy_frame = pd.read_excel(io.BytesIO(legacy.content), sheet_name="Filtered official data")
+        self.assertEqual(len(legacy_frame), 36)
 
 
 if __name__ == "__main__":

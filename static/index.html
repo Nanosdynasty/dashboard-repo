@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Howe Robinson | Global Assets Map</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="/static/css/style.css?v=20260730-2" />
+  <link rel="stylesheet" href="/static/css/style.css?v=20260731-20" />
 </head>
 <body>
   <div class="app-shell">
@@ -60,7 +60,7 @@
           </div>
         </details>
 
-        <details class="filter-section" data-mode="ports" open>
+        <details class="filter-section" data-mode="ports">
           <summary>
             <span><i class="section-icon ports-icon"></i>Ports</span>
             <span class="section-count" id="port-visible-count">3,669 shown</span>
@@ -99,7 +99,8 @@
           <div class="section-body">
             <p class="workspace-intro">Indian coal production, seaborne imports, power use and stocks—with verified map context.</p>
             <div class="view-switch" aria-label="Coal workspace view">
-              <button type="button" class="active" data-coal-view="map">Map</button>
+              <button type="button" class="active" data-coal-view="analytics">Analytics</button>
+              <button type="button" data-coal-view="map">Map</button>
               <button type="button" data-coal-view="table">Table</button>
               <button type="button" data-coal-view="cards">Cards</button>
               <button type="button" data-coal-view="power">India power</button>
@@ -175,6 +176,12 @@
             <div class="coal-actions">
               <button type="button" id="coal-run-analysis" disabled>Run analysis</button>
               <button type="button" id="coal-export" disabled>Download Excel</button>
+            </div>
+            <div class="coal-question-box">
+              <label for="coal-research-question">Ask the India dry-bulk research desk</label>
+              <textarea id="coal-research-question" rows="4" placeholder="Example: What percentage of India’s electricity came from coal in June 2026, and how did it change from June 2025?"></textarea>
+              <button type="button" id="coal-research-run">Analyse question</button>
+              <small id="coal-research-message">Uses mapped official datasets only. It will not invent missing observations.</small>
             </div>
             <p class="data-gap"><strong>Analysis guardrail:</strong> correlations will use aligned time periods and will be labelled as association, not causation.</p>
             <p class="source-note"><strong>Stock cover:</strong> days of coal remaining at the observed consumption rate. Inventory tonnes remain a supporting field.</p>
@@ -314,6 +321,54 @@
           </div>
         </details>
 
+        <details class="filter-section weather-section">
+          <summary>
+            <span><i class="section-icon weather-icon"></i>Coastal weather</span>
+            <span class="section-count" id="weather-layer-count">Off</span>
+          </summary>
+          <div class="weather-card">
+            <label class="weather-toggle">
+              <span>
+                <strong>Show IMD coastal forecast</strong>
+                <small>Optional map layer; refreshed every five hours</small>
+              </span>
+              <input id="coastal-weather-enabled" type="checkbox" role="switch" />
+            </label>
+            <label class="weather-field" for="coastal-weather-day">
+              <span>Forecast period</span>
+              <select id="coastal-weather-day">
+                <option value="1" selected>Day 1</option>
+                <option value="2">Day 2</option>
+                <option value="3">Day 3</option>
+                <option value="4">Day 4</option>
+                <option value="5">Day 5</option>
+              </select>
+            </label>
+            <fieldset class="weather-parameters">
+              <legend>Map signals</legend>
+              <label><input type="checkbox" value="rain" checked /><span class="weather-param-dot rain"></span>Rainfall</label>
+              <label><input type="checkbox" value="wind" checked /><span class="weather-param-dot wind"></span>Wind &amp; gusts</label>
+              <label><input type="checkbox" value="wave" checked /><span class="weather-param-dot wave"></span>Wave height</label>
+            </fieldset>
+            <label class="weather-animation-toggle">
+              <input id="coastal-weather-animation" type="checkbox" checked />
+              Animate weather symbols
+            </label>
+            <div class="weather-actions">
+              <button type="button" id="coastal-weather-refresh" class="secondary-button">Refresh now</button>
+              <a class="secondary-button" href="/api/imd/coastal-weather/export.csv">Download CSV</a>
+            </div>
+            <div id="coastal-weather-status" class="weather-status">
+              Layer is switched off.
+            </div>
+            <p class="source-note">
+              Official IMD coastal bulletins and five-day fishermen warnings.
+              Shaded regions are generalized offshore display areas—not for navigation.
+              Blank values mean IMD did not quantify that field.
+            </p>
+          </div>
+        </details>
+
         <details class="filter-section voyage-section">
           <summary>
             <span><i class="section-icon voyage-icon"></i>Voyage distance</span>
@@ -367,46 +422,123 @@
       <div id="map"></div>
       <header id="coal-workspace-header" class="coal-workspace-header" hidden>
         <div>
-          <span>INDIA / COAL INTELLIGENCE</span>
-          <h1>Supply, trade &amp; power demand</h1>
+          <span>HRP MARKET INTELLIGENCE / INDIA COAL</span>
+          <h1>Flows, fundamentals &amp; power demand</h1>
         </div>
         <div class="coal-header-meta">
           <strong id="coal-header-status">Awaiting operational data</strong>
-          <small>GEM + WPI map context</small>
+          <small>Official data · validated lineage · export ready</small>
         </div>
       </header>
       <section id="coal-data-surface" class="coal-data-surface" hidden>
         <nav class="coal-analysis-nav" aria-label="Coal analysis sections">
-          <button type="button" class="active">Overview</button>
-          <button type="button">Supply</button>
-          <button type="button">Trade flows</button>
-          <button type="button">Power</button>
-          <button type="button">Stock cover</button>
-          <button type="button">Drivers</button>
+          <button class="active" type="button" data-coal-dashboard-tab="overview">Overview</button>
+          <button type="button" data-coal-dashboard-tab="supply">Supply</button>
+          <button type="button" data-coal-dashboard-tab="trade">Trade flows</button>
+          <button type="button" data-coal-dashboard-tab="power">Power</button>
+          <button type="button" data-coal-dashboard-tab="stocks">Stocks</button>
+          <button type="button" data-coal-dashboard-tab="table">Data explorer</button>
         </nav>
-        <div class="coal-kpis">
-          <article><span>Production</span><strong>Awaiting data</strong><small>Upload production series</small></article>
-          <article><span>Seaborne imports</span><strong>Awaiting data</strong><small>Upload import series</small></article>
-          <article><span>Power use</span><strong>Awaiting data</strong><small>Upload consumption series</small></article>
-          <article><span>Stock cover</span><strong>Awaiting data</strong><small>Days remaining at observed burn rate</small></article>
-          <article><span>Import vessels</span><strong>Awaiting data</strong><small>Port-call or voyage data required</small></article>
+        <div class="coal-kpis" id="coal-kpis">
+          <article><span>Production <em>OFFICIAL</em></span><strong id="coal-kpi-production">-</strong><small id="coal-kpi-production-change">Latest FY · MT</small><i id="coal-kpi-production-bar"></i></article>
+          <article><span>Coal imports <em>OFFICIAL</em></span><strong id="coal-kpi-imports">-</strong><small id="coal-kpi-imports-change">Latest FY · MT</small><i id="coal-kpi-imports-bar"></i></article>
+          <article><span>Off-take <em>FINAL</em></span><strong id="coal-kpi-offtake">-</strong><small id="coal-kpi-offtake-detail">All India raw coal · MT</small><i id="coal-kpi-offtake-bar"></i></article>
+          <article><span>Pit-head stock <em>FINAL</em></span><strong id="coal-kpi-stock">-</strong><small id="coal-kpi-stock-detail">Closing stock · not stock-cover days</small><i id="coal-kpi-stock-bar"></i></article>
+          <article><span>Import dependency <em>DERIVED</em></span><strong id="coal-kpi-dependency">-</strong><small id="coal-kpi-dependency-detail">Imports ÷ production plus imports</small><i id="coal-kpi-dependency-bar"></i></article>
+        </div>
+        <div class="coal-terminal-controls">
+          <div class="coal-range-presets" aria-label="Time range presets">
+            <span>QUICK RANGE</span>
+            <button type="button" data-coal-range="12m">12M</button>
+            <button type="button" data-coal-range="24m">24M</button>
+            <button type="button" data-coal-range="3y" class="active">3Y</button>
+            <button type="button" data-coal-range="max">MAX</button>
+          </div>
+          <div id="coal-active-filters" class="coal-active-filters" aria-label="Active filters"></div>
+        </div>
+        <div class="coal-analysis-toolbar">
+          <div>
+            <label for="coal-analysis-from">From</label>
+            <select id="coal-analysis-from"></select>
+          </div>
+          <div>
+            <label for="coal-analysis-to">To</label>
+            <select id="coal-analysis-to"></select>
+          </div>
+          <div>
+            <label for="coal-analysis-frequency">Frequency</label>
+            <select id="coal-analysis-frequency">
+              <option value="monthly">Monthly</option>
+              <option value="quarterly">Quarterly</option>
+              <option value="financial_year">Financial year</option>
+            </select>
+          </div>
+          <div>
+            <label for="coal-analysis-focus">Measure focus</label>
+            <select id="coal-analysis-focus"><option value="all">All measures</option></select>
+          </div>
+          <div>
+            <label for="coal-analysis-comparison">Compare with</label>
+            <select id="coal-analysis-comparison">
+              <option value="previous_period">Previous period</option>
+              <option value="previous_year">Previous year</option>
+              <option value="none">No comparison</option>
+            </select>
+          </div>
+          <button type="button" id="coal-analysis-apply">Apply filters</button>
+          <a id="coal-dashboard-csv" href="#" download>CSV</a>
+          <a id="coal-dashboard-xlsx" href="#" download>Excel</a>
+        </div>
+        <div id="coal-dashboard-availability" class="coal-dashboard-availability"></div>
+        <div id="coal-dashboard-kpis" class="coal-dashboard-kpis"></div>
+        <div id="coal-dashboard-panels" class="coal-dashboard-panels"></div>
+        <article id="coal-research-result" class="coal-research-result" hidden>
+          <header>
+            <div><span>PLAIN-ENGLISH ANALYSIS</span><h2 id="coal-research-title">Research result</h2></div>
+            <div><b id="coal-research-status">OFFICIAL</b><small id="coal-research-unit"></small></div>
+          </header>
+          <p id="coal-research-answer"></p>
+          <div id="coal-research-chart" class="coal-live-chart"></div>
+          <div id="coal-research-table" class="coal-source-catalog"></div>
+          <footer>
+            <div id="coal-research-sources"></div>
+            <div><a id="coal-research-csv" href="#" download>Download CSV</a><a id="coal-research-xlsx" href="#" download>Download Excel</a></div>
+          </footer>
+        </article>
+        <div class="coal-research-prompts" aria-label="Suggested research questions">
+          <button type="button">What percentage of India electricity generation came from coal in June 2026 versus June 2025?</button>
+          <button type="button">How did solar generation share change from June 2025 to June 2026?</button>
+          <button type="button">Compare coal and hydro generation after the monsoon.</button>
+          <button type="button">Show monthly coking and non-coking coal imports in 2024-25.</button>
+          <button type="button">Which Indian ports handled the most coal imports?</button>
+          <button type="button">Which countries supplied India’s coal imports?</button>
+          <button type="button">Show coking coal consumption by steel plant and hot-metal output.</button>
+          <button type="button">How much domestic coal was used by power, cement and sponge iron?</button>
         </div>
         <div class="coal-analysis-grid">
-          <article>
-            <header><div><span>SUPPLY BALANCE</span><h3>Production vs seaborne imports</h3></div><small>Monthly / quarterly / yearly</small></header>
-            <div class="chart-empty"><i></i><p>Upload aligned production and imports series to populate this chart.</p></div>
+          <article id="coal-analysis-overview" class="coal-analysis-panel coal-analysis-wide" data-analysis-panel="overview supply trade">
+            <header><div><span>SUPPLY BALANCE</span><h3>Production vs coal imports</h3></div><small>Financial year · million tonnes</small></header>
+            <div id="coal-production-imports-chart" class="coal-live-chart"></div>
           </article>
-          <article>
-            <header><div><span>POWER SYSTEM</span><h3>Coal burn and stock-cover days</h3></div><small>Plant, state or national</small></header>
-            <div class="chart-empty"><i></i><p>Stock cover = usable inventory ÷ average daily coal consumption.</p></div>
+          <article class="coal-analysis-panel" data-analysis-panel="overview supply">
+            <header><div><span>YEAR-ON-YEAR</span><h3>Annual change in production and imports</h3></div><small>Percent</small></header>
+            <div id="coal-yoy-chart" class="coal-live-chart"></div>
           </article>
-          <article>
-            <header><div><span>TRADE FLOWS</span><h3>Origins, loading ports and discharge ports</h3></div><small>Commodity / vessel segment</small></header>
-            <div class="chart-empty"><i></i><p>Upload voyage or port-call data to analyse seaborne coal flows.</p></div>
+          <article class="coal-analysis-panel" data-analysis-panel="overview stocks">
+            <header><div><span>SUPPLY CHAIN</span><h3>Off-take and pit-head closing stock</h3></div><small>Financial year · million tonnes</small></header>
+            <div id="coal-stock-offtake-chart" class="coal-live-chart"></div>
           </article>
-          <article>
-            <header><div><span>DRIVERS</span><h3>Renewables, monsoon and heat</h3></div><small>Aligned periods and lags</small></header>
-            <div class="chart-empty"><i></i><p>Driver analysis will show association, overlap and lag—not causal claims.</p></div>
+          <article class="coal-analysis-panel" data-analysis-panel="overview trade">
+            <header><div><span>IMPORT MIX</span><h3>Coking vs non-coking coal imports</h3></div><small>Financial year · million tonnes</small></header>
+            <div id="coal-import-mix-chart" class="coal-live-chart"></div>
+          </article>
+          <article class="coal-analysis-panel coal-analysis-wide" data-analysis-panel="overview supply trade stocks">
+            <header><div><span>ANALYSIS</span><h3>Selected-period findings</h3></div><small>Association, not causation</small></header>
+            <div id="coal-analysis-findings" class="coal-findings"></div>
+          </article>
+          <article id="coal-analysis-table-panel" class="coal-analysis-panel coal-analysis-wide" data-analysis-panel="tables">
+            <header><div><span>OFFICIAL DATA</span><h3>India coal annual series</h3></div><small>Exact values · downloadable</small></header>
+            <div id="coal-analysis-table" class="coal-source-catalog"></div>
           </article>
         </div>
         <div class="coal-surface-heading">
@@ -476,12 +608,13 @@
         <span><i class="port-key"></i>Port</span>
         <span><i class="asset-key"></i>Selected asset</span>
         <span><i class="ais-key"></i>Live AIS vessel</span>
+        <span class="weather-key-item" hidden><i class="weather-key"></i>Coastal weather</span>
         <span><i class="route-key"></i>Voyage route</span>
       </div>
     </main>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/static/js/app.js?v=20260730-11"></script>
+  <script src="/static/js/app.js?v=20260731-26"></script>
 </body>
 </html>

@@ -124,6 +124,7 @@ const state = {
   filteredPorts: [],
   routeLayer: null,
   routeMode: false,
+  routePickIndex: 0,
   routePorts: [],
   routePortCatalog: [],
   coalLayer: null,
@@ -138,9 +139,21 @@ const state = {
   aisRegions: new Set(DEFAULT_AIS_REGIONS),
   aisWatchlist: new Map(),
   selectedAisMmsi: null,
+  weatherLayer: null,
+  weatherSymbolLayer: null,
+  coastalWeatherEnabled: false,
+  coastalWeatherRows: [],
+  coastalWeatherDay: 1,
+  coastalWeatherAnimated: true,
+  coastalWeatherParameters: new Set(["rain", "wind", "wave"]),
+  coastalWeatherLoading: false,
   coalAssets: [],
   coalSummary: null,
-  coalView: "map",
+  coalAnalysis: null,
+  coalResearch: null,
+  coalAnalysisView: "overview",
+  coalDashboardTab: "overview",
+  coalView: "analytics",
   nppLoaded: false,
   nppRefreshTimer: null,
   continentLabels: null,
@@ -175,6 +188,8 @@ async function init() {
   state.aisLayer = L.layerGroup().addTo(state.map);
   state.aisTrailLayer = L.layerGroup().addTo(state.map);
   state.routeLayer = L.layerGroup().addTo(state.map);
+  state.weatherLayer = L.layerGroup();
+  state.weatherSymbolLayer = L.layerGroup();
   state.map.on("zoomend", renderPorts);
   loadAisPreferences();
   bindControls();
@@ -192,6 +207,33 @@ function bindControls() {
     section.addEventListener("toggle", () => {
       if (section.open) activateMode(section.dataset.mode);
     });
+  });
+  document.querySelector(".voyage-section").addEventListener("toggle", event => {
+    const section = event.currentTarget;
+    if (section.open) {
+      document.querySelectorAll(".filter-section[data-mode]").forEach(item => {
+        item.open = false;
+      });
+      state.routeMode = true;
+      state.routePickIndex = 0;
+      if (!state.map.hasLayer(state.routeLayer)) state.routeLayer.addTo(state.map);
+      closePortCard();
+      renderPorts();
+      updateRouteSelection();
+      document.getElementById("route-pick").classList.add("active");
+      document.getElementById("route-result").textContent =
+        "Click a port dot for the origin, then another for the destination.";
+    } else {
+      state.routeMode = false;
+      state.routePickIndex = 0;
+      const button = document.getElementById("route-pick");
+      button.classList.remove("active");
+      button.textContent = "Select two ports on map";
+      if (state.mode !== "ports" && state.map.hasLayer(state.routeLayer)) {
+        state.map.removeLayer(state.routeLayer);
+      }
+      renderPorts();
+    }
   });
   document.querySelectorAll("#energy-layers input, #renewable-layers input, #nuclear-layers input, #coal-layers input, #iron-layers input, #cement-layers input")
     .forEach(input => input.addEventListener("change", () => toggleAssetLayer(input)));
@@ -247,6 +289,29 @@ function bindControls() {
   document.getElementById("ais-search").addEventListener("keydown", event => {
     if (event.key === "Enter") refreshAisLayer(true);
   });
+  document.getElementById("coastal-weather-enabled").addEventListener("change", event => {
+    setCoastalWeatherEnabled(event.target.checked);
+  });
+  document.getElementById("coastal-weather-day").addEventListener("change", event => {
+    state.coastalWeatherDay = Number(event.target.value) || 1;
+    if (state.coastalWeatherEnabled) loadCoastalWeather();
+  });
+  document.querySelectorAll(".weather-parameters input").forEach(input => {
+    input.addEventListener("change", () => {
+      state.coastalWeatherParameters = new Set(
+        Array.from(document.querySelectorAll(".weather-parameters input:checked"))
+          .map(item => item.value)
+      );
+      renderCoastalWeather();
+    });
+  });
+  document.getElementById("coastal-weather-animation").addEventListener("change", event => {
+    state.coastalWeatherAnimated = event.target.checked;
+    renderCoastalWeather();
+  });
+  document.getElementById("coastal-weather-refresh").addEventListener("click", () => {
+    loadCoastalWeather(true);
+  });
   document.querySelectorAll("#coal-workspace-layers input, #coal-consumer-layers input").forEach(input => {
     input.addEventListener("change", renderCoalLayers);
   });
@@ -256,24 +321,45 @@ function bindControls() {
     if (input?.checked) applyWorkspaceFilters("commodities");
   });
   document.querySelectorAll("[data-coal-view]").forEach(button => {
-    button.addEventListener("click", () => setCoalView(button.dataset.coalView));
-  });
-  document.querySelectorAll(".coal-analysis-nav button").forEach(button => {
     button.addEventListener("click", () => {
-      document.querySelectorAll(".coal-analysis-nav button").forEach(item => {
-        item.classList.toggle("active", item === button);
-      });
+      if (state.mode !== "coal") activateMode("coal");
+      setCoalView(button.dataset.coalView);
     });
+  });
+  document.getElementById("coal-analysis-apply").addEventListener("click", loadCoalDashboard);
+  document.getElementById("coal-analysis-frequency").addEventListener("change", loadCoalDashboard);
+  document.getElementById("coal-analysis-focus").addEventListener("change", loadCoalDashboard);
+  document.getElementById("coal-analysis-comparison").addEventListener("change", loadCoalDashboard);
+  document.querySelectorAll("[data-coal-range]").forEach(button => {
+    button.addEventListener("click", () => applyCoalRangePreset(button.dataset.coalRange));
+  });
+  document.querySelectorAll("[data-coal-dashboard-tab]").forEach(button => {
+    button.addEventListener("click", () => setCoalDashboardTab(button.dataset.coalDashboardTab));
   });
   document.getElementById("coal-upload").addEventListener("click", () => {
     document.getElementById("coal-upload-input").click();
   });
   document.getElementById("coal-upload-input").addEventListener("change", uploadCoalDataset);
   document.getElementById("coal-export").addEventListener("click", exportCoalData);
+  document.getElementById("coal-research-run").addEventListener("click", runCoalResearch);
+  document.getElementById("coal-research-question").addEventListener("keydown", event => {
+    if ((event.ctrlKey || event.metaKey) && event.key === "Enter") runCoalResearch();
+  });
+  document.querySelectorAll(".coal-research-prompts button").forEach(button => {
+    button.addEventListener("click", () => {
+      document.getElementById("coal-research-question").value = button.textContent.trim();
+      runCoalResearch();
+    });
+  });
   document.getElementById("coal-metric").addEventListener("change", refreshCoalActionState);
   document.getElementById("coal-run-analysis").addEventListener("click", () => {
-    document.getElementById("coal-upload-message").textContent =
-      "Analysis is enabled only when the required uploaded series pass period, unit and overlap validation. No result has been inferred.";
+    const dataset = document.getElementById("coal-metric").selectedOptions[0].textContent;
+    const frequency = document.getElementById("coal-frequency").selectedOptions[0].textContent;
+    const coalType = document.getElementById("coal-grade").selectedOptions[0].textContent;
+    const period = document.getElementById("coal-period").selectedOptions[0].textContent;
+    document.getElementById("coal-research-question").value =
+      `Show ${frequency.toLowerCase()} ${coalType.toLowerCase()} ${dataset.toLowerCase()} for ${period.toLowerCase()}.`;
+    runCoalResearch();
   });
   document.getElementById("npp-refresh").addEventListener("click", () => loadNppPower(true));
   document.getElementById("port-country").addEventListener("change", loadPorts);
@@ -317,12 +403,27 @@ function bindControls() {
 
 function activateMode(mode) {
   state.mode = mode;
+  closePortCard();
+  const voyageSection = document.querySelector(".voyage-section");
+  if (voyageSection.open) voyageSection.open = false;
+  state.routeMode = false;
+  state.routePickIndex = 0;
   document.querySelectorAll(".filter-section[data-mode]").forEach(section => {
     if (section.dataset.mode !== mode) section.open = false;
   });
   state.assetLayers.forEach((layer, id) => {
-    if (LAYER_CONFIG[id].mode !== mode && state.map.hasLayer(layer)) state.map.removeLayer(layer);
+    if (state.map.hasLayer(layer)) state.map.removeLayer(layer);
   });
+  const coalOnly = mode === "coal";
+  [state.aisLayer, state.aisTrailLayer, state.routeLayer].forEach(layer => {
+    if (layer && state.map.hasLayer(layer)) state.map.removeLayer(layer);
+  });
+  if (!coalOnly && state.aisEnabled) {
+    state.aisLayer.addTo(state.map);
+    state.aisTrailLayer.addTo(state.map);
+    renderAisVessels();
+  }
+  if (mode === "ports") state.routeLayer.addTo(state.map);
   if (mode === "energy" || mode === "commodities") {
     WORKSPACE_LAYERS[mode].forEach(id => {
       const input = workspaceInput(mode, id);
@@ -346,6 +447,230 @@ function activateMode(mode) {
   }
   renderPorts();
   updateActiveCounts();
+}
+
+function setCoastalWeatherEnabled(enabled) {
+  state.coastalWeatherEnabled = Boolean(enabled);
+  const count = document.getElementById("weather-layer-count");
+  const key = document.querySelector(".weather-key-item");
+  if (!state.coastalWeatherEnabled) {
+    state.weatherLayer.clearLayers();
+    state.weatherSymbolLayer.clearLayers();
+    if (state.map.hasLayer(state.weatherLayer)) state.map.removeLayer(state.weatherLayer);
+    if (state.map.hasLayer(state.weatherSymbolLayer)) state.map.removeLayer(state.weatherSymbolLayer);
+    count.textContent = "Off";
+    key.hidden = true;
+    document.getElementById("coastal-weather-status").textContent =
+      "Layer is switched off.";
+    const detailCard = document.getElementById("port-card");
+    if (detailCard.classList.contains("weather-detail-card")) closePortCard();
+    return;
+  }
+  state.weatherLayer.addTo(state.map);
+  state.weatherSymbolLayer.addTo(state.map);
+  key.hidden = false;
+  loadCoastalWeather();
+}
+
+async function loadCoastalWeather(force = false) {
+  if (!state.coastalWeatherEnabled || state.coastalWeatherLoading) return;
+  state.coastalWeatherLoading = true;
+  const status = document.getElementById("coastal-weather-status");
+  const refreshButton = document.getElementById("coastal-weather-refresh");
+  refreshButton.disabled = true;
+  status.textContent = force
+    ? "Refreshing official IMD bulletins…"
+    : "Loading normalized IMD coastal forecast…";
+  try {
+    const endpoint = `/api/imd/coastal-weather${force ? "/refresh" : ""}?day=${state.coastalWeatherDay}`;
+    const response = await fetch(endpoint, { method: force ? "POST" : "GET" });
+    if (!response.ok) {
+      const detail = await response.json().catch(() => ({}));
+      throw new Error(detail.detail || `Weather request failed (${response.status})`);
+    }
+    const payload = await response.json();
+    state.coastalWeatherRows = Array.isArray(payload.rows) ? payload.rows : [];
+    renderCoastalWeather();
+    const fetched = payload.fetched_at
+      ? new Date(payload.fetched_at).toLocaleString()
+      : "time unavailable";
+    const visible = weatherVisibleRows().length;
+    status.textContent =
+      `Day ${state.coastalWeatherDay}: ${visible} areas with published values · updated ${fetched}.`;
+  } catch (error) {
+    status.textContent = `Weather unavailable: ${error.message}`;
+    state.weatherLayer.clearLayers();
+    state.weatherSymbolLayer.clearLayers();
+    document.getElementById("weather-layer-count").textContent = "Unavailable";
+  } finally {
+    state.coastalWeatherLoading = false;
+    refreshButton.disabled = false;
+  }
+}
+
+function weatherVisibleRows() {
+  const params = state.coastalWeatherParameters;
+  return state.coastalWeatherRows.filter(row => (
+    (params.has("rain") && row.rainfall_category) ||
+    (params.has("wind") && (row.wind_speed_max_kmph != null || row.gust_kmph != null)) ||
+    (params.has("wave") && row.wave_height_max_m != null)
+  ));
+}
+
+function weatherColor(severity) {
+  if (severity === "warning") return "#c93036";
+  if (severity === "advisory") return "#d68a1d";
+  return "#2c91b4";
+}
+
+function weatherValue(value, suffix = "") {
+  return value == null
+    ? "Not quantified"
+    : `${Number(value).toLocaleString()}${suffix ? ` ${suffix}` : ""}`;
+}
+
+function coastalWeatherTooltip(row) {
+  const rain = state.coastalWeatherParameters.has("rain")
+    ? `<div><span>Rainfall</span><strong>${escapeHtml(row.rainfall_category || "Not quantified")}</strong></div>`
+    : "";
+  const wind = state.coastalWeatherParameters.has("wind")
+    ? `<div><span>Wind</span><strong>${
+        row.wind_speed_max_kmph == null
+          ? "Not quantified"
+          : `${weatherValue(row.wind_speed_min_kmph)}–${weatherValue(row.wind_speed_max_kmph, "km/h")}`
+      }</strong></div>
+      <div><span>Gust</span><strong>${weatherValue(row.gust_kmph, "km/h")}</strong></div>`
+    : "";
+  const waves = state.coastalWeatherParameters.has("wave")
+    ? `<div><span>Wave height</span><strong>${
+        row.wave_height_max_m == null
+          ? "Not quantified"
+          : `${row.wave_height_min_m}–${row.wave_height_max_m} m`
+      }</strong></div>`
+    : "";
+  const source = row.source_url
+    ? `<a href="${escapeHtml(row.source_url)}" target="_blank" rel="noopener">Open IMD source</a>`
+    : "No quantified source entry";
+  return `
+    <div class="weather-tooltip">
+      <span class="weather-tooltip-kicker">IMD / DAY ${row.day}</span>
+      <h3>${escapeHtml(row.zone_name)}</h3>
+      ${rain}${wind}${waves}
+      <small>${escapeHtml(row.valid_date || row.source_issue_time || "Latest published bulletin")}</small>
+      <small>${source} · generalized region, not for navigation</small>
+    </div>`;
+}
+
+function weatherSymbolHtml(row) {
+  const animated = state.coastalWeatherAnimated ? " animated" : "";
+  const parts = [];
+  if (state.coastalWeatherParameters.has("rain") && row.rainfall_category) {
+    parts.push(`<span class="weather-rain${animated}" title="Rainfall"><i></i><i></i><i></i></span>`);
+  }
+  if (
+    state.coastalWeatherParameters.has("wind") &&
+    (row.wind_speed_max_kmph != null || row.gust_kmph != null)
+  ) {
+    parts.push(`<span class="weather-wind${animated}" title="Wind"><i></i><i></i><i></i></span>`);
+  }
+  if (state.coastalWeatherParameters.has("wave") && row.wave_height_max_m != null) {
+    parts.push(`<span class="weather-wave${animated}" title="Waves"><i></i><i></i></span>`);
+  }
+  const motionClass = state.coastalWeatherAnimated ? " weather-motion" : "";
+  return `<div class="weather-symbols severity-${row.severity}${motionClass}">${parts.join("")}</div>`;
+}
+
+function showCoastalWeatherCard(row) {
+  const card = document.getElementById("port-card");
+  card.classList.remove("port-spec-card");
+  card.classList.add("weather-detail-card");
+  const windRange = row.wind_speed_max_kmph == null
+    ? "Not quantified"
+    : `${weatherValue(row.wind_speed_min_kmph)}–${weatherValue(row.wind_speed_max_kmph, "km/h")}`;
+  const waveRange = row.wave_height_max_m == null
+    ? "Not quantified"
+    : `${weatherValue(row.wave_height_min_m)}–${weatherValue(row.wave_height_max_m, "m")}`;
+  const severity = row.severity === "warning"
+    ? "Warning"
+    : row.severity === "advisory" ? "Advisory" : "Normal";
+  const sourceLink = row.source_url
+    ? `<a class="official-port-link weather-source-link" href="${escapeAttr(row.source_url)}" target="_blank" rel="noopener">Open official IMD source</a>`
+    : "";
+  document.getElementById("port-card-content").innerHTML =
+    `<span class="detail-eyebrow">IMD coastal weather · Day ${Number(row.day)}</span>` +
+    `<h2>${escapeHtml(row.zone_name)}</h2>` +
+    `<p class="detail-meta">${escapeHtml(row.valid_date || row.source_issue_time || "Latest published bulletin")}</p>` +
+    `<div class="weather-card-severity severity-${escapeAttr(row.severity || "normal")}">${severity}</div>` +
+    `<div class="detail-grid weather-detail-grid">` +
+    detailCell("Rainfall", row.rainfall_category || "Not quantified") +
+    detailCell("Wind speed", windRange) +
+    detailCell("Maximum gust", weatherValue(row.gust_kmph, "km/h")) +
+    detailCell("Wave height", waveRange) +
+    `</div>` +
+    `<p class="weather-card-summary">${escapeHtml(row.summary || "No quantified warning in the source bulletin")}</p>` +
+    sourceLink +
+    `<p class="detail-note">Generalized offshore forecast region—not for navigation. Blank values mean IMD did not quantify that field in the parsed bulletin.</p>`;
+  card.classList.add("open");
+  card.setAttribute("aria-hidden", "false");
+}
+
+function renderCoastalWeather() {
+  if (!state.weatherLayer || !state.weatherSymbolLayer) return;
+  state.weatherLayer.clearLayers();
+  state.weatherSymbolLayer.clearLayers();
+  if (!state.coastalWeatherEnabled) return;
+  const rows = weatherVisibleRows();
+  rows.forEach(row => {
+    if (!row.geometry) return;
+    const color = weatherColor(row.severity);
+    const openWeatherDetails = event => {
+      if (event?.originalEvent) L.DomEvent.stopPropagation(event.originalEvent);
+      showCoastalWeatherCard(row);
+    };
+    const polygon = L.geoJSON(row.geometry, {
+      interactive: true,
+      style: {
+        color,
+        weight: 1.2,
+        opacity: 0.85,
+        fillColor: color,
+        fillOpacity: row.severity === "warning" ? 0.2 : 0.12,
+        dashArray: row.severity === "normal" ? "4 3" : null
+      }
+    }).bindTooltip(coastalWeatherTooltip(row), {
+      sticky: true,
+      direction: "top",
+      className: "weather-leaflet-tooltip",
+      opacity: 1
+    });
+    polygon.on("click", openWeatherDetails);
+    polygon.eachLayer(layer => {
+      layer.on("click", openWeatherDetails);
+      if (layer.getElement) {
+        layer.on("add", () => {
+          const element = layer.getElement();
+          if (element) element.style.cursor = "pointer";
+        });
+      }
+    });
+    polygon.addTo(state.weatherLayer);
+    const center = polygon.getBounds().getCenter();
+    const weatherMarker = L.marker(center, {
+      interactive: true,
+      keyboard: true,
+      title: `Open ${row.zone_name} weather report`,
+      icon: L.divIcon({
+        className: "weather-symbol-marker",
+        html: weatherSymbolHtml(row),
+        iconSize: [104, 44],
+        iconAnchor: [52, 22]
+      })
+    });
+    weatherMarker.on("click", openWeatherDetails);
+    weatherMarker.addTo(state.weatherSymbolLayer);
+  });
+  document.getElementById("weather-layer-count").textContent =
+    rows.length ? `${rows.length} areas` : "No values";
 }
 
 function loadAisPreferences() {
@@ -943,11 +1268,15 @@ async function loadCoalWorkspace() {
       : "India workspace";
     document.getElementById("coal-header-status").textContent = hasDatasets
       ? `${state.coalSummary.datasets.length} uploaded dataset${state.coalSummary.datasets.length === 1 ? "" : "s"}`
-      : "Awaiting operational data";
+      : coalMasterHeader(state.coalSummary.official_master);
+    await loadCoalAnalysis();
     refreshCoalActionState();
     if (hasDatasets) {
       document.getElementById("coal-upload-message").textContent =
         "Uploaded data is stored separately from GEM/WPI map context. Review its detected date and numeric fields before analysis.";
+    } else {
+      document.getElementById("coal-upload-message").textContent =
+        "Official Coal Directory annual series is loaded. Uploads remain optional for monthly, weekly, plant-level or driver analysis.";
     }
     renderCoalAssetViews();
     renderCoalLayers();
@@ -956,12 +1285,539 @@ async function loadCoalWorkspace() {
   }
 }
 
+function coalMasterHeader(master) {
+  if (!master || !Number(master.normalized_row_count || 0)) {
+    return "Awaiting operational data";
+  }
+  return `${Number(master.normalized_row_count || 0).toLocaleString()} official rows`;
+}
+
+async function loadCoalAnalysis() {
+  const from = document.getElementById("coal-analysis-from");
+  const to = document.getElementById("coal-analysis-to");
+  if (!from.options.length) {
+    const periods = [];
+    for (let date = new Date(2023, 4, 1); date <= new Date(2026, 5, 1); date.setMonth(date.getMonth() + 1)) {
+      periods.push(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`);
+    }
+    from.innerHTML = periods.map(period =>
+      `<option value="${escapeAttr(period)}">${escapeHtml(formatCoalPeriod(period))}</option>`
+    ).join("");
+    to.innerHTML = from.innerHTML;
+    from.value = periods[0];
+    to.value = periods[periods.length - 1];
+  }
+  await loadCoalDashboard();
+}
+
+function formatCoalPeriod(period) {
+  if (!/^\d{4}-\d{2}$/.test(String(period))) return String(period || "—");
+  const date = new Date(`${period}-01T00:00:00`);
+  return date.toLocaleDateString("en-IN", { month: "short", year: "numeric" });
+}
+
+async function setCoalDashboardTab(tab) {
+  state.coalDashboardTab = tab;
+  document.querySelectorAll("[data-coal-dashboard-tab]").forEach(button => {
+    button.classList.toggle("active", button.dataset.coalDashboardTab === tab);
+  });
+  await loadCoalDashboard();
+}
+
+function applyCoalRangePreset(preset) {
+  const from = document.getElementById("coal-analysis-from");
+  const to = document.getElementById("coal-analysis-to");
+  const periods = Array.from(from.options).map(option => option.value);
+  if (!periods.length) return;
+  const counts = { "12m": 12, "24m": 24, "3y": 36 };
+  const count = counts[preset] || periods.length;
+  from.value = periods[Math.max(0, periods.length - count)];
+  to.value = periods[periods.length - 1];
+  document.querySelectorAll("[data-coal-range]").forEach(button => {
+    button.classList.toggle("active", button.dataset.coalRange === preset);
+  });
+  loadCoalDashboard();
+}
+
+async function loadCoalDashboard() {
+  const container = document.getElementById("coal-dashboard-panels");
+  const start = document.getElementById("coal-analysis-from").value || "2023-05";
+  const end = document.getElementById("coal-analysis-to").value || "2026-06";
+  const frequency = document.getElementById("coal-analysis-frequency").value || "monthly";
+  const focus = document.getElementById("coal-analysis-focus").value || "all";
+  const comparison = document.getElementById("coal-analysis-comparison").value || "previous_period";
+  if (start > end) {
+    container.innerHTML = `<div class="coal-dashboard-error">The From month must be before the To month.</div>`;
+    return;
+  }
+  container.innerHTML = `<div class="coal-dashboard-loading">Loading official ${escapeHtml(state.coalDashboardTab)} data…</div>`;
+  const params = new URLSearchParams({ tab: state.coalDashboardTab, start, end, frequency, focus, comparison });
+  try {
+    const response = await fetch(`/api/coal/dashboard?${params}`);
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.detail || "Coal dashboard data is unavailable");
+    state.coalAnalysis = payload;
+    const focusSelect = document.getElementById("coal-analysis-focus");
+    focusSelect.innerHTML = (payload.focus_options || []).map(option =>
+      `<option value="${escapeAttr(option.id)}">${escapeHtml(option.label)}</option>`
+    ).join("");
+    focusSelect.value = payload.focus || "all";
+    renderCoalDashboard(payload);
+    document.getElementById("coal-dashboard-csv").href = `/api/coal/dashboard/export?${params}&format=csv`;
+    document.getElementById("coal-dashboard-xlsx").href = `/api/coal/dashboard/export?${params}&format=xlsx`;
+    document.getElementById("coal-header-status").textContent =
+      `${payload.rows.length} ${payload.frequency.replace("_", " ")} observations · official through ${payload.available_range.end}`;
+  } catch (error) {
+    container.innerHTML = `<div class="coal-dashboard-error">${escapeHtml(error.message)}</div>`;
+  }
+}
+
+function renderCoalDashboard(payload) {
+  const availability = payload.available_range || {};
+  const selectedOutside = payload.rows.length === 0;
+  document.getElementById("coal-dashboard-availability").innerHTML =
+    `<div><strong>${escapeHtml(payload.tab === "trade" ? "Trade data coverage" : "Official data coverage")}</strong>` +
+    `<span>${escapeHtml(String(availability.start || "—"))} to ${escapeHtml(String(availability.end || "—"))} · ${escapeHtml(availability.grain || payload.frequency)} · ${escapeHtml(availability.status || "official")}</span></div>` +
+    `${availability.limitation ? `<p>${escapeHtml(availability.limitation)}</p>` : ""}` +
+    `${selectedOutside ? `<b>No verified rows fall inside the selected range. Filters were not silently ignored.</b>` : ""}`;
+  renderCoalActiveFilters(payload);
+  document.getElementById("coal-dashboard-kpis").innerHTML = (payload.kpis || []).map(kpi => {
+    const numericValue = Number(kpi.value);
+    const decimals = Number.isInteger(numericValue) || Math.abs(numericValue) >= 1000 ? 0 : 1;
+    const display = kpi.display || (kpi.value === null || kpi.value === undefined ? "—" : formatNumber(kpi.value, decimals));
+    const comparison = coalKpiComparison(kpi, payload);
+    return `<article><span>${escapeHtml(kpi.label)}</span><strong>${escapeHtml(String(display))}${kpi.unit ? ` <small>${escapeHtml(kpi.unit)}</small>` : ""}</strong>` +
+      `<p>${escapeHtml(kpi.detail || "")}</p>${comparison ? `<b class="coal-kpi-delta ${comparison.direction}">${escapeHtml(comparison.label)}</b>` : ""}</article>`;
+  }).join("");
+
+  const container = document.getElementById("coal-dashboard-panels");
+  if (payload.tab === "table") {
+    container.innerHTML = dashboardTable(payload, true);
+    bindCoalTableSearch(container);
+    return;
+  }
+  container.innerHTML = (payload.charts || []).map((chart, index) =>
+    `<article class="coal-dashboard-card ${index === 0 ? "coal-dashboard-card-wide" : ""}">` +
+    `<header><div><span>${escapeHtml(payload.tab.toUpperCase())}</span><h3>${escapeHtml(chart.title)}</h3><p>${escapeHtml(chart.subtitle || "")}</p></div>` +
+    `<small>${escapeHtml(chart.y_label)}</small></header>` +
+    `<div class="coal-dashboard-chart" id="coal-dynamic-chart-${index}"></div></article>`
+  ).join("") + dashboardTable(payload, false) + dashboardSources(payload);
+  (payload.charts || []).forEach((chart, index) => renderDynamicCoalChart(
+    `coal-dynamic-chart-${index}`,
+    Array.isArray(chart.rows) ? chart.rows : payload.rows,
+    chart
+  ));
+  bindCoalTableSearch(container);
+}
+
+function renderCoalActiveFilters(payload) {
+  const focus = (payload.focus_options || []).find(option => option.id === payload.focus)?.label || "All measures";
+  const compareLabels = { previous_period: "vs previous period", previous_year: "vs previous year", none: "no comparison" };
+  const chips = [
+    labelize(payload.tab),
+    `${formatCoalPeriod(payload.filters.from)} – ${formatCoalPeriod(payload.filters.to)}`,
+    labelize(payload.frequency),
+    focus,
+    compareLabels[payload.comparison] || "no comparison"
+  ];
+  document.getElementById("coal-active-filters").innerHTML = chips.map((chip, index) =>
+    `<span class="${index === 0 ? "primary" : ""}">${escapeHtml(chip)}</span>`
+  ).join("");
+}
+
+function coalKpiComparison(kpi, payload) {
+  if (payload.comparison === "none" || !payload.rows?.length) return null;
+  const keyByLabel = {
+    "Latest production": "production_mt", "Latest dispatch": "dispatch_mt",
+    "Latest imports": "total_coal_mt", "Coking coal": "coking_coal_mt",
+    "Non-coking coal": "non_coking_coal_mt", "FY2025-26 imports": "total_imports_mt",
+    "Coal generation": "coal_generation_gwh", "Coal share of all generation": "coal_share_pct",
+    "Renewables incl. large hydro": "renewables_share_pct", "Solar generation": "solar_generation_gwh",
+    "Pit-head closing stock": "closing_stock_mt", "Annual off-take": "offtake_mt", "Annual production": "production_mt"
+  };
+  const key = keyByLabel[kpi.label];
+  if (!key) return null;
+  const values = payload.rows.map(row => Number(row[key])).filter(Number.isFinite);
+  const lag = payload.comparison === "previous_year"
+    ? (payload.frequency === "monthly" ? 12 : payload.frequency === "quarterly" ? 4 : 1)
+    : 1;
+  if (values.length <= lag) return null;
+  const current = values[values.length - 1], prior = values[values.length - 1 - lag];
+  if (!Number.isFinite(current) || !Number.isFinite(prior) || prior === 0) return null;
+  const delta = (current / prior - 1) * 100;
+  return { direction: delta > 0 ? "up" : delta < 0 ? "down" : "flat", label: `${delta >= 0 ? "+" : ""}${formatNumber(delta, 1)}% ${payload.comparison === "previous_year" ? "YoY" : "vs prior"}` };
+}
+
+function dashboardTable(payload, expanded) {
+  const columns = payload.columns || [];
+  const rows = payload.rows || [];
+  return `<article class="coal-dashboard-card coal-dashboard-card-wide coal-dashboard-table-card ${expanded ? "expanded" : ""}">` +
+    `<header><div><span>FILTERED DATA</span><h3>${expanded ? "Data explorer" : "Exact values behind this view"}</h3>` +
+    `<p>${rows.length} rows · export uses this exact tab, range, focus and frequency</p></div>` +
+    `<label class="coal-table-search"><span>Search rows</span><input type="search" placeholder="Filter visible records…" /></label></header>` +
+    `<div class="coal-dashboard-table"><table><thead><tr>${columns.map(column => `<th>${escapeHtml(labelize(column))}</th>`).join("")}</tr></thead>` +
+    `<tbody>${rows.map(row => `<tr>${columns.map(column => `<td>${formatDashboardCell(row[column], column)}</td>`).join("")}</tr>`).join("")}</tbody></table></div></article>`;
+}
+
+function bindCoalTableSearch(container) {
+  container.querySelectorAll(".coal-table-search input").forEach(input => {
+    input.addEventListener("input", () => {
+      const query = input.value.trim().toLowerCase();
+      const table = input.closest("article").querySelector("tbody");
+      table.querySelectorAll("tr").forEach(row => {
+        row.hidden = Boolean(query) && !row.textContent.toLowerCase().includes(query);
+      });
+    });
+  });
+}
+
+function dashboardSources(payload) {
+  return `<article class="coal-dashboard-card coal-dashboard-card-wide coal-dashboard-sources"><header><div><span>LINEAGE &amp; QUALITY</span><h3>Official sources</h3></div></header>` +
+    `<div>${(payload.sources || []).map(source => `<a href="${escapeAttr(source.url)}" target="_blank" rel="noopener">${escapeHtml(source.title)}</a>`).join("")}</div>` +
+    `<p>${escapeHtml(payload.quality?.note || "")}</p></article>`;
+}
+
+function formatDashboardCell(value, column) {
+  if (value === null || value === undefined || value === "") return "<span class=\"coal-null\">—</span>";
+  if (typeof value === "number") return escapeHtml(formatNumber(value, column.includes("pct") ? 1 : 2));
+  if (column.includes("url")) return `<a href="${escapeAttr(value)}" target="_blank" rel="noopener">Source</a>`;
+  return escapeHtml(String(value));
+}
+
+function renderDynamicCoalChart(id, rows, chart) {
+  const container = document.getElementById(id);
+  const series = chart.series || [];
+  const chartNumber = value => {
+    if (value === null || value === undefined || value === "") return NaN;
+    const result = Number(value);
+    return Number.isFinite(result) ? result : NaN;
+  };
+  const validValues = rows.flatMap(row => series.map(item => chartNumber(row[item.key])).filter(Number.isFinite));
+  if (!rows.length || !validValues.length) {
+    container.innerHTML = `<div class="coal-dashboard-empty">No verified observations for these filters.</div>`;
+    return;
+  }
+  const width = 780, height = 300, pad = { left: 66, right: 22, top: 28, bottom: 62 };
+  const minValue = chart.y_label.includes("Change") ? Math.min(0, ...validValues) : 0;
+  const stackedTotals = chart.type === "stacked_column"
+    ? rows.map(row => series.reduce((sum, item) => {
+        const value = chartNumber(row[item.key]);
+        return sum + (Number.isFinite(value) ? Math.max(0, value) : 0);
+      }, 0))
+    : [];
+  const maxValue = Math.max(...validValues, ...stackedTotals, 1);
+  const span = Math.max(maxValue - minValue, 1);
+  const x = index => pad.left + (rows.length === 1 ? 0.5 : index / (rows.length - 1)) * (width - pad.left - pad.right);
+  const y = value => pad.top + (maxValue - Number(value)) / span * (height - pad.top - pad.bottom);
+  const ticks = Array.from({ length: 5 }, (_, index) => minValue + span * index / 4);
+  const grid = ticks.map(value => `<line x1="${pad.left}" y1="${y(value)}" x2="${width - pad.right}" y2="${y(value)}"></line><text x="${pad.left - 10}" y="${y(value) + 4}" text-anchor="end">${escapeHtml(formatNumber(value, 0))}</text>`).join("");
+  const maxAxisLabels = 8;
+  const labelIndexes = rows.length <= maxAxisLabels
+    ? new Set(rows.map((_, index) => index))
+    : new Set(Array.from({ length: maxAxisLabels }, (_, index) =>
+        Math.round(index * (rows.length - 1) / (maxAxisLabels - 1))
+      ));
+  const labels = rows.map((row, index) => labelIndexes.has(index)
+    ? `<text x="${x(index)}" y="${height - 35}" text-anchor="middle">${escapeHtml(String(row.period))}</text>`
+    : "").join("");
+  const marks = series.map(item => {
+    if (chart.type === "stacked_column") {
+      const barWidth = Math.max(16, Math.min(72, (width - pad.left - pad.right) / Math.max(rows.length, 1) * 0.55));
+      return rows.map((row, index) => {
+        const seriesIndex = series.indexOf(item);
+        const previous = series.slice(0, seriesIndex).reduce((sum, prior) => {
+          const priorValue = chartNumber(row[prior.key]);
+          return sum + (Number.isFinite(priorValue) ? Math.max(0, priorValue) : 0);
+        }, 0);
+        const value = chartNumber(row[item.key]);
+        if (!Number.isFinite(value)) return "";
+        const top = y(previous + Math.max(0, value));
+        const bottom = y(previous);
+        return `<rect x="${x(index) - barWidth / 2}" y="${top}" width="${barWidth}" height="${Math.max(0, bottom - top)}" fill="${item.color}"><title>${escapeHtml(`${item.label} · ${row.period}: ${formatNumber(value, 2)} GWh`)}</title></rect>`;
+      }).join("");
+    }
+    if (chart.type === "column") {
+      const groupWidth = Math.max(4, (width - pad.left - pad.right) / Math.max(rows.length, 1) * 0.65);
+      const barWidth = groupWidth / series.length;
+      return rows.map((row, index) => {
+        const value = chartNumber(row[item.key]);
+        if (!Number.isFinite(value)) return "";
+        const seriesIndex = series.indexOf(item);
+        const baseline = y(0);
+        const top = Math.min(y(value), baseline);
+        return `<rect x="${x(index) - groupWidth / 2 + seriesIndex * barWidth}" y="${top}" width="${Math.max(2, barWidth - 1)}" height="${Math.abs(baseline - y(value))}" fill="${item.color}"><title>${escapeHtml(`${item.label} · ${row.period}: ${formatNumber(value, 2)}`)}</title></rect>`;
+      }).join("");
+    }
+    let output = "", segment = [];
+    const flush = () => { if (segment.length > 1) output += `<polyline points="${segment.join(" ")}" fill="none" stroke="${item.color}" stroke-width="3"></polyline>`; segment = []; };
+    rows.forEach((row, index) => {
+      const value = chartNumber(row[item.key]);
+      if (!Number.isFinite(value)) { flush(); return; }
+      segment.push(`${x(index)},${y(value)}`);
+      output += `<circle cx="${x(index)}" cy="${y(value)}" r="4" fill="#fff" stroke="${item.color}" stroke-width="2"><title>${escapeHtml(`${item.label} · ${row.period}: ${formatNumber(value, 2)}`)}</title></circle>`;
+    });
+    flush();
+    return output;
+  }).join("");
+  container.innerHTML = `<div class="coal-chart-legend">${series.map(item => `<span><i style="background:${item.color}"></i>${escapeHtml(item.label)}</span>`).join("")}</div>` +
+    `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeAttr(chart.title)}">${grid}${labels}${marks}` +
+    `<text class="axis-title" x="${width / 2}" y="${height - 5}" text-anchor="middle">${escapeHtml(chart.x_label)}</text>` +
+    `<text class="axis-title" transform="translate(15 ${height / 2}) rotate(-90)" text-anchor="middle">${escapeHtml(chart.y_label)}</text></svg>`;
+}
+
+function selectedCoalAnalysisRows() {
+  const rows = state.coalAnalysis?.annual || [];
+  const from = document.getElementById("coal-analysis-from").value;
+  const to = document.getElementById("coal-analysis-to").value;
+  const start = Math.min(rows.findIndex(row => row.period === from), rows.findIndex(row => row.period === to));
+  const end = Math.max(rows.findIndex(row => row.period === from), rows.findIndex(row => row.period === to));
+  return rows.slice(Math.max(0, start), end + 1);
+}
+
+function renderCoalAnalysis() {
+  const rows = selectedCoalAnalysisRows();
+  if (!rows.length) return;
+  const latest = rows[rows.length - 1];
+  setText("coal-kpi-production", `${formatNumber(latest.production_mt, 1)} MT`);
+  setText("coal-kpi-imports", `${formatNumber(latest.total_imports_mt, 1)} MT`);
+  setText("coal-kpi-offtake", `${formatNumber(latest.offtake_mt, 1)} MT`);
+  setText("coal-kpi-stock", `${formatNumber(latest.closing_stock_mt, 1)} MT`);
+  setText("coal-kpi-dependency", `${formatNumber(latest.import_dependency_pct, 1)}%`);
+  setText("coal-kpi-production-change", `${latest.period} · ${signedPercent(latest.production_yoy_pct)} YoY`);
+  setText("coal-kpi-imports-change", `${latest.period} · ${signedPercent(latest.imports_yoy_pct)} YoY`);
+  setText("coal-kpi-offtake-detail", `${latest.period} · ${formatNumber(latest.offtake_mt / latest.production_mt * 100, 1)}% of production`);
+  setText("coal-kpi-stock-detail", `${latest.period} · pit-head closing inventory`);
+  setText("coal-kpi-dependency-detail", `${latest.period} · imports ÷ available supply`);
+  setCoalKpiBar("coal-kpi-production-bar", latest.production_mt, 1100);
+  setCoalKpiBar("coal-kpi-imports-bar", latest.total_imports_mt, 300);
+  setCoalKpiBar("coal-kpi-offtake-bar", latest.offtake_mt, 1100);
+  setCoalKpiBar("coal-kpi-stock-bar", latest.closing_stock_mt, 130);
+  setCoalKpiBar("coal-kpi-dependency-bar", latest.import_dependency_pct, 30);
+
+  renderCoalLineChart("coal-production-imports-chart", rows, [
+    ["Production", "production_mt", "#003671"],
+    ["Imports", "total_imports_mt", "#db2f34"]
+  ], "MT");
+  renderCoalLineChart("coal-yoy-chart", rows.slice(1), [
+    ["Production YoY", "production_yoy_pct", "#003671"],
+    ["Imports YoY", "imports_yoy_pct", "#db2f34"]
+  ], "%", true);
+  renderCoalLineChart("coal-stock-offtake-chart", rows, [
+    ["Off-take", "offtake_mt", "#2e6d92"],
+    ["Pit-head stock", "closing_stock_mt", "#d8902f"]
+  ], "MT");
+  renderCoalImportMix(rows);
+  renderCoalFindings(rows);
+  renderCoalAnalysisTable(rows);
+  applyCoalAnalysisView();
+}
+
+function setCoalKpiBar(id, value, maximum) {
+  const element = document.getElementById(id);
+  if (element) element.style.setProperty("--value", `${Math.min(100, Math.max(2, Number(value || 0) / maximum * 100))}%`);
+}
+
+function renderCoalLineChart(id, rows, series, unit, includeZero = false) {
+  const container = document.getElementById(id);
+  if (!container || rows.length < 2) {
+    if (container) container.innerHTML = `<div class="coal-empty">At least two periods are required.</div>`;
+    return;
+  }
+  const width = 720;
+  const height = 250;
+  const pad = { left: 52, right: 18, top: 18, bottom: 42 };
+  const values = rows.flatMap(row => series.map(item => Number(row[item[1]])).filter(Number.isFinite));
+  let min = includeZero ? Math.min(0, ...values) : 0;
+  let max = Math.max(...values, 1);
+  if (includeZero) {
+    const span = Math.max(max - min, 1);
+    min -= span * 0.08;
+    max += span * 0.08;
+  } else {
+    max *= 1.08;
+  }
+  const x = index => pad.left + index / (rows.length - 1) * (width - pad.left - pad.right);
+  const y = value => pad.top + (max - Number(value)) / (max - min) * (height - pad.top - pad.bottom);
+  const ticks = Array.from({ length: 5 }, (_, index) => min + (max - min) * index / 4);
+  const grid = ticks.map(value =>
+    `<line x1="${pad.left}" y1="${y(value).toFixed(1)}" x2="${width - pad.right}" y2="${y(value).toFixed(1)}" stroke="#e6eaed"></line>` +
+    `<text x="${pad.left - 8}" y="${(y(value) + 4).toFixed(1)}" text-anchor="end">${formatNumber(value, unit === "%" ? 0 : 0)}</text>`
+  ).join("");
+  const xLabels = rows.map((row, index) =>
+    `<text x="${x(index).toFixed(1)}" y="${height - 17}" text-anchor="middle">${escapeHtml(row.period.slice(2))}</text>`
+  ).join("");
+  const lines = series.map(item => {
+    const points = rows.map((row, index) => `${x(index).toFixed(1)},${y(row[item[1]]).toFixed(1)}`).join(" ");
+    const marks = rows.map((row, index) =>
+      `<circle class="coal-chart-point" cx="${x(index).toFixed(1)}" cy="${y(row[item[1]]).toFixed(1)}" r="4" fill="#fff" stroke="${item[2]}" stroke-width="2.3">` +
+      `<title>${escapeHtml(`${item[0]} · ${row.period}: ${formatNumber(row[item[1]], 1)} ${unit}`)}</title></circle>`
+    ).join("");
+    return `<polyline points="${points}" fill="none" stroke="${item[2]}" stroke-width="3"></polyline>${marks}`;
+  }).join("");
+  container.innerHTML =
+    `<div class="coal-chart-legend">${series.map(item => `<span><i style="background:${item[2]}"></i>${escapeHtml(item[0])}</span>`).join("")}</div>` +
+    `<svg viewBox="0 0 ${width} ${height}" role="img">${grid}${includeZero && min < 0 ? `<line x1="${pad.left}" y1="${y(0)}" x2="${width - pad.right}" y2="${y(0)}" stroke="#7f8991" stroke-width="1.3"></line>` : ""}${xLabels}${lines}</svg>`;
+}
+
+function renderCoalImportMix(rows) {
+  const container = document.getElementById("coal-import-mix-chart");
+  const max = Math.max(...rows.map(row => Number(row.total_imports_mt || 0)), 1);
+  container.innerHTML = `<div class="coal-chart-legend"><span><i style="background:#8c2e3d"></i>Coking</span><span><i style="background:#d8902f"></i>Non-coking</span></div>` +
+    `<div class="coal-stacked-bars">${rows.map(row => {
+      const coking = Number(row.coking_imports_mt || 0);
+      const nonCoking = Number(row.non_coking_imports_mt || 0);
+      return `<div class="coal-stacked-row"><span>${escapeHtml(row.period)}</span><div title="${escapeAttr(`${row.period}: ${formatNumber(coking, 1)} MT coking; ${formatNumber(nonCoking, 1)} MT non-coking`)}"><i style="width:${coking / max * 100}%;background:#8c2e3d"></i><i style="width:${nonCoking / max * 100}%;background:#d8902f"></i></div><strong>${formatNumber(row.total_imports_mt, 1)}</strong></div>`;
+    }).join("")}</div>`;
+}
+
+function renderCoalFindings(rows) {
+  const first = rows[0];
+  const latest = rows[rows.length - 1];
+  const productionChange = latest.production_mt - first.production_mt;
+  const importsChange = latest.total_imports_mt - first.total_imports_mt;
+  const dependencyChange = latest.import_dependency_pct - first.import_dependency_pct;
+  const pairs = rows.filter(row => Number.isFinite(row.production_mt) && Number.isFinite(row.total_imports_mt));
+  const corr = pearson(
+    pairs.map(row => row.production_mt),
+    pairs.map(row => row.total_imports_mt)
+  );
+  document.getElementById("coal-analysis-findings").innerHTML = [
+    ["Production change", `${signedNumber(productionChange)} MT`, `${first.period} to ${latest.period}`],
+    ["Import change", `${signedNumber(importsChange)} MT`, `${first.period} to ${latest.period}`],
+    ["Import-dependency change", `${signedNumber(dependencyChange)} pp`, `${formatNumber(first.import_dependency_pct, 1)}% to ${formatNumber(latest.import_dependency_pct, 1)}%`],
+    ["Production/import correlation", Number.isFinite(corr) ? corr.toFixed(2) : "n/a", `${pairs.length} aligned financial years`]
+  ].map(item => `<div><span>${escapeHtml(item[0])}</span><strong>${escapeHtml(item[1])}</strong><small>${escapeHtml(item[2])}</small></div>`).join("") +
+    `<p>Correlation describes co-movement only. Pit-head closing stock is not the same as power-station stock-cover days.</p>`;
+}
+
+function renderCoalAnalysisTable(rows) {
+  document.getElementById("coal-analysis-table").innerHTML =
+    `<table><thead><tr><th>FY</th><th>Production MT</th><th>Imports MT</th><th>Off-take MT</th><th>Stock MT</th><th>Import dependency</th></tr></thead><tbody>` +
+    rows.map(row => `<tr><td><strong>${escapeHtml(row.period)}</strong></td><td>${formatNumber(row.production_mt, 1)}</td><td>${formatNumber(row.total_imports_mt, 1)}</td><td>${formatNumber(row.offtake_mt, 1)}</td><td>${formatNumber(row.closing_stock_mt, 1)}</td><td>${formatNumber(row.import_dependency_pct, 1)}%</td></tr>`).join("") +
+    `</tbody></table>`;
+}
+
+function applyCoalAnalysisView() {
+  document.querySelectorAll("[data-analysis-panel]").forEach(panel => {
+    panel.hidden = false;
+  });
+}
+
+function pearson(left, right) {
+  if (left.length < 3 || left.length !== right.length) return NaN;
+  const leftMean = left.reduce((sum, value) => sum + value, 0) / left.length;
+  const rightMean = right.reduce((sum, value) => sum + value, 0) / right.length;
+  const numerator = left.reduce((sum, value, index) => sum + (value - leftMean) * (right[index] - rightMean), 0);
+  const leftSq = left.reduce((sum, value) => sum + (value - leftMean) ** 2, 0);
+  const rightSq = right.reduce((sum, value) => sum + (value - rightMean) ** 2, 0);
+  return numerator / Math.sqrt(leftSq * rightSq);
+}
+
+function signedPercent(value) {
+  return `${Number(value) >= 0 ? "+" : ""}${formatNumber(value, 1)}%`;
+}
+
+function signedNumber(value) {
+  return `${Number(value) >= 0 ? "+" : ""}${formatNumber(value, 1)}`;
+}
+
+async function loadCoalMasterCatalog() {
+  if (state.coalMaster) return state.coalMaster;
+  const response = await fetch("/api/coal/master");
+  if (!response.ok) throw new Error("Official coal master could not be loaded");
+  state.coalMaster = await response.json();
+  return state.coalMaster;
+}
+
+function renderCoalMasterOverview(summaryMaster) {
+  const master = state.coalMaster || null;
+  const coverage = master?.coverage || summaryMaster || {};
+  const generatedAt = master?.generated_at || summaryMaster?.generated_at;
+  setText("coal-kpi-sources", Number(coverage.source_file_count || summaryMaster?.source_file_count || 0).toLocaleString());
+  setText("coal-kpi-files", Number(coverage.extracted_file_count || summaryMaster?.extracted_file_count || 0).toLocaleString());
+  setText("coal-kpi-rows", Number(coverage.normalized_row_count || summaryMaster?.normalized_row_count || 0).toLocaleString());
+  setText("coal-kpi-tables", Number((master?.source_tables || []).length || summaryMaster?.source_table_count || 0).toLocaleString());
+  setText("coal-kpi-fetched", generatedAt ? humanDate(generatedAt) : "-");
+
+  const coverageBox = document.getElementById("coal-master-coverage");
+  if (coverageBox) {
+    coverageBox.innerHTML = [
+      ["Country", coverage.country || "India"],
+      ["Requested period", coverage.years_requested || "FY2016-17 to latest official"],
+      ["Extract mode", coverage.current_extract_mode || "Official source-backed"],
+      ["Quality status", labelize(master?.quality?.status || summaryMaster?.status || "source catalogued")]
+    ].map(([label, value]) =>
+      `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`
+    ).join("");
+  }
+
+  if (!master) {
+    loadCoalMasterCatalog()
+      .then(payload => {
+        state.coalMaster = payload;
+        renderCoalMasterOverview(summaryMaster);
+      })
+      .catch(error => {
+        const catalog = document.getElementById("coal-source-catalog");
+        if (catalog) catalog.innerHTML = `<div class="coal-empty">${escapeHtml(error.message)}</div>`;
+      });
+    return;
+  }
+
+  renderCoalDatasetMix(master.source_tables || []);
+  renderCoalSourceCatalog(master.source_tables || []);
+}
+
+function renderCoalDatasetMix(tables) {
+  const container = document.getElementById("coal-dataset-mix");
+  if (!container) return;
+  const grouped = {};
+  tables.forEach(item => {
+    const key = item.dataset_type || "source_reference";
+    grouped[key] = (grouped[key] || 0) + Number(item.rows || 0);
+  });
+  const rows = Object.entries(grouped)
+    .sort((left, right) => right[1] - left[1])
+    .slice(0, 8);
+  if (!rows.length) {
+    container.innerHTML = `<div class="coal-empty">Run the official coal fetcher to populate source-backed tables.</div>`;
+    return;
+  }
+  const max = Math.max(...rows.map(([, value]) => value), 1);
+  container.innerHTML = rows.map(([key, value]) =>
+    `<div class="coal-master-bar"><div><span>${escapeHtml(labelize(key))}</span><strong>${Number(value).toLocaleString()} rows</strong></div>` +
+    `<div><i style="width:${Math.max(1, value / max * 100)}%"></i></div></div>`
+  ).join("");
+}
+
+function renderCoalSourceCatalog(tables) {
+  const container = document.getElementById("coal-source-catalog");
+  if (!container) return;
+  if (!tables.length) {
+    container.innerHTML = `<div class="coal-empty">No official source tables have been extracted yet.</div>`;
+    return;
+  }
+  const rows = tables.slice(0, 12);
+  container.innerHTML =
+    `<table><thead><tr><th>Dataset</th><th>Sheet</th><th>Rows</th></tr></thead><tbody>` +
+    rows.map(item =>
+      `<tr><td><strong>${escapeHtml(item.source_title || "Official source")}</strong><small>${escapeHtml(labelize(item.dataset_type || "source_reference"))}</small></td>` +
+      `<td>${escapeHtml(item.sheet_name || "-")}</td><td>${Number(item.rows || 0).toLocaleString()}</td></tr>`
+    ).join("") +
+    `</tbody></table>${tables.length > rows.length ? `<p class="table-limit">Showing ${rows.length} of ${tables.length} official source tables. Download the catalog for the full list.</p>` : ""}`;
+}
+
+function setText(id, value) {
+  const element = document.getElementById(id);
+  if (element) element.textContent = value;
+}
+
 function refreshCoalActionState() {
   const available = new Set(state.coalSummary?.available_dataset_types || []);
+  ["production", "imports", "power_use", "renewables"].forEach(item => available.add(item));
   const selected = document.getElementById("coal-metric").value;
   document.getElementById("coal-export").disabled = !available.has(selected);
-  document.getElementById("coal-run-analysis").disabled =
-    !(available.has("production") && available.has("imports"));
+  document.getElementById("coal-run-analysis").disabled = false;
 }
 
 function selectedCoalKinds() {
@@ -1012,6 +1868,7 @@ function setCoalView(view) {
   const dataSurface = document.getElementById("coal-data-surface");
   const nppSurface = document.getElementById("npp-power-surface");
   const mapElement = document.getElementById("map");
+  const isAnalytics = view === "analytics";
   const isMap = view === "map";
   const isPower = view === "power";
   dataSurface.hidden = isMap || isPower || state.mode !== "coal";
@@ -1021,6 +1878,8 @@ function setCoalView(view) {
   document.querySelector(".map-key").hidden = !isMap && state.mode === "coal";
   document.getElementById("coal-assets-table").hidden = view !== "table";
   document.getElementById("coal-assets-cards").hidden = view !== "cards";
+  document.querySelector(".coal-surface-heading").hidden = isAnalytics;
+  if (isAnalytics && !dataSurface.hidden) dataSurface.scrollTop = 0;
   document.getElementById("coal-surface-title").textContent =
     view === "cards" ? "India coal asset cards" : "India coal asset table";
   if (isPower && state.mode === "coal") loadNppPower();
@@ -1068,6 +1927,8 @@ function renderCoalAssetViews() {
         `<small>${item.capacity == null ? "Capacity unknown" : escapeHtml(Number(item.capacity).toLocaleString() + " " + (item.capacity_unit || ""))}${item.expansion_capacity == null ? "" : `<br>Expansion +${escapeHtml(Number(item.expansion_capacity).toLocaleString() + " " + (item.capacity_unit || "Mtpa"))}`}</small>` +
         (item.port_specification_available
           ? `<button type="button" class="coal-card-action" data-port-spec-id="${escapeAttr(item.id)}">View port details</button>`
+          : item.asset_kind === "power_consumers"
+            ? `<button type="button" class="coal-card-action" data-plant-spec-id="${escapeAttr(item.id)}">View plant details</button>`
           : "") +
         `</article>`).join("")
     : `<div class="coal-empty">Mine assets are available in map and table views. Select a terminal or consuming-industry layer to use card view.</div>`;
@@ -1075,6 +1936,12 @@ function renderCoalAssetViews() {
     button.addEventListener("click", () => {
       const asset = state.coalAssets.find(item => item.id === button.dataset.portSpecId);
       if (asset) showCoalPortDetails(asset);
+    });
+  });
+  cards.querySelectorAll("[data-plant-spec-id]").forEach(button => {
+    button.addEventListener("click", () => {
+      const asset = state.coalAssets.find(item => item.id === button.dataset.plantSpecId);
+      if (asset) showAssetCard(COAL_ASSET_CONFIG.power_consumers, asset);
     });
   });
 }
@@ -1103,9 +1970,93 @@ async function uploadCoalDataset() {
   }
 }
 
+async function runCoalResearch() {
+  const input = document.getElementById("coal-research-question");
+  const message = document.getElementById("coal-research-message");
+  const question = input.value.trim();
+  if (question.length < 4) {
+    message.textContent = "Write a specific question first.";
+    input.focus();
+    return;
+  }
+  const button = document.getElementById("coal-research-run");
+  button.disabled = true;
+  message.textContent = "Matching your question to official datasets…";
+  try {
+    const response = await fetch("/api/coal/research/query", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question })
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.detail || "Analysis failed");
+    state.coalResearch = payload;
+    renderCoalResearch(payload);
+    message.textContent = `${payload.rows.length} official observations returned. Ctrl+Enter runs another question.`;
+  } catch (error) {
+    message.textContent = error.message;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function renderCoalResearch(payload) {
+  const panel = document.getElementById("coal-research-result");
+  panel.hidden = false;
+  setText("coal-research-title", payload.title);
+  setText("coal-research-status", payload.status.toUpperCase());
+  setText("coal-research-unit", payload.unit);
+  setText("coal-research-answer", payload.answer);
+  renderCoalResearchChart(payload);
+  const columns = payload.columns || [];
+  const rows = (payload.rows || []).slice(0, 20);
+  document.getElementById("coal-research-table").innerHTML =
+    `<table><thead><tr>${columns.map(column => `<th>${escapeHtml(labelize(column))}</th>`).join("")}</tr></thead><tbody>` +
+    rows.map(row => `<tr>${columns.map(column => `<td>${formatResearchValue(row[column])}</td>`).join("")}</tr>`).join("") +
+    `</tbody></table>${payload.rows.length > rows.length ? `<p class="table-limit">Top ${rows.length} shown; the download contains the complete filtered result.</p>` : ""}`;
+  document.getElementById("coal-research-sources").innerHTML =
+    `<small>${escapeHtml(payload.guardrail)}</small>` +
+    payload.sources.map(source => `<a href="${escapeAttr(source.url)}" target="_blank" rel="noopener">${escapeHtml(source.title)}</a>`).join("");
+  const encoded = encodeURIComponent(payload.question);
+  document.getElementById("coal-research-csv").href = `/api/coal/research/export?format=csv&q=${encoded}`;
+  document.getElementById("coal-research-xlsx").href = `/api/coal/research/export?format=xlsx&q=${encoded}`;
+  panel.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function formatResearchValue(value) {
+  if (value === null || value === undefined || value === "") return "—";
+  if (typeof value === "number") return escapeHtml(formatNumber(value, Math.abs(value) < 100 ? 2 : 1));
+  return escapeHtml(String(value));
+}
+
+function renderCoalResearchChart(payload) {
+  const container = document.getElementById("coal-research-chart");
+  const rows = payload.rows || [];
+  const series = payload.chart?.series || [];
+  const category = payload.chart?.category || "period";
+  if (!rows.length || !series.length) {
+    container.innerHTML = `<div class="coal-empty">No chartable observations.</div>`;
+    return;
+  }
+  if (payload.chart.type !== "bar") {
+    renderCoalLineChart(container.id, rows, series.map(item => [item.label, item.key, item.color]), payload.unit.includes("%") ? "%" : payload.unit);
+    return;
+  }
+  const chartRows = rows.slice(0, 15);
+  const max = Math.max(...chartRows.flatMap(row => series.map(item => Number(row[item.key] || 0))), 1);
+  container.innerHTML = `<div class="coal-chart-legend">${series.map(item => `<span><i style="background:${item.color}"></i>${escapeHtml(item.label)}</span>`).join("")}</div>` +
+    `<div class="coal-research-bars">${chartRows.map(row =>
+      `<div><span title="${escapeAttr(String(row[category] || ""))}">${escapeHtml(String(row[category] || ""))}</span><section>${series.map(item => `<i style="width:${Math.max(1, Number(row[item.key] || 0) / max * 100)}%;background:${item.color}" title="${escapeAttr(`${item.label}: ${formatNumber(row[item.key], 2)} ${payload.unit}`)}"></i>`).join("")}</section><strong>${formatNumber(row[series[0].key], 2)}</strong></div>`
+    ).join("")}</div>`;
+}
+
 async function exportCoalData() {
   const datasetType = document.getElementById("coal-metric").value;
-  const response = await fetch(`/api/coal/export?dataset_type=${encodeURIComponent(datasetType)}`);
+  const frequency = document.getElementById("coal-frequency").value;
+  const coalType = document.getElementById("coal-grade").value;
+  const period = document.getElementById("coal-period").value;
+  const params = new URLSearchParams({ dataset_type: datasetType, frequency, coal_type: coalType, period });
+  const response = await fetch(`/api/coal/export?${params}`);
   if (!response.ok) {
     const payload = await response.json();
     document.getElementById("coal-upload-message").textContent = payload.detail || "Export failed";
@@ -1114,7 +2065,7 @@ async function exportCoalData() {
   const blob = await response.blob();
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
-  link.download = `india_coal_${datasetType}.xlsx`;
+  link.download = `india_coal_${datasetType}_${frequency}.xlsx`;
   link.click();
   URL.revokeObjectURL(link.href);
 }
@@ -1592,26 +2543,34 @@ function buildAssetLayer(id, points) {
 }
 
 function assetTooltip(config, point) {
-  const capacity = point.capacity == null ? "" :
-    `<br>${Number(point.capacity).toLocaleString()} ${escapeHtml(point.capacity_unit || "MW")}`;
+  const displayedCapacity = point.plant_capacity ?? point.capacity;
+  const capacity = displayedCapacity == null ? "" :
+    `<br>${Number(displayedCapacity).toLocaleString()} ${escapeHtml(point.capacity_unit || "MW")}`;
+  const units = point.unit_count == null ? "" :
+    `<br>${Number(point.unit_count).toLocaleString()} unit${Number(point.unit_count) === 1 ? "" : "s"}`;
   const expansion = point.expansion_capacity == null ? "" :
     `<br>Expansion: +${Number(point.expansion_capacity).toLocaleString()} ${escapeHtml(point.capacity_unit || "Mtpa")} (${escapeHtml((point.expansion_status || []).join(" + "))})`;
   const role = point.asset_type ? `<br>${escapeHtml(point.asset_type)}` : "";
   return `<strong>${escapeHtml(point.name || config.label)}</strong>` +
-    `${escapeHtml(point.country || "")}${point.status ? " · " + escapeHtml(point.status) : ""}${role}${capacity}${expansion}`;
+    `${escapeHtml(point.country || "")}${point.status ? " · " + escapeHtml(point.status) : ""}${role}${capacity}${units}${expansion}`;
 }
 
 function handlePortClick(port) {
-  if (!state.routeMode) {
+  const voyageActive = document.querySelector(".voyage-section").open;
+  if (!state.routeMode && !voyageActive) {
     showPortCard(port);
     return;
   }
-  if (state.routePorts[0] && state.routePorts[1]) resetRoute(false);
-  if (!state.routePorts[0]) state.routePorts[0] = port;
-  else state.routePorts[1] = port;
+  if (!state.routeMode) {
+    state.routeMode = true;
+    state.routePickIndex = 0;
+  }
+  state.routePorts[state.routePickIndex] = port;
+  state.routePickIndex += 1;
   updateRouteSelection();
-  if (state.routePorts[0] && state.routePorts[1]) {
+  if (state.routePickIndex >= 2) {
     state.routeMode = false;
+    state.routePickIndex = 0;
     document.getElementById("route-pick").classList.remove("active");
     document.getElementById("route-pick").textContent = "Select two ports on map";
     renderPorts();
@@ -1716,8 +2675,8 @@ function selectRoutePort(index, portId) {
 }
 
 function startRoutePicking() {
-  resetRoute(false);
   state.routeMode = true;
+  state.routePickIndex = 0;
   renderPorts();
   closePortCard();
   const button = document.getElementById("route-pick");
@@ -1738,13 +2697,18 @@ function updateRouteSelection() {
   document.getElementById("route-from-name").textContent = from ? from.name : "Select origin";
   document.getElementById("route-to-name").textContent = to ? to.name : "Select destination";
   const button = document.getElementById("route-pick");
-  if (state.routeMode) button.textContent = from ? "Click destination port…" : "Click origin port…";
+  if (state.routeMode) {
+    button.textContent = state.routePickIndex === 0
+      ? "Click origin port…"
+      : "Click destination port…";
+  }
 }
 
 function resetRoute(clearText = true) {
   state.routeLayer.clearLayers();
   state.routePorts = [];
   state.routeMode = false;
+  state.routePickIndex = 0;
   const button = document.getElementById("route-pick");
   button.classList.remove("active");
   button.textContent = "Select two ports on map";
@@ -1873,6 +2837,14 @@ function showAssetCard(config, point) {
     showCoalPortDetails(point);
     return;
   }
+  if (
+    point.asset_kind === "power_consumers" ||
+    point.gem_location_id ||
+    String(config.label || "").toLowerCase() === "coal plant"
+  ) {
+    showCoalPlantCard(config, point);
+    return;
+  }
   const card = document.getElementById("port-card");
   card.classList.remove("port-spec-card");
   const sourceLink = point.source_url
@@ -1904,6 +2876,109 @@ function showAssetCard(config, point) {
     detailCell("Evidence", point.evidence_level) +
     detailCell("Source review", point.source_date) +
     `</div>${sourceLink}<p class="detail-note">${escapeHtml(point.coverage_note || "Source: Global Energy Monitor workbook layer.")}</p>`;
+  card.classList.add("open");
+  card.setAttribute("aria-hidden", "false");
+}
+
+function presentPlantValue(value) {
+  if (value == null) return null;
+  const text = String(value).trim();
+  return text && !["nan", "null", "unknown"].includes(text.toLowerCase())
+    ? text
+    : null;
+}
+
+function finitePlantNumber(value) {
+  return presentPlantValue(value) == null ? Number.NaN : Number(value);
+}
+
+function optionalDetailCell(label, value) {
+  const displayed = presentPlantValue(value);
+  return displayed ? detailCell(label, displayed) : "";
+}
+
+function plantCommissioning(point) {
+  const start = Number(point.commissioning_start_year || point.unit_start_year);
+  const end = Number(point.commissioning_end_year || point.unit_start_year);
+  if (!Number.isFinite(start)) return null;
+  return Number.isFinite(end) && end !== start ? `${start}–${end}` : String(start);
+}
+
+function showCoalPlantCard(config, point) {
+  const card = document.getElementById("port-card");
+  card.classList.remove("port-spec-card");
+  const capacity = finitePlantNumber(point.plant_capacity ?? point.capacity);
+  const unitCapacity = finitePlantNumber(point.capacity);
+  const unitCount = finitePlantNumber(point.unit_count);
+  const location = [
+    presentPlantValue(point.location),
+    presentPlantValue(point.district),
+    presentPlantValue(point.state)
+  ].filter(Boolean).join(" · ");
+  const unitSummary = Number.isFinite(unitCount)
+    ? `${unitCount.toLocaleString()} unit${unitCount === 1 ? "" : "s"}`
+      + (Number.isFinite(unitCapacity) ? ` · selected unit ${unitCapacity.toLocaleString()} MW` : "")
+    : presentPlantValue(point.unit);
+  const factor = finitePlantNumber(point.capacity_factor);
+  const co2 = finitePlantNumber(point.annual_co2_mtpa);
+  const ceaSummary = point.cea_verified
+    ? `${point.cea_unit_count} × ${Number(point.cea_capacity_mw / point.cea_unit_count).toLocaleString()} MW · commissioned ${point.cea_commissioning}`
+    : null;
+  const sourceLinks = [
+    point.source_url
+      ? `<a class="detail-source-link" href="${escapeAttr(point.source_url)}" target="_blank" rel="noopener">GEM plant record</a>`
+      : "",
+    point.cea_source_url
+      ? `<a class="detail-source-link" href="${escapeAttr(point.cea_source_url)}" target="_blank" rel="noopener">CEA station register</a>`
+      : "",
+    point.npp_source_url
+      ? `<a class="detail-source-link" href="${escapeAttr(point.npp_source_url)}" target="_blank" rel="noopener">NPP current reports</a>`
+      : "",
+    point.ministry_coal_source_url
+      ? `<a class="detail-source-link" href="${escapeAttr(point.ministry_coal_source_url)}" target="_blank" rel="noopener">Coal-linkage records</a>`
+      : ""
+  ].filter(Boolean).join("");
+  document.getElementById("port-card-content").innerHTML =
+    `<span class="detail-eyebrow">${escapeHtml(config.label || "Coal-fired power plant")}</span>` +
+    `<h2>${escapeHtml(point.name || "Coal-fired power plant")}</h2>` +
+    `<p class="detail-meta">${escapeHtml(point.country || "Country unknown")}${point.state ? " · " + escapeHtml(point.state) : ""}</p>` +
+    `<div class="detail-grid">` +
+    optionalDetailCell("Status", point.status) +
+    optionalDetailCell(
+      "Plant capacity",
+      Number.isFinite(capacity) ? `${capacity.toLocaleString()} MW` : null
+    ) +
+    optionalDetailCell("Unit configuration", unitSummary) +
+    optionalDetailCell("Commissioned", plantCommissioning(point)) +
+    optionalDetailCell("Owner", point.owner) +
+    optionalDetailCell("Parent company", point.parent_company) +
+    optionalDetailCell("Technology", point.combustion_technology) +
+    optionalDetailCell("Coal type", point.coal_type) +
+    optionalDetailCell("Coal source", point.coal_source) +
+    optionalDetailCell("Captive industry use", point.captive_use) +
+    optionalDetailCell("Location", location) +
+    optionalDetailCell("Location accuracy", point.location_accuracy) +
+    optionalDetailCell(
+      "Capacity factor",
+      Number.isFinite(factor) ? `${formatNumber(factor * 100, 1)}%` : null
+    ) +
+    optionalDetailCell(
+      "Annual CO₂",
+      Number.isFinite(co2) ? `${formatNumber(co2, 2)} Mt/year` : null
+    ) +
+    optionalDetailCell("CEA verification", ceaSummary) +
+    optionalDetailCell(
+      "CEA organisation / sector",
+      point.cea_verified ? `${point.cea_organisation} · ${point.cea_sector}` : null
+    ) +
+    optionalDetailCell("Environmental permits", point.permits) +
+    `</div>` +
+    (sourceLinks ? `<div class="detail-source-links">${sourceLinks}</div>` : "") +
+    `<p class="detail-note">${escapeHtml(
+      point.cea_verified
+        ? `CEA station details verified against the register dated ${point.cea_source_as_of}. Other technical, ownership and coal-supply fields are from the GEM plant record.`
+        : point.coverage_note || "Plant attributes are from the Global Energy Monitor coal plant tracker."
+    )}</p>`;
   card.classList.add("open");
   card.setAttribute("aria-hidden", "false");
 }
@@ -2061,6 +3136,7 @@ function closePortCard() {
   const card = document.getElementById("port-card");
   card.classList.remove("open");
   card.classList.remove("port-spec-card");
+  card.classList.remove("weather-detail-card");
   card.setAttribute("aria-hidden", "true");
 }
 

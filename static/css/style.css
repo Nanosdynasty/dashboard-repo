@@ -64,6 +64,7 @@ button, summary, label, select { -webkit-tap-highlight-color: transparent; }
 .coal-icon { background: #242b38; }
 .commodity-icon { background: var(--hrp-red); }
 .ais-icon { background: #008ea8; box-shadow: 0 0 0 3px rgba(0,142,168,.12); }
+.weather-icon { background: #2c91b4; box-shadow: 0 0 0 3px rgba(44,145,180,.12); }
 .voyage-icon { background: #6d7c9b; }
 .section-count { margin-left: auto; color: #88929b; font-size: 10px; font-weight: 400; }
 .section-body { padding: 2px 13px 14px; border-top: 1px solid #edf0f2; }
@@ -147,6 +148,83 @@ button, summary, label, select { -webkit-tap-highlight-color: transparent; }
 }
 
 .workspace-intro { margin: 10px 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+
+.weather-section[open] { border-left-color: #2c91b4; }
+.weather-card { padding: 12px 13px 14px; border-top: 1px solid #edf0f2; }
+.weather-toggle {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 10px;
+  color: var(--hrp-navy);
+  background: #f0f7fa;
+  cursor: pointer;
+}
+.weather-toggle span { display: grid; gap: 2px; }
+.weather-toggle strong { font-size: 11px; }
+.weather-toggle small { color: var(--muted); font-size: 9px; font-weight: 400; }
+.weather-toggle input { width: 34px; height: 18px; accent-color: #2c91b4; }
+.weather-field { display: grid; gap: 5px; margin-top: 11px; }
+.weather-field > span,
+.weather-parameters legend {
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.weather-field select {
+  width: 100%;
+  padding: 8px 9px;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid #ccd3d8;
+}
+.weather-parameters {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 8px;
+  margin: 11px 0 0;
+  padding: 9px;
+  border: 1px solid #dce5e9;
+}
+.weather-parameters legend { padding: 0 4px; }
+.weather-parameters label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--hrp-navy);
+  font-size: 9px;
+  cursor: pointer;
+}
+.weather-parameters input,
+.weather-animation-toggle input { accent-color: #2c91b4; }
+.weather-param-dot { width: 6px; height: 6px; border-radius: 50%; }
+.weather-param-dot.rain { background: #3c8fc6; }
+.weather-param-dot.wind { background: #78a66b; }
+.weather-param-dot.wave { background: #4b62b2; }
+.weather-animation-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 10px 0;
+  color: var(--muted);
+  font-size: 9px;
+  cursor: pointer;
+}
+.weather-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.weather-actions a { display: grid; place-items: center; text-decoration: none; }
+.weather-status {
+  margin-top: 9px;
+  padding: 8px;
+  color: #46606e;
+  background: #f3f7f9;
+  border-left: 2px solid #2c91b4;
+  font-size: 9px;
+  line-height: 1.45;
+}
 
 .ais-section[open] { border-left-color: #008ea8; }
 .ais-card { padding: 12px 13px 14px; border-top: 1px solid #edf0f2; }
@@ -357,6 +435,13 @@ button, summary, label, select { -webkit-tap-highlight-color: transparent; }
   font-weight: 700;
 }
 .coal-actions button:disabled { color: #949da5; background: #f1f3f4; border-color: #d7dce0; cursor: not-allowed; }
+.coal-question-box { margin-top: 12px; padding: 12px; background: #f2f6f8; border-left: 3px solid var(--hrp-red); }
+.coal-question-box label { display: block; color: var(--hrp-navy); font-size: 10px; font-weight: 800; line-height: 1.35; }
+.coal-question-box textarea { box-sizing: border-box; width: 100%; margin: 8px 0; padding: 9px; resize: vertical; color: var(--hrp-navy); background: #fff; border: 1px solid #cbd5dc; font: inherit; font-size: 10px; line-height: 1.45; }
+.coal-question-box textarea:focus { outline: 2px solid rgba(0,54,113,.15); border-color: var(--hrp-blue); }
+.coal-question-box button { width: 100%; padding: 9px; color: #fff; background: var(--hrp-blue); border: 0; cursor: pointer; font: inherit; font-size: 10px; font-weight: 700; }
+.coal-question-box button:disabled { opacity: .6; cursor: wait; }
+.coal-question-box small { display: block; margin-top: 7px; color: #6d7882; font-size: 8px; line-height: 1.45; }
 .layer-list label.disabled-layer { color: #8a949d; cursor: not-allowed; }
 .layer-list label.disabled-layer:hover { background: transparent; }
 
@@ -543,9 +628,72 @@ button, summary, label, select { -webkit-tap-highlight-color: transparent; }
 .map-key i { display: inline-block; width: 7px; height: 7px; border-radius: 50%; }
 .map-key .port-key { background: var(--hrp-blue); }
 .map-key .asset-key { background: var(--hrp-red); }
+.map-key .weather-key { width: 10px; height: 8px; background: rgba(44,145,180,.2); border: 1px solid #2c91b4; border-radius: 1px; }
 .map-key .route-key { width: 14px; height: 3px; background: var(--hrp-red); border-radius: 0; }
 .map-key .jwc-key { width: 10px; height: 8px; background: rgba(222,148,39,.42); border: 1px solid #c47d16; border-radius: 1px; }
 .map-key .piracy-key { width: 10px; height: 8px; background: rgba(201,48,54,.3); border: 1px dashed #b52228; border-radius: 1px; }
+
+.weather-leaflet-tooltip {
+  min-width: 225px;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  box-shadow: 0 9px 28px rgba(28,41,74,.2);
+}
+.weather-tooltip { padding: 11px 12px; color: var(--ink); background: #fff; }
+.weather-tooltip-kicker { color: #2c91b4; font-size: 8px; font-weight: 700; letter-spacing: .12em; }
+.weather-tooltip h3 { margin: 2px 0 8px; color: var(--hrp-navy); font-size: 13px; }
+.weather-tooltip div { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; border-top: 1px solid #edf0f2; font-size: 9px; }
+.weather-tooltip div span { color: var(--muted); }
+.weather-tooltip div strong { text-align: right; }
+.weather-tooltip small { display: block; margin-top: 7px; color: var(--muted); font-size: 8px; line-height: 1.4; }
+.weather-tooltip a { color: var(--hrp-blue); }
+.weather-symbol-marker { z-index: 1; background: transparent; border: 0; cursor: pointer; }
+.weather-symbols {
+  display: flex;
+  position: relative;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  filter: drop-shadow(0 1px 3px rgba(255,255,255,1));
+}
+.weather-symbols.weather-motion::before {
+  content: "";
+  position: absolute;
+  inset: 5px 1px;
+  z-index: -1;
+  background: rgba(255,255,255,.28);
+  border: 1px solid rgba(44,145,180,.2);
+  border-radius: 18px;
+  animation: weather-halo 1.8s ease-in-out infinite;
+}
+.weather-rain, .weather-wind, .weather-wave { position: relative; display: inline-block; width: 25px; height: 27px; }
+.weather-rain::before { content: ""; position: absolute; top: 3px; left: 2px; width: 21px; height: 9px; background: #3c8fc6; border-radius: 10px; }
+.weather-rain i { position: absolute; top: 13px; width: 2px; height: 10px; background: #176c9f; border-radius: 2px; transform: rotate(14deg); }
+.weather-rain i:nth-child(1) { left: 5px; }
+.weather-rain i:nth-child(2) { left: 12px; animation-delay: -.35s; }
+.weather-rain i:nth-child(3) { left: 19px; animation-delay: -.7s; }
+.weather-rain.animated::before { animation: weather-cloud 1.15s ease-in-out infinite; }
+.weather-rain.animated i { animation: weather-rain .82s linear infinite; }
+.weather-wind i { position: absolute; left: 1px; width: 22px; height: 2px; background: #3d8268; border-radius: 2px; }
+.weather-wind i::after { content: ""; position: absolute; right: -1px; top: -2px; width: 5px; height: 5px; border-top: 2px solid #3d8268; border-right: 2px solid #3d8268; transform: rotate(45deg); }
+.weather-wind i:nth-child(1) { top: 5px; width: 16px; }
+.weather-wind i:nth-child(2) { top: 12px; }
+.weather-wind i:nth-child(3) { top: 19px; width: 13px; }
+.weather-wind.animated i { animation: weather-wind 1.1s ease-in-out infinite; }
+.weather-wind.animated i:nth-child(2) { animation-delay: -.4s; }
+.weather-wind.animated i:nth-child(3) { animation-delay: -.8s; }
+.weather-wave i { position: absolute; left: 1px; width: 23px; height: 9px; border-top: 3px solid #4b62b2; border-radius: 50%; }
+.weather-wave i:nth-child(1) { top: 6px; }
+.weather-wave i:nth-child(2) { top: 15px; }
+.weather-wave.animated i { animation: weather-wave 1.25s ease-in-out infinite; }
+.weather-wave.animated i:nth-child(2) { animation-delay: -.7s; }
+@keyframes weather-rain { from { transform: translateY(-4px) rotate(14deg); opacity: 0; } 30% { opacity: 1; } to { transform: translateY(7px) rotate(14deg); opacity: 0; } }
+@keyframes weather-cloud { 0%, 100% { transform: translateY(-1px) scale(.96); } 50% { transform: translateY(1px) scale(1.04); } }
+@keyframes weather-wind { 0%, 100% { transform: translateX(-6px); opacity: .3; } 50% { transform: translateX(7px); opacity: 1; } }
+@keyframes weather-wave { 0%, 100% { transform: translateX(-4px) scaleY(.72); } 50% { transform: translateX(4px) scaleY(1.35); } }
+@keyframes weather-halo { 0%, 100% { transform: scale(.92); opacity: .25; } 50% { transform: scale(1.04); opacity: .7; } }
 
 .coal-workspace-header {
   position: absolute;
@@ -575,7 +723,7 @@ button, summary, label, select { -webkit-tap-highlight-color: transparent; }
 .coal-data-surface {
   position: absolute;
   z-index: 500;
-  inset: 66px 0 0;
+  inset: 90px 0 0;
   overflow: auto;
   padding: 20px;
   background: #eef2f4;
@@ -589,9 +737,12 @@ button, summary, label, select { -webkit-tap-highlight-color: transparent; }
   border-top: 3px solid var(--hrp-blue);
   box-shadow: 0 4px 16px rgba(28,41,74,.06);
 }
-.coal-kpis span { display: block; color: #65717c; font-size: 9px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+.coal-kpis span { display: flex; align-items: center; justify-content: space-between; gap: 5px; color: #65717c; font-size: 9px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+.coal-kpis span em { padding: 2px 4px; color: #2d7257; background: #e7f3ed; font-size: 6px; font-style: normal; letter-spacing: .05em; }
 .coal-kpis strong { display: block; margin-top: 8px; color: var(--hrp-navy); font-size: 16px; }
 .coal-kpis small { display: block; margin-top: 3px; color: #8a949d; font-size: 9px; }
+.coal-kpis article > i { display: block; height: 3px; margin-top: 10px; overflow: hidden; background: #e5eaee; }
+.coal-kpis article > i::before { content: ""; display: block; width: var(--value, 0%); height: 100%; background: linear-gradient(90deg, var(--hrp-blue), var(--hrp-red)); transition: width .35s ease; }
 .coal-surface-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin: 24px 0 10px; }
 .coal-surface-heading h2 { margin: 3px 0 0; color: var(--hrp-navy); font-size: 18px; }
 .coal-surface-heading p { margin: 0; color: var(--muted); font-size: 10px; }
@@ -625,7 +776,7 @@ button, summary, label, select { -webkit-tap-highlight-color: transparent; }
 .npp-power-surface {
   position: absolute;
   z-index: 500;
-  inset: 66px 0 0;
+  inset: 90px 0 0;
   overflow: auto;
   padding: 20px;
   background: #eef2f4;
@@ -715,6 +866,33 @@ button, summary, label, select { -webkit-tap-highlight-color: transparent; }
 }
 .port-card.open { transform: translateX(0); }
 .port-card.port-spec-card { width: min(720px, calc(100% - 24px)); }
+.port-card.weather-detail-card { border-top-color: #2c91b4; }
+.weather-detail-card .detail-eyebrow { color: #2c91b4; }
+.weather-card-severity {
+  display: inline-block;
+  margin: 0 0 12px;
+  padding: 5px 8px;
+  color: #23576a;
+  background: #e7f4f8;
+  border-left: 3px solid #2c91b4;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.weather-card-severity.severity-advisory { color: #7d5417; background: #fff3dc; border-left-color: #d68a1d; }
+.weather-card-severity.severity-warning { color: #8a1f24; background: #fde9ea; border-left-color: #c93036; }
+.weather-detail-grid div { border-left-color: rgba(44,145,180,.55); }
+.weather-card-summary {
+  margin: 12px 0;
+  padding: 10px;
+  color: #3c5360;
+  background: #edf6f8;
+  border-left: 3px solid #2c91b4;
+  font-size: 10px;
+  line-height: 1.5;
+}
+.weather-source-link { margin: 0; }
 .close-button { position: absolute; top: 8px; right: 10px; padding: 0; color: #65717c; background: transparent; border: 0; cursor: pointer; font-size: 21px; }
 .detail-eyebrow { color: var(--hrp-red); font-size: 8px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
 .port-card h2 { margin: 4px 24px 2px 0; color: var(--hrp-navy); font-size: 18px; }
@@ -833,16 +1011,20 @@ button, summary, label, select { -webkit-tap-highlight-color: transparent; }
 }
 
 .coal-analysis-nav {
-  display: flex;
+  position: sticky;
+  z-index: 35;
+  top: -20px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 2px;
-  overflow-x: auto;
+  overflow: visible;
   margin: -20px -20px 18px;
   padding: 0 20px;
   background: #fff;
   border-bottom: 1px solid var(--line);
 }
-.coal-analysis-nav button {
-  flex: 0 0 auto;
+.coal-analysis-nav button,
+.coal-analysis-nav a {
   padding: 14px 12px 11px;
   color: #65717c;
   background: transparent;
@@ -851,14 +1033,296 @@ button, summary, label, select { -webkit-tap-highlight-color: transparent; }
   cursor: pointer;
   font-size: 10px;
   font-weight: 700;
+  text-decoration: none;
+  text-align: center;
 }
-.coal-analysis-nav button.active { color: var(--hrp-blue); border-bottom-color: var(--hrp-red); }
+.coal-analysis-nav button.active,
+.coal-analysis-nav a.active { color: var(--hrp-blue); border-bottom-color: var(--hrp-red); }
+.coal-data-surface > .coal-kpis,
+.coal-data-surface > .coal-analysis-grid { display: none; }
+.coal-dashboard-availability {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  margin-top: 10px; padding: 11px 14px; color: #526170; background: #eef4f8;
+  border: 1px solid #d7e2e9; border-left: 4px solid var(--hrp-blue); font-size: 9px;
+}
+.coal-dashboard-availability strong, .coal-dashboard-availability span { display: block; }
+.coal-dashboard-availability strong { margin-bottom: 3px; color: var(--hrp-navy); font-size: 10px; }
+.coal-dashboard-availability p { max-width: 520px; margin: 0; line-height: 1.45; }
+.coal-dashboard-availability b { color: #8b4d13; }
+.coal-dashboard-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
+.coal-dashboard-kpis article {
+  position: relative; min-height: 92px; padding: 14px 14px 12px; overflow: hidden;
+  background: #fff; border: 1px solid #e0e7ec; box-shadow: 0 5px 18px rgba(28,41,74,.055);
+}
+.coal-dashboard-kpis article::after { content: ""; position: absolute; left: 0; top: 0; width: 100%; height: 3px; background: linear-gradient(90deg, var(--hrp-blue), #2e78b7); }
+.coal-dashboard-kpis span { color: #6d7882; font-size: 8px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
+.coal-dashboard-kpis strong { display: block; margin-top: 9px; color: var(--hrp-navy); font-size: 22px; line-height: 1; }
+.coal-dashboard-kpis strong small { font-size: 9px; font-weight: 700; }
+.coal-dashboard-kpis p { margin: 8px 0 0; color: #7b8791; font-size: 8px; }
+.coal-dashboard-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.coal-dashboard-card { min-width: 0; min-height: 330px; padding: 16px; background: #fff; border: 1px solid #e1e7ec; box-shadow: 0 5px 20px rgba(28,41,74,.06); }
+.coal-dashboard-card-wide { grid-column: 1 / -1; }
+.coal-dashboard-card > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 8px; }
+.coal-dashboard-card header span { color: var(--hrp-red); font-size: 8px; font-weight: 800; letter-spacing: .12em; }
+.coal-dashboard-card h3 { margin: 4px 0 0; color: var(--hrp-navy); font-size: 15px; }
+.coal-dashboard-card header p { margin: 5px 0 0; color: #78838d; font-size: 8px; line-height: 1.4; }
+.coal-dashboard-card header small { color: #66727d; font-size: 8px; text-align: right; }
+.coal-dashboard-chart { min-height: 300px; }
+.coal-dashboard-chart svg { display: block; width: 100%; height: 300px; overflow: visible; }
+.coal-dashboard-chart svg line { stroke: #e7ecef; stroke-width: 1; }
+.coal-dashboard-chart svg text { fill: #687580; font-size: 9px; }
+.coal-dashboard-chart svg .axis-title { fill: var(--hrp-navy); font-size: 10px; font-weight: 700; }
+.coal-dashboard-chart circle, .coal-dashboard-chart rect { cursor: crosshair; }
+.coal-dashboard-table-card { min-height: 190px; }
+.coal-dashboard-table-card.expanded { min-height: 420px; }
+.coal-dashboard-table { max-height: 280px; overflow: auto; border: 1px solid #e4e9ed; }
+.coal-dashboard-table-card.expanded .coal-dashboard-table { max-height: 570px; }
+.coal-dashboard-table table { width: 100%; border-collapse: collapse; font-size: 9px; }
+.coal-dashboard-table th { position: sticky; top: 0; z-index: 1; padding: 8px; color: #fff; background: var(--hrp-navy); font-size: 7px; letter-spacing: .06em; text-align: left; text-transform: uppercase; white-space: nowrap; }
+.coal-dashboard-table td { padding: 7px 8px; border-bottom: 1px solid #edf0f2; color: #40505e; white-space: nowrap; }
+.coal-dashboard-table tbody tr:nth-child(even) { background: #f7f9fa; }
+.coal-dashboard-table a, .coal-dashboard-sources a { color: var(--hrp-blue); font-weight: 700; text-decoration: none; }
+.coal-null { color: #a4adb4; }
+.coal-dashboard-sources { min-height: 120px; }
+.coal-dashboard-sources > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.coal-dashboard-sources a { padding: 7px 9px; border: 1px solid #d4dde4; }
+.coal-dashboard-sources > p { margin: 10px 0 0; color: #66737e; font-size: 9px; }
+.coal-dashboard-loading, .coal-dashboard-error, .coal-dashboard-empty { display: flex; min-height: 180px; align-items: center; justify-content: center; padding: 24px; color: #66737e; background: #fff; border: 1px solid #dfe6eb; text-align: center; }
+.coal-dashboard-error { color: #9b2830; border-color: #e8c8ca; }
+.coal-analysis-toolbar {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 9px;
+  padding: 10px 12px;
+  background: #fff;
+  border-left: 3px solid var(--hrp-blue);
+  box-shadow: 0 4px 16px rgba(28,41,74,.05);
+}
+.coal-analysis-toolbar > div { min-width: 110px; }
+.coal-analysis-toolbar label {
+  display: block;
+  margin-bottom: 4px;
+  color: #67737e;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.coal-analysis-toolbar select,
+.coal-analysis-toolbar button,
+.coal-analysis-toolbar a {
+  min-height: 31px;
+  padding: 7px 10px;
+  border: 1px solid #cfd7dd;
+  color: var(--hrp-navy);
+  background: #fff;
+  font: inherit;
+  font-size: 10px;
+  text-decoration: none;
+}
+.coal-analysis-toolbar button {
+  color: #fff;
+  background: var(--hrp-blue);
+  border-color: var(--hrp-blue);
+  cursor: pointer;
+}
+.coal-analysis-toolbar a:hover { border-color: var(--hrp-blue); }
+
+/* Market-intelligence terminal: compact, filter-led and comparison-first. */
+.coal-data-surface {
+  padding: 0 18px 24px;
+  background:
+    linear-gradient(180deg, #e8edf1 0, #f2f5f7 180px, #eef2f4 100%);
+}
+.coal-analysis-nav {
+  top: 0;
+  grid-template-columns: repeat(6, minmax(92px, 1fr));
+  margin: 0 -18px;
+  padding: 0 18px;
+  background: rgba(255,255,255,.97);
+  box-shadow: 0 4px 15px rgba(20,38,64,.08);
+  backdrop-filter: blur(10px);
+}
+.coal-analysis-nav button { padding: 15px 10px 12px; font-size: 9px; letter-spacing: .04em; text-transform: uppercase; }
+.coal-terminal-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 12px 0 8px;
+  padding: 8px 10px;
+  color: #d8e2eb;
+  background: #17243d;
+  border: 1px solid #253755;
+  box-shadow: 0 8px 24px rgba(20,34,57,.13);
+}
+.coal-range-presets { display: flex; align-items: center; gap: 5px; }
+.coal-range-presets > span { margin-right: 4px; color: #8fa3b9; font-size: 7px; font-weight: 800; letter-spacing: .12em; }
+.coal-range-presets button {
+  min-width: 38px;
+  padding: 6px 8px;
+  color: #c7d2dd;
+  background: #22324d;
+  border: 1px solid #344762;
+  cursor: pointer;
+  font-size: 8px;
+  font-weight: 800;
+}
+.coal-range-presets button:hover, .coal-range-presets button.active { color: #fff; background: #07529b; border-color: #2d7fc7; }
+.coal-active-filters { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; }
+.coal-active-filters span { padding: 5px 7px; color: #c7d3df; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); font-size: 7px; font-weight: 700; }
+.coal-active-filters span.primary { color: #fff; background: #c62836; border-color: #e14b57; text-transform: uppercase; }
+.coal-analysis-toolbar {
+  position: sticky;
+  z-index: 30;
+  top: 43px;
+  gap: 7px;
+  padding: 9px 10px;
+  border: 1px solid #d8e0e6;
+  border-left: 0;
+  box-shadow: 0 6px 18px rgba(26,43,70,.09);
+}
+.coal-analysis-toolbar > div { min-width: 104px; flex: 1 1 104px; }
+.coal-analysis-toolbar > div:nth-child(4), .coal-analysis-toolbar > div:nth-child(5) { min-width: 145px; }
+.coal-analysis-toolbar select { width: 100%; }
+.coal-analysis-toolbar button { min-width: 100px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+.coal-analysis-toolbar a { display: inline-flex; align-items: center; justify-content: center; min-width: 54px; font-weight: 800; }
+.coal-dashboard-availability { background: rgba(255,255,255,.8); border-left-width: 3px; }
+.coal-dashboard-kpis { grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: 8px; }
+.coal-dashboard-kpis article { min-height: 108px; padding: 15px 14px; border-radius: 2px; }
+.coal-dashboard-kpis article::after { height: 2px; }
+.coal-dashboard-kpis strong { font-size: 24px; letter-spacing: -.03em; }
+.coal-kpi-delta { display: inline-flex; margin-top: 9px; padding: 3px 5px; font-size: 7px; font-weight: 800; letter-spacing: .03em; }
+.coal-kpi-delta.up { color: #176b4e; background: #e4f3ec; }
+.coal-kpi-delta.down { color: #a52c36; background: #f9e8ea; }
+.coal-kpi-delta.flat { color: #64717c; background: #eef1f3; }
+.coal-dashboard-panels { grid-template-columns: minmax(0, 1.45fr) minmax(320px, .85fr); gap: 8px; }
+.coal-dashboard-card { min-height: 310px; padding: 14px; border-radius: 2px; box-shadow: 0 5px 18px rgba(24,40,67,.055); }
+.coal-dashboard-card-wide { grid-column: 1 / -1; }
+.coal-dashboard-card:first-child { grid-column: 1 / -1; min-height: 370px; }
+.coal-dashboard-card:first-child .coal-dashboard-chart,
+.coal-dashboard-card:first-child .coal-dashboard-chart svg { min-height: 330px; height: 330px; }
+.coal-dashboard-card > header { padding-bottom: 9px; border-bottom: 1px solid #edf0f3; }
+.coal-dashboard-card h3 { font-size: 14px; }
+.coal-dashboard-card header p { max-width: 680px; font-size: 8px; }
+.coal-chart-legend { display: flex; flex-wrap: wrap; gap: 10px; padding: 8px 0 0; }
+.coal-chart-legend span { display: inline-flex; align-items: center; gap: 5px; color: #526170; font-size: 8px; font-weight: 700; }
+.coal-chart-legend i { width: 14px; height: 3px; }
+.coal-dashboard-chart circle:hover, .coal-dashboard-chart rect:hover { filter: brightness(.88); stroke-width: 3; }
+.coal-dashboard-table { background: #fff; }
+.coal-dashboard-table tbody tr:hover { background: #eaf2f8; }
+.coal-table-search { display: grid; gap: 4px; min-width: 180px; }
+.coal-table-search span { color: #6b7781 !important; font-size: 7px !important; }
+.coal-table-search input { min-height: 30px; padding: 6px 9px; color: #26364d; background: #f7f9fa; border: 1px solid #d5dde3; font: inherit; font-size: 9px; }
+.coal-dashboard-sources a { background: #f6f9fb; }
+
+@media (max-width: 1050px) {
+  .coal-terminal-controls { align-items: flex-start; flex-direction: column; }
+  .coal-active-filters { justify-content: flex-start; }
+  .coal-dashboard-panels { grid-template-columns: 1fr; }
+  .coal-dashboard-card-wide, .coal-dashboard-card:first-child { grid-column: auto; }
+}
+.coal-research-result { margin-top: 10px; padding: 18px; background: #fff; border-top: 4px solid var(--hrp-blue); box-shadow: 0 8px 24px rgba(28,41,74,.08); }
+.coal-research-result[hidden] { display: none; }
+.coal-research-result > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
+.coal-research-result > header span { color: var(--hrp-red); font-size: 8px; font-weight: 800; letter-spacing: .11em; }
+.coal-research-result h2 { margin: 4px 0 0; color: var(--hrp-navy); font-size: 18px; }
+.coal-research-result > header > div:last-child { display: grid; justify-items: end; gap: 5px; }
+.coal-research-result > header b { padding: 4px 7px; color: #25644c; background: #e5f2eb; font-size: 7px; letter-spacing: .08em; }
+.coal-research-result > header small { color: #737f89; font-size: 8px; }
+.coal-research-result > p { max-width: 800px; margin: 12px 0 0; color: #4e5c68; font-size: 11px; line-height: 1.55; }
+.coal-research-result .coal-source-catalog { max-height: 280px; }
+.coal-research-result > footer { display: flex; align-items: flex-end; justify-content: space-between; gap: 15px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #e3e8ec; }
+.coal-research-result > footer > div:first-child { display: grid; gap: 4px; }
+.coal-research-result > footer small { color: #707c86; font-size: 8px; }
+.coal-research-result > footer a { color: var(--hrp-blue); font-size: 9px; font-weight: 700; text-decoration: none; }
+.coal-research-result > footer > div:last-child { display: flex; gap: 7px; }
+.coal-research-result > footer > div:last-child a { padding: 8px 10px; border: 1px solid #c8d2da; }
+.coal-research-prompts { display: flex; gap: 7px; overflow-x: auto; margin-top: 10px; padding-bottom: 4px; }
+.coal-research-prompts button { flex: 0 0 220px; min-height: 45px; padding: 8px 10px; color: #445564; background: #fff; border: 1px solid #d6dde2; border-left: 3px solid var(--hrp-red); cursor: pointer; font: inherit; font-size: 9px; line-height: 1.35; text-align: left; }
+.coal-research-prompts button:hover { border-color: var(--hrp-blue); color: var(--hrp-blue); }
+.coal-research-bars { display: grid; gap: 7px; margin-top: 12px; }
+.coal-research-bars > div { display: grid; grid-template-columns: minmax(95px, 180px) 1fr 62px; align-items: center; gap: 9px; font-size: 9px; }
+.coal-research-bars > div > span { overflow: hidden; color: #5d6974; text-overflow: ellipsis; white-space: nowrap; }
+.coal-research-bars section { display: flex; flex-direction: column; gap: 2px; min-height: 8px; }
+.coal-research-bars section i { display: block; height: 6px; min-width: 2px; }
+.coal-research-bars strong { color: var(--hrp-navy); text-align: right; }
 .coal-analysis-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
 .coal-analysis-grid > article { min-height: 210px; padding: 15px; background: #fff; box-shadow: 0 4px 16px rgba(28,41,74,.06); }
+.coal-analysis-grid > article[hidden] { display: none; }
+.coal-analysis-grid > article.coal-analysis-wide { grid-column: 1 / -1; }
 .coal-analysis-grid header { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; }
 .coal-analysis-grid header span { color: var(--hrp-red); font-size: 8px; font-weight: 700; letter-spacing: .1em; }
 .coal-analysis-grid h3 { margin: 3px 0 0; color: var(--hrp-navy); font-size: 13px; }
 .coal-analysis-grid header small { color: #87919a; font-size: 8px; text-align: right; }
+.coal-analysis-grid header a { color: var(--hrp-blue); text-decoration: none; }
+.coal-master-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 22px; }
+.coal-master-list div {
+  min-height: 54px;
+  padding: 10px;
+  background: #f3f6f8;
+  border-left: 2px solid var(--hrp-blue);
+}
+.coal-master-list span,
+.coal-source-catalog small,
+.coal-master-bar span {
+  display: block;
+  color: #65717c;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.coal-master-list strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--hrp-navy);
+  font-size: 12px;
+  line-height: 1.35;
+}
+.coal-master-bars { margin-top: 20px; display: grid; gap: 10px; }
+.coal-master-bar > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 5px;
+}
+.coal-master-bar strong { color: var(--hrp-navy); font-size: 11px; white-space: nowrap; }
+.coal-master-bar > div:last-child {
+  height: 8px;
+  overflow: hidden;
+  background: #e7edf1;
+}
+.coal-master-bar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--hrp-blue), var(--hrp-red));
+}
+.coal-source-catalog { margin-top: 16px; max-height: 190px; overflow: auto; border-top: 1px solid #e3e8ec; }
+.coal-source-catalog table { width: 100%; border-collapse: collapse; font-size: 10px; }
+.coal-source-catalog th,
+.coal-source-catalog td { padding: 8px 6px; border-bottom: 1px solid #e8edf1; text-align: left; vertical-align: top; }
+.coal-source-catalog th { color: #6d7781; font-size: 8px; text-transform: uppercase; letter-spacing: .08em; }
+.coal-source-catalog strong { display: block; color: var(--hrp-navy); font-size: 10px; line-height: 1.3; }
+.coal-live-chart { min-height: 245px; margin-top: 10px; }
+.coal-live-chart svg { display: block; width: 100%; height: 250px; overflow: visible; }
+.coal-live-chart svg text { fill: #6d7882; font-size: 10px; }
+.coal-chart-legend { display: flex; flex-wrap: wrap; gap: 14px; margin: 9px 0 3px; color: #5e6b75; font-size: 9px; }
+.coal-chart-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.coal-chart-legend i { display: inline-block; width: 14px; height: 3px; }
+.coal-chart-point { cursor: crosshair; transition: r .12s ease, stroke-width .12s ease; }
+.coal-chart-point:hover { r: 6px; stroke-width: 3px; }
+.coal-stacked-bars { display: grid; gap: 8px; margin-top: 10px; }
+.coal-stacked-row { display: grid; grid-template-columns: 54px 1fr 34px; align-items: center; gap: 7px; color: #66727c; font-size: 9px; }
+.coal-stacked-row > div { display: flex; height: 12px; background: #edf1f3; }
+.coal-stacked-row i { display: block; height: 100%; }
+.coal-stacked-row strong { color: var(--hrp-navy); text-align: right; }
+.coal-findings { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 18px; }
+.coal-findings > div { padding: 12px; background: #f3f6f8; border-top: 3px solid var(--hrp-blue); }
+.coal-findings span, .coal-findings small { display: block; color: #697681; font-size: 9px; }
+.coal-findings strong { display: block; margin: 6px 0 3px; color: var(--hrp-navy); font-size: 19px; }
+.coal-findings p { grid-column: 1 / -1; margin: 0; color: #68747e; font-size: 9px; }
 .chart-empty { display: flex; min-height: 145px; align-items: center; justify-content: center; flex-direction: column; gap: 10px; color: #808b94; text-align: center; }
 .chart-empty i { display: block; width: 80%; height: 54px; border-bottom: 1px solid #dfe4e8; background: linear-gradient(160deg, transparent 47%, #dfe4e8 48%, #dfe4e8 50%, transparent 51%); }
 .chart-empty p { max-width: 330px; margin: 0; font-size: 9px; }
@@ -873,6 +1337,11 @@ button, summary, label, select { -webkit-tap-highlight-color: transparent; }
   .brand img { width: 190px; }
   .coal-kpis { grid-template-columns: 1fr 1fr; }
   .coal-analysis-grid { grid-template-columns: 1fr; }
+  .coal-dashboard-kpis { grid-template-columns: 1fr 1fr; }
+  .coal-dashboard-panels { grid-template-columns: 1fr; }
+  .coal-dashboard-card-wide { grid-column: auto; }
+  .coal-analysis-grid > article.coal-analysis-wide { grid-column: auto; }
+  .coal-findings { grid-template-columns: 1fr 1fr; }
   .npp-grid, .npp-hero-grid { grid-template-columns: 1fr; }
   .npp-grid > article.npp-wide { grid-column: auto; }
   .port-spec-grid, .satellite-grid, .facility-list, .source-list { grid-template-columns: 1fr; }
@@ -899,4 +1368,15 @@ button, summary, label, select { -webkit-tap-highlight-color: transparent; }
 
 .detail-source-link:hover {
   background: #eaf2f9;
+}
+
+.detail-source-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.detail-source-links .detail-source-link {
+  margin-top: 0;
 }
