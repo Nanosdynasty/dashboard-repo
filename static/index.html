@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Howe Robinson | Global Assets Map</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="/static/css/style.css?v=20260731-20" />
+  <link rel="stylesheet" href="/static/css/style.css?v=20260804-04" />
 </head>
 <body>
   <div class="app-shell">
@@ -247,6 +247,23 @@
               <label><input type="checkbox" value="cement_plants" /><i style="--dot:#9a8a73"></i><span>Cement plants</span><small>3,513</small></label>
             </div>
             <p class="data-gap"><strong>Bauxite &amp; limestone:</strong> awaiting a reviewed source of operational mines. Historical occurrences are intentionally not mapped as active assets.</p>
+          </div>
+        </details>
+
+        <details class="filter-section datahub-section" data-mode="datahub">
+          <summary>
+            <span><i class="section-icon datahub-icon"></i>Data Hub</span>
+            <span class="section-count" id="datahub-sidebar-status">Master store</span>
+          </summary>
+          <div class="section-body">
+            <p class="workspace-intro">Upload, connect, reconcile and compare licensed or custom market datasets in one governed workspace.</p>
+            <div class="datahub-mini-status">
+              <div><span>Datasets</span><strong id="datahub-sidebar-datasets">0</strong></div>
+              <div><span>Rows</span><strong id="datahub-sidebar-rows">0</strong></div>
+              <div><span>Updates due</span><strong id="datahub-sidebar-due">0</strong></div>
+            </div>
+            <button type="button" class="filter-button" id="datahub-open-workspace">Open data workspace</button>
+            <p class="source-note">Relationship proposals remain inactive until a user reviews and approves the suggested keys, grain and coverage.</p>
           </div>
         </details>
 
@@ -584,6 +601,104 @@
         </div>
         <p id="npp-quality-note" class="npp-quality-note">Values display only after category and sector totals reconcile to the NPP installed-capacity headline.</p>
       </section>
+      <section id="datahub-surface" class="datahub-surface" hidden>
+        <header class="datahub-header">
+          <div><span>HRP DATA ORCHESTRATION</span><h1>Market data hub</h1><p>Source-aware ingestion, comparison and approved relationships.</p></div>
+          <div class="datahub-master-state"><span>MASTER STORE</span><strong id="datahub-master-file">provider_master.sqlite3</strong><small>Files, rows, lineage and approvals</small></div>
+        </header>
+        <div class="datahub-kpis">
+          <article><span>Datasets</span><strong id="datahub-kpi-datasets">0</strong><small>Across all providers</small></article>
+          <article><span>Normalized rows</span><strong id="datahub-kpi-rows">0</strong><small>Available for preview</small></article>
+          <article><span>Updates due</span><strong id="datahub-kpi-overdue">0</strong><small>Freshness reminder</small></article>
+          <article><span>Approved relations</span><strong id="datahub-kpi-relations">0</strong><small>Reusable analytical links</small></article>
+        </div>
+        <div id="datahub-provider-grid" class="datahub-provider-grid" aria-label="Data providers"></div>
+        <nav class="datahub-nav" aria-label="Data hub tools">
+          <button type="button" class="active" data-datahub-tab="catalog">Dataset catalog</button>
+          <button type="button" data-datahub-tab="relationships">Compare &amp; relate</button>
+          <button type="button" data-datahub-tab="visualize">Visualize &amp; export</button>
+        </nav>
+        <div class="datahub-workbench">
+          <section data-datahub-panel="catalog">
+            <header><div><span>LINEAGE CATALOG</span><h2>Master datasets</h2></div><label>Filter source<select id="datahub-provider-filter"><option value="">All providers</option><option value="hrp_app">HRP app data</option><option value="gtt">GTT</option><option value="kpler">Kpler</option><option value="oceanbolt">Oceanbolt</option><option value="axs_marine">AXS Marine</option><option value="custom">Custom data</option></select></label></header>
+            <div id="datahub-catalog" class="datahub-catalog"></div>
+          </section>
+          <section data-datahub-panel="relationships" hidden>
+            <header><div><span>GOVERNED ORCHESTRATION</span><h2>Compare sources and propose relationships</h2></div><small>Nothing is joined until approved.</small></header>
+            <div class="datahub-relation-layout">
+              <div>
+                <label for="datahub-relationship-datasets">Datasets to compare</label>
+                <select id="datahub-relationship-datasets" multiple size="7"></select>
+                <label for="datahub-relationship-question">Research objective</label>
+                <textarea id="datahub-relationship-question" rows="4" placeholder="Example: Relate China coal imports by origin and port with coal-fired generation and industrial use."></textarea>
+                <div class="datahub-actions"><button type="button" id="datahub-compare">Compare sources</button><button type="button" id="datahub-propose">Propose relationship</button></div>
+              </div>
+              <div id="datahub-relationship-result" class="datahub-relationship-result"><div class="datahub-empty"><strong>Select two or more datasets</strong><span>The app will compare coverage, freshness, schema and candidate join keys.</span></div></div>
+            </div>
+          </section>
+          <section data-datahub-panel="visualize" hidden>
+            <header><div><span>ANALYTICAL PREVIEW</span><h2>Visualize a dataset</h2></div><small>Clean, source-aware cards built from normalized master-store rows.</small></header>
+            <div class="datahub-viz-card-grid">
+              <article class="datahub-viz-control-card">
+                <header><span>BUILD VISUAL</span><h3>Chart controls</h3><p>Select one dataset and the fields you want to compare.</p></header>
+                <div class="datahub-viz-toolbar">
+                  <label>Dataset<select id="datahub-viz-dataset"><option value="">Choose dataset</option></select></label>
+                  <div class="datahub-viz-field-row">
+                    <label>Chart<select id="datahub-viz-type"><option value="line">Trend line</option><option value="bar">Category bars</option><option value="scatter">Relationship scatter</option></select></label>
+                    <label>X axis<select id="datahub-viz-x"><option value="">Select field</option></select></label>
+                    <label>Y axis<select id="datahub-viz-y"><option value="">Select field</option></select></label>
+                  </div>
+                  <button type="button" id="datahub-render-chart">Update visual</button>
+                </div>
+              </article>
+              <article class="datahub-viz-summary-card">
+                <header><span>DATASET SNAPSHOT</span><h3>At a glance</h3><p id="datahub-viz-source">Choose a dataset to see its coverage and quality.</p></header>
+                <div class="datahub-viz-metrics">
+                  <div><span>Rows</span><strong id="datahub-viz-rows">—</strong><small>Normalized records</small></div>
+                  <div><span>Fields</span><strong id="datahub-viz-fields">—</strong><small>Available columns</small></div>
+                  <div><span>Coverage</span><strong id="datahub-viz-period">—</strong><small>Observed period</small></div>
+                  <div><span>Quality</span><strong id="datahub-viz-quality">—</strong><small>Profile status</small></div>
+                </div>
+                <div id="datahub-downloads" class="datahub-downloads"></div>
+              </article>
+              <article class="datahub-chart-card">
+                <header><div><span id="datahub-chart-kicker">SELECT A DATASET</span><h3 id="datahub-chart-title">Chart preview</h3><p id="datahub-chart-subtitle">Choose compatible fields to create a visual.</p></div></header>
+                <div id="datahub-chart" class="datahub-chart"></div>
+              </article>
+              <details class="datahub-preview-card">
+                <summary><span><b>DATA ROWS</b><strong>Preview normalized records</strong></span><small>Open table</small></summary>
+                <div id="datahub-preview-table" class="datahub-preview-table"></div>
+              </details>
+            </div>
+          </section>
+        </div>
+        <input id="datahub-file-input" type="file" accept=".xlsx,.xls,.csv,.json,.pdf" hidden />
+        <dialog id="datahub-upload-dialog" class="datahub-dialog">
+          <form method="dialog">
+            <button class="datahub-dialog-close" value="cancel" aria-label="Close">&times;</button>
+            <span>ADD TO MASTER STORE</span><h2 id="datahub-upload-title">Upload dataset</h2>
+            <input id="datahub-upload-provider" type="hidden" />
+            <label>Dataset name<input id="datahub-upload-name" required placeholder="e.g. China coal imports monthly" /></label>
+            <label>Expected update frequency<select id="datahub-upload-frequency"><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly" selected>Monthly</option><option value="quarterly">Quarterly</option><option value="yearly">Yearly</option><option value="ad_hoc">Ad hoc</option></select></label>
+            <label>File<div id="datahub-selected-file" class="datahub-selected-file">No file selected</div></label>
+            <button type="button" id="datahub-choose-file">Choose Excel, CSV, JSON or PDF</button>
+            <button type="button" class="primary" id="datahub-submit-upload">Upload and profile</button>
+            <p id="datahub-upload-message">The file will be profiled for dates, measures, missingness and duplicates.</p>
+          </form>
+        </dialog>
+        <dialog id="datahub-api-dialog" class="datahub-dialog">
+          <form method="dialog">
+            <button class="datahub-dialog-close" value="cancel" aria-label="Close">&times;</button>
+            <span>SECURE CONNECTION</span><h2 id="datahub-api-title">Connect provider API</h2>
+            <input id="datahub-api-provider" type="hidden" />
+            <label>Connection name<input id="datahub-api-label" value="Default connection" /></label>
+            <label>API endpoint (optional)<input id="datahub-api-endpoint" type="url" placeholder="https://api.provider.com/v1" /></label>
+            <label>API key<input id="datahub-api-key" type="password" autocomplete="new-password" placeholder="Paste API key" /></label>
+            <button type="button" class="primary" id="datahub-submit-api">Save connection</button>
+            <p id="datahub-api-message">The browser never receives the saved key back. Provider-specific field mapping is reviewed before scheduled ingestion.</p>
+          </form>
+        </dialog>
+      </section>
       <div class="map-topbar">
         <div class="map-status"><span></span><strong id="map-status">Loading ports…</strong></div>
         <div class="map-tools" aria-label="Map display controls">
@@ -615,6 +730,6 @@
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/static/js/app.js?v=20260731-26"></script>
+  <script src="/static/js/app.js?v=20260804-04"></script>
 </body>
 </html>

@@ -561,6 +561,27 @@ class PortApiTests(unittest.TestCase):
             all(item["port_specification_available"] for item in terminals)
         )
 
+        port_cards = self.client.get(
+            "/api/coal/assets",
+            params={
+                "asset_kind": "coal_trade_terminals,dry_bulk_ports",
+                "status_group": "operating",
+                "limit": 20000,
+            },
+        ).json()["data"]
+        canonical_ids = [
+            item["canonical_port_id"] for item in port_cards
+            if item.get("canonical_port_id")
+        ]
+        self.assertEqual(len(canonical_ids), len(set(canonical_ids)))
+        card_names = {item["name"] for item in port_cards}
+        self.assertIn("Bedi Port", card_names)
+        self.assertIn("Haldia Port", card_names)
+        self.assertIn("Kolkata Dock System Coal Terminal", card_names)
+        self.assertNotIn("BEDI", card_names)
+        self.assertNotIn("HALDIA PORT", card_names)
+        self.assertNotIn("CALCUTTA", card_names)
+
         export = self.client.get("/api/coal/port-specifications/export")
         self.assertEqual(export.status_code, 200)
         self.assertIn(
@@ -570,6 +591,32 @@ class PortApiTests(unittest.TestCase):
         self.assertIn("Max documented draft (m)", export.text)
         self.assertIn("Facility record count", export.text)
         self.assertIn("Coal flow record count", export.text)
+
+    def test_iron_ore_and_steel_map_records_support_detail_cards(self):
+        mines = self.client.get(
+            "/api/map/iron_ore_mines",
+            params={"status": "operating", "limit": 5000},
+        )
+        self.assertEqual(mines.status_code, 200)
+        mine_rows = mines.json()
+        self.assertTrue(mine_rows)
+        self.assertTrue(any(row.get("owner") for row in mine_rows))
+        self.assertTrue(any(row.get("source_url") for row in mine_rows))
+        self.assertTrue(
+            any(row.get("production_2024_ktpa") is not None for row in mine_rows)
+        )
+
+        steel = self.client.get(
+            "/api/map/steel_plants",
+            params={"status": "operating", "limit": 5000},
+        )
+        self.assertEqual(steel.status_code, 200)
+        steel_rows = steel.json()
+        self.assertTrue(steel_rows)
+        self.assertTrue(any(row.get("owner") for row in steel_rows))
+        self.assertTrue(any(row.get("source_url") for row in steel_rows))
+        self.assertTrue(any(row.get("capacity") is not None for row in steel_rows))
+        self.assertTrue(any(row.get("iron_ore_source") for row in steel_rows))
 
     def test_port_ui_does_not_advertise_unsupported_zero_categories(self):
         response = self.client.get("/")
@@ -589,7 +636,7 @@ class PortApiTests(unittest.TestCase):
         self.assertIn("Coal stock availability", html)
         self.assertIn("Cumulative generation", html)
         self.assertIn("Sector-wise PLF", html)
-        self.assertIn("app.js?v=20260731-26", html)
+        self.assertIn("app.js?v=20260804-04", html)
         self.assertIn("Cargo + tankers + type pending", html)
         self.assertIn('id="ais-watchlist" class="ais-watchlist" hidden', html)
         self.assertIn("positions in the background", html)

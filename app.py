@@ -20,6 +20,7 @@ from maritime_extras import (
 )
 from port_catalog import PortCatalog
 from imd_coastal_weather import ImdCoastalWeatherManager
+from data_hub import create_data_hub_router
 
 log = logging.getLogger("ais")
 logging.basicConfig(level=logging.INFO)
@@ -177,6 +178,36 @@ NORMALIZED_MAP_TRACKERS = {
     "cement_plants",
     "coal_trade_terminals",
 }
+
+INDIA_PORT_IDENTITY_ALIASES = {
+    "calcutta": "kolkata",
+    "cochin": "kochi",
+    "magdalla": "magadalla",
+    "marmagao": "mormugao",
+    "vishakhapatnam": "visakhapatnam",
+}
+INDIA_PORT_IDENTITY_STOPWORDS = {
+    "bandar",
+    "bay",
+    "coal",
+    "dock",
+    "essar",
+    "port",
+    "system",
+    "terminal",
+}
+
+
+def _india_port_identity(value: Any) -> str:
+    """Return a stable physical-port key across WPI/GEM naming variants."""
+    text = re.sub(r"\([^)]*\)", " ", str(value or "").lower())
+    tokens = re.findall(r"[a-z0-9]+", text)
+    canonical = [INDIA_PORT_IDENTITY_ALIASES.get(token, token) for token in tokens]
+    canonical = [
+        token for token in canonical
+        if token not in INDIA_PORT_IDENTITY_STOPWORDS
+    ]
+    return "-".join(canonical)
 user_datasets: Dict[str, Path] = {}
 con = duckdb.connect(database=":memory:")
 
@@ -957,6 +988,7 @@ def _coal_asset_rows(status_group: str = "operating") -> List[Dict[str, Any]]:
         ).fetchall()
     }
     rows: List[Dict[str, Any]] = []
+    coal_terminal_identities: set[str] = set()
     for tracker_id, label, asset_kind in (
         ("coal_mines", "Coal mine", "coal_mines"),
         ("steel_plants", "Steel plant", "steel_consumers"),
@@ -1153,6 +1185,8 @@ def _coal_asset_rows(status_group: str = "operating") -> List[Dict[str, Any]]:
                     ),
                     "asset_kind": "coal_trade_terminals",
                     "asset_label": "Coal trade terminal",
+                    "canonical_port_id": _india_port_identity(parent),
+                    "source_record_count": len(group),
                 }
             port_summary = _port_specification_summary(
                 specifications_by_id.get(terminal_id)
@@ -1160,12 +1194,17 @@ def _coal_asset_rows(status_group: str = "operating") -> List[Dict[str, Any]]:
             terminal_row["port_specification"] = port_summary
             terminal_row["port_specification_available"] = bool(port_summary)
             rows.append(terminal_row)
+            if terminal_row["canonical_port_id"]:
+                coal_terminal_identities.add(terminal_row["canonical_port_id"])
 
     if status_group == "operating":
         for port in ports.filtered(
             categories=["dry_bulk"], countries=["IN"]
         ):
             compact = ports.compact(port)
+            canonical_port_id = _india_port_identity(compact["name"])
+            if canonical_port_id in coal_terminal_identities:
+                continue
             rows.append(
                 {
                     "id": compact["id"],
@@ -1189,6 +1228,7 @@ def _coal_asset_rows(status_group: str = "operating") -> List[Dict[str, Any]]:
                     ),
                     "asset_kind": "dry_bulk_ports",
                     "asset_label": "Dry-bulk port",
+                    "canonical_port_id": canonical_port_id,
                 }
             )
     return rows
@@ -1584,6 +1624,7 @@ ports = PortCatalog(con)
 ports.refresh()
 
 app = FastAPI(title="Global Energy & Maritime Intelligence", version="4.0.0")
+app.include_router(create_data_hub_router(BASE_DIR))
 cors_origins = [
     value.strip()
     for value in os.getenv(
@@ -2596,6 +2637,32 @@ async def get_map_points(
                 "source_date",
                 "evidence_level",
                 "coverage_note",
+                "coordinate_accuracy",
+                "municipality",
+                "subnational_unit",
+                "region",
+                "production_2024_ktpa",
+                "production_2023_ktpa",
+                "production_2022_ktpa",
+                "reserves_kt",
+                "resources_kt",
+                "start_date",
+                "stop_date",
+                "owner",
+                "parent_company",
+                "location_address",
+                "plant_age",
+                "pellet_capacity_ktpa",
+                "coking_capacity_ktpa",
+                "steel_end_users",
+                "workforce_size",
+                "main_equipment",
+                "power_source",
+                "iron_ore_source",
+                "met_coal_source",
+                "iron_capacity_ktpa",
+                "bf_capacity_ktpa",
+                "dri_capacity_ktpa",
             )
             if name in columns
         }

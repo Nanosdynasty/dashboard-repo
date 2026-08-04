@@ -1380,3 +1380,168 @@ button, summary, label, select { -webkit-tap-highlight-color: transparent; }
 .detail-source-links .detail-source-link {
   margin-top: 0;
 }
+
+/* Provider-neutral data orchestration workspace. */
+.datahub-icon { background: #0e7182; }
+.datahub-mini-status { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 12px 0; }
+.datahub-mini-status div { padding: 8px 5px; background: #f3f6f8; border-top: 2px solid var(--hrp-blue); text-align: center; }
+.datahub-mini-status span, .datahub-mini-status strong { display: block; }
+.datahub-mini-status span { color: #78838d; font-size: 7px; text-transform: uppercase; }
+.datahub-mini-status strong { margin-top: 3px; color: var(--hrp-navy); font-size: 14px; }
+.datahub-surface { position: absolute; inset: 0; z-index: 600; overflow: auto; padding: 0 20px 30px; color: #172541; background: #edf1f4; }
+.datahub-surface[hidden] { display: none; }
+.datahub-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin: 0 -20px; padding: 18px 24px; color: #fff; background: #1d2d4d; border-bottom: 3px solid var(--hrp-red); }
+.datahub-header span, .datahub-master-state span { color: #b5c3d4; font-size: 8px; font-weight: 800; letter-spacing: .13em; }
+.datahub-header h1 { margin: 4px 0 2px; font-size: 22px; }
+.datahub-header p { margin: 0; color: #bdc9d8; font-size: 10px; }
+.datahub-master-state { display: grid; justify-items: end; gap: 3px; padding-left: 24px; border-left: 1px solid rgba(255,255,255,.16); }
+.datahub-master-state strong { font-size: 11px; }
+.datahub-master-state small { color: #9facbc; font-size: 8px; }
+.datahub-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 14px 0 10px; }
+.datahub-kpis article { min-height: 82px; padding: 13px 14px; background: #fff; border-top: 3px solid var(--hrp-blue); box-shadow: 0 4px 14px rgba(25,42,68,.055); }
+.datahub-kpis span, .datahub-kpis strong, .datahub-kpis small { display: block; }
+.datahub-kpis span { color: #6d7883; font-size: 8px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.datahub-kpis strong { margin: 7px 0 3px; color: var(--hrp-navy); font-size: 23px; }
+.datahub-kpis small { color: #83909b; font-size: 8px; }
+.datahub-provider-grid { display: grid; grid-template-columns: repeat(5, minmax(168px, 1fr)); gap: 8px; }
+.datahub-provider-card { min-height: 210px; padding: 13px; background: #fff; border: 1px solid #dbe2e7; border-top: 4px solid var(--provider-accent); box-shadow: 0 4px 16px rgba(23,39,65,.055); }
+.datahub-provider-card.overdue { background: #fff7f7; border-color: #e9a7ad; border-top-color: #c92938; }
+.datahub-provider-card.due_soon { background: #fffaf0; border-color: #e9d19a; border-top-color: #cf8d12; }
+.datahub-provider-card header, .datahub-provider-card footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.datahub-provider-card header span, .datahub-provider-card header strong { display: block; }
+.datahub-provider-card header span { color: var(--hrp-navy); font-size: 14px; font-weight: 800; }
+.datahub-provider-card header strong { margin-top: 2px; color: #7a8792; font-size: 8px; }
+.datahub-provider-card header i { width: 13px; height: 13px; border: 3px solid var(--provider-accent); border-radius: 50%; }
+.datahub-provider-latest { min-height: 83px; margin: 14px 0 8px; padding: 10px; background: #f4f7f9; }
+.datahub-provider-latest small, .datahub-provider-latest b, .datahub-provider-latest span { display: block; }
+.datahub-provider-latest small { color: #87939e; font-size: 7px; font-weight: 800; letter-spacing: .09em; }
+.datahub-provider-latest b { overflow: hidden; margin: 7px 0 4px; color: var(--hrp-navy); font-size: 10px; line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; }
+.datahub-provider-latest span { color: #687580; font-size: 8px; line-height: 1.35; }
+.datahub-freshness { display: flex; align-items: center; gap: 6px; min-height: 25px; color: #5d6974; font-size: 8px; font-weight: 700; }
+.datahub-freshness i { width: 7px; height: 7px; border-radius: 50%; background: #3c8b6b; }
+.datahub-provider-card.overdue .datahub-freshness { color: #a62b37; }
+.datahub-provider-card.overdue .datahub-freshness i { background: #c92938; }
+.datahub-provider-card.due_soon .datahub-freshness i { background: #cf8d12; }
+.datahub-provider-card.missing .datahub-freshness i { background: #8d98a2; }
+.datahub-provider-card footer { margin-top: 9px; }
+.datahub-provider-card footer button, .datahub-catalog button { flex: 1; min-height: 30px; color: #24415f; background: #fff; border: 1px solid #cbd5dd; cursor: pointer; font: inherit; font-size: 8px; font-weight: 800; }
+.datahub-provider-card footer button:first-child { color: #fff; background: var(--provider-accent); border-color: var(--provider-accent); }
+.datahub-nav { display: flex; margin-top: 14px; background: #fff; border-bottom: 1px solid #d6dee4; }
+.datahub-nav button { min-width: 170px; padding: 13px 18px 11px; color: #53616e; background: transparent; border: 0; border-bottom: 3px solid transparent; cursor: pointer; font: inherit; font-size: 9px; font-weight: 800; }
+.datahub-nav button.active { color: var(--hrp-blue); border-bottom-color: var(--hrp-red); }
+.datahub-workbench { padding: 16px; background: #fff; }
+.datahub-workbench > section[hidden] { display: none; }
+.datahub-workbench > section > header { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; margin-bottom: 14px; }
+.datahub-workbench header span { color: var(--hrp-red); font-size: 8px; font-weight: 800; letter-spacing: .11em; }
+.datahub-workbench h2 { margin: 4px 0 0; color: var(--hrp-navy); font-size: 17px; }
+.datahub-workbench header label { display: grid; gap: 4px; color: #74808a; font-size: 8px; }
+.datahub-workbench select, .datahub-workbench textarea, .datahub-dialog input, .datahub-dialog select { padding: 8px 9px; color: #24354c; background: #fff; border: 1px solid #cbd5dd; font: inherit; font-size: 9px; }
+.datahub-catalog { overflow: auto; border-top: 1px solid #dfe5e9; }
+.datahub-catalog table, .datahub-preview-table table { width: 100%; border-collapse: collapse; font-size: 9px; }
+.datahub-catalog th, .datahub-catalog td, .datahub-preview-table th, .datahub-preview-table td { padding: 9px 8px; border-bottom: 1px solid #e5eaed; text-align: left; vertical-align: middle; }
+.datahub-catalog th, .datahub-preview-table th { color: #6b7782; background: #f5f7f9; font-size: 7px; letter-spacing: .08em; text-transform: uppercase; }
+.datahub-catalog td strong, .datahub-catalog td small { display: block; }
+.datahub-catalog td strong { color: var(--hrp-navy); font-size: 10px; }
+.datahub-catalog td small { margin-top: 3px; color: #78848e; font-size: 8px; }
+.datahub-quality, .datahub-freshness-tag { display: inline-flex; padding: 3px 6px; font-size: 7px; font-weight: 800; }
+.datahub-quality.profiled, .datahub-freshness-tag.current { color: #25634d; background: #e5f2eb; }
+.datahub-quality.review_needed, .datahub-freshness-tag.due_soon { color: #8a6516; background: #fff3d9; }
+.datahub-freshness-tag.overdue { color: #9f2934; background: #f9e3e5; }
+.datahub-relation-layout { display: grid; grid-template-columns: minmax(260px, .75fr) minmax(420px, 1.5fr); gap: 14px; }
+.datahub-relation-layout > div:first-child { display: grid; gap: 7px; padding: 14px; background: #f4f7f9; }
+.datahub-relation-layout label { color: #53616c; font-size: 8px; font-weight: 800; }
+.datahub-relation-layout select { min-height: 140px; }
+.datahub-actions { display: flex; gap: 7px; }
+.datahub-actions button, .datahub-viz-toolbar button, .datahub-proposal header button { min-height: 34px; padding: 0 12px; color: #fff; background: var(--hrp-blue); border: 1px solid var(--hrp-blue); cursor: pointer; font: inherit; font-size: 8px; font-weight: 800; }
+.datahub-actions button:first-child { color: var(--hrp-blue); background: #fff; }
+.datahub-relationship-result { min-height: 310px; border: 1px solid #dce3e8; }
+.datahub-empty { display: flex; min-height: 180px; align-items: center; justify-content: center; flex-direction: column; gap: 6px; padding: 18px; color: #79858f; text-align: center; }
+.datahub-empty strong { color: #4c5a67; }
+.datahub-empty span { max-width: 420px; font-size: 9px; }
+.datahub-compare-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 7px; padding: 12px; }
+.datahub-compare-grid article { padding: 10px; background: #f4f7f9; border-top: 2px solid var(--hrp-blue); }
+.datahub-compare-grid span, .datahub-compare-grid strong, .datahub-compare-grid b, .datahub-compare-grid small { display: block; }
+.datahub-compare-grid span { color: var(--hrp-red); font-size: 7px; font-weight: 800; }
+.datahub-compare-grid strong { margin: 5px 0 10px; font-size: 10px; }
+.datahub-compare-grid b { font-size: 15px; }
+.datahub-compare-grid small { margin-top: 4px; color: #74808a; font-size: 8px; }
+.datahub-key-list { padding: 12px; border-top: 1px solid #dfe5e9; }
+.datahub-key-list > strong { display: block; margin-bottom: 7px; font-size: 10px; }
+.datahub-key-list > span, .datahub-proposal article span { display: inline-flex; margin: 2px; padding: 4px 6px; color: #275174; background: #e8f1f7; font-size: 8px; }
+.datahub-key-list p { color: #7b5b18; font-size: 8px; }
+.datahub-proposal { padding: 13px; }
+.datahub-proposal > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 10px; border-bottom: 1px solid #e0e5e9; }
+.datahub-proposal > header span, .datahub-proposal > header strong { display: block; }
+.datahub-proposal > header span { color: #b73a44; font-size: 7px; font-weight: 800; }
+.datahub-proposal > header strong { margin-top: 5px; font-size: 11px; }
+.datahub-proposal header button.approved { background: #2d7056; border-color: #2d7056; }
+.datahub-proposal article { margin-top: 9px; padding: 9px; background: #f5f7f9; }
+.datahub-proposal article > strong, .datahub-proposal article > small { display: block; }
+.datahub-proposal article > strong { font-size: 10px; }
+.datahub-proposal article > small { margin: 3px 0 5px; color: #7d8993; font-size: 7px; }
+.datahub-proposal footer { display: grid; gap: 3px; margin-top: 10px; color: #7b641e; font-size: 8px; }
+.datahub-proposal footer span::before { content: "• "; }
+.datahub-viz-card-grid { display: grid; grid-template-columns: minmax(280px, .8fr) minmax(360px, 1.2fr); gap: 12px; }
+.datahub-viz-card-grid > article, .datahub-preview-card { background: #fff; border: 1px solid #dce3e8; border-top: 3px solid var(--hrp-blue); box-shadow: 0 5px 18px rgba(23,39,65,.06); }
+.datahub-viz-control-card, .datahub-viz-summary-card, .datahub-chart-card { padding: 15px; }
+.datahub-viz-card-grid article > header { display: block !important; margin: 0 0 12px !important; }
+.datahub-viz-card-grid article > header span { color: var(--hrp-red); font-size: 7px; font-weight: 800; letter-spacing: .11em; }
+.datahub-viz-card-grid article > header h3 { margin: 5px 0 3px; color: var(--hrp-navy); font-size: 15px; }
+.datahub-viz-card-grid article > header p { margin: 0; color: #73808b; font-size: 8px; line-height: 1.45; }
+.datahub-viz-toolbar { display: grid; gap: 10px; padding: 0; color: #53616c; background: transparent; }
+.datahub-viz-toolbar label { display: grid; gap: 5px; color: #62707c; font-size: 7px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+.datahub-viz-toolbar select { width: 100%; min-height: 36px; color: #24354c; background: #f8fafb; }
+.datahub-viz-field-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+.datahub-viz-toolbar button { min-height: 38px; align-self: end; background: var(--hrp-blue); }
+.datahub-viz-summary-card { border-top-color: var(--hrp-red) !important; }
+.datahub-viz-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.datahub-viz-metrics > div { min-height: 72px; padding: 10px; background: #f4f7f9; border-left: 2px solid #cad6df; }
+.datahub-viz-metrics span, .datahub-viz-metrics strong, .datahub-viz-metrics small { display: block; }
+.datahub-viz-metrics span { color: #7b8791; font-size: 7px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.datahub-viz-metrics strong { overflow: hidden; margin: 7px 0 3px; color: var(--hrp-navy); font-size: 16px; text-overflow: ellipsis; white-space: nowrap; }
+.datahub-viz-metrics small { color: #89949d; font-size: 7px; }
+.datahub-chart-card { grid-column: 1 / -1; min-height: 390px; }
+.datahub-chart-card > header { align-items: flex-start !important; margin-bottom: 4px !important; }
+.datahub-downloads { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; padding-top: 11px; border-top: 1px solid #e2e7eb; }
+.datahub-downloads::before { content: "DOWNLOAD"; display: flex; align-items: center; margin-right: 3px; color: #7a8792; font-size: 7px; font-weight: 800; letter-spacing: .08em; }
+.datahub-downloads:empty::before { content: "Downloads appear after selecting a dataset"; font-weight: 600; letter-spacing: 0; }
+.datahub-downloads a { min-width: 58px; padding: 7px 10px; color: var(--hrp-blue); background: #f8fafb; border: 1px solid #cbd5dd; font-size: 8px; font-weight: 800; text-align: center; text-decoration: none; }
+.datahub-chart { min-height: 310px; margin-top: 8px; border-top: 1px solid #edf0f2; }
+.datahub-chart svg { display: block; width: 100%; height: 310px; overflow: visible; }
+.datahub-chart svg text { fill: #6b7782; font-size: 9px; }
+.datahub-chart svg .axis-title { fill: #364659; font-size: 10px; font-weight: 700; }
+.datahub-preview-card { grid-column: 1 / -1; overflow: hidden; }
+.datahub-preview-card summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 15px; cursor: pointer; list-style: none; }
+.datahub-preview-card summary::-webkit-details-marker { display: none; }
+.datahub-preview-card summary span, .datahub-preview-card summary b, .datahub-preview-card summary strong { display: block; }
+.datahub-preview-card summary b { color: var(--hrp-red); font-size: 7px; letter-spacing: .11em; }
+.datahub-preview-card summary strong { margin-top: 4px; color: var(--hrp-navy); font-size: 11px; }
+.datahub-preview-card summary small { color: #667480; font-size: 8px; font-weight: 800; }
+.datahub-preview-card summary small::before { content: "+ "; color: var(--hrp-red); }
+.datahub-preview-card[open] summary small::before { content: "− "; }
+.datahub-preview-table { max-height: 300px; overflow: auto; margin-top: 0; border-top: 1px solid #dfe5e9; }
+.datahub-preview-table td { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.datahub-preview-table > small { display: block; padding: 8px; color: #74818b; font-size: 8px; }
+.datahub-dialog { width: min(430px, calc(100vw - 30px)); padding: 0; border: 0; box-shadow: 0 20px 70px rgba(16,31,52,.28); }
+.datahub-dialog::backdrop { background: rgba(15,28,48,.58); }
+.datahub-dialog form { position: relative; display: grid; gap: 10px; padding: 24px; }
+.datahub-dialog form > span { color: var(--hrp-red); font-size: 8px; font-weight: 800; letter-spacing: .1em; }
+.datahub-dialog h2 { margin: -4px 0 4px; color: var(--hrp-navy); font-size: 18px; }
+.datahub-dialog label { display: grid; gap: 5px; color: #53616d; font-size: 8px; font-weight: 800; }
+.datahub-dialog button { min-height: 36px; color: var(--hrp-blue); background: #fff; border: 1px solid #c8d3dc; cursor: pointer; font: inherit; font-size: 9px; font-weight: 800; }
+.datahub-dialog button.primary { color: #fff; background: var(--hrp-blue); border-color: var(--hrp-blue); }
+.datahub-dialog button.datahub-dialog-close { position: absolute; top: 8px; right: 10px; width: 30px; min-height: 30px; border: 0; font-size: 20px; }
+.datahub-dialog p { margin: 0; color: #74808b; font-size: 8px; line-height: 1.45; }
+.datahub-selected-file { padding: 9px; color: #5c6873; background: #f3f6f8; border: 1px dashed #bdc9d2; font-size: 9px; }
+
+@media (max-width: 1200px) {
+  .datahub-provider-grid { grid-template-columns: repeat(3, minmax(180px, 1fr)); }
+}
+@media (max-width: 820px) {
+  .datahub-kpis, .datahub-provider-grid { grid-template-columns: 1fr 1fr; }
+  .datahub-relation-layout { grid-template-columns: 1fr; }
+  .datahub-viz-card-grid { grid-template-columns: 1fr; }
+  .datahub-viz-field-row { grid-template-columns: 1fr; }
+  .datahub-header { align-items: flex-start; flex-direction: column; }
+  .datahub-master-state { justify-items: start; padding: 0; border: 0; }
+}

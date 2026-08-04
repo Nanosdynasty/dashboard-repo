@@ -154,6 +154,9 @@ const state = {
   coalAnalysisView: "overview",
   coalDashboardTab: "overview",
   coalView: "analytics",
+  dataHubSummary: null,
+  dataHubPreview: null,
+  dataHubProvider: null,
   nppLoaded: false,
   nppRefreshTimer: null,
   continentLabels: null,
@@ -196,7 +199,8 @@ async function init() {
   await Promise.all([
     loadPortFacets(),
     loadWorkspaceFacets(),
-    loadCoalWorkspace()
+    loadCoalWorkspace(),
+    loadDataHubSummary()
   ]);
   await loadPorts();
   activateMode("ports");
@@ -362,6 +366,21 @@ function bindControls() {
     runCoalResearch();
   });
   document.getElementById("npp-refresh").addEventListener("click", () => loadNppPower(true));
+  document.getElementById("datahub-open-workspace").addEventListener("click", () => activateMode("datahub"));
+  document.getElementById("datahub-provider-filter").addEventListener("change", renderDataHubCatalog);
+  document.querySelectorAll("[data-datahub-tab]").forEach(button => {
+    button.addEventListener("click", () => setDataHubTab(button.dataset.datahubTab));
+  });
+  document.getElementById("datahub-choose-file").addEventListener("click", () => document.getElementById("datahub-file-input").click());
+  document.getElementById("datahub-file-input").addEventListener("change", event => {
+    document.getElementById("datahub-selected-file").textContent = event.target.files[0]?.name || "No file selected";
+  });
+  document.getElementById("datahub-submit-upload").addEventListener("click", uploadDataHubDataset);
+  document.getElementById("datahub-submit-api").addEventListener("click", saveDataHubApiConnection);
+  document.getElementById("datahub-compare").addEventListener("click", compareDataHubDatasets);
+  document.getElementById("datahub-propose").addEventListener("click", proposeDataHubRelationship);
+  document.getElementById("datahub-viz-dataset").addEventListener("change", loadDataHubPreview);
+  document.getElementById("datahub-render-chart").addEventListener("click", renderDataHubVisualization);
   document.getElementById("port-country").addEventListener("change", loadPorts);
   document.getElementById("port-size").addEventListener("change", loadPorts);
   document.querySelectorAll("#port-categories input").forEach(input => input.addEventListener("change", loadPorts));
@@ -415,10 +434,11 @@ function activateMode(mode) {
     if (state.map.hasLayer(layer)) state.map.removeLayer(layer);
   });
   const coalOnly = mode === "coal";
+  const dataHubOnly = mode === "datahub";
   [state.aisLayer, state.aisTrailLayer, state.routeLayer].forEach(layer => {
     if (layer && state.map.hasLayer(layer)) state.map.removeLayer(layer);
   });
-  if (!coalOnly && state.aisEnabled) {
+  if (!coalOnly && !dataHubOnly && state.aisEnabled) {
     state.aisLayer.addTo(state.map);
     state.aisTrailLayer.addTo(state.map);
     renderAisVessels();
@@ -432,12 +452,23 @@ function activateMode(mode) {
   }
   const coalHeader = document.getElementById("coal-workspace-header");
   coalHeader.hidden = mode !== "coal";
+  document.getElementById("datahub-surface").hidden = !dataHubOnly;
   if (mode === "coal") {
+    document.getElementById("datahub-surface").hidden = true;
     setCoalView(state.coalView);
     renderCoalLayers();
     state.map.fitBounds([[6, 68], [37, 98]], { padding: [25, 25] });
+  } else if (dataHubOnly) {
+    state.coalLayer.clearLayers();
+    document.getElementById("coal-data-surface").hidden = true;
+    document.getElementById("npp-power-surface").hidden = true;
+    document.getElementById("map").hidden = true;
+    document.querySelector(".map-topbar").hidden = true;
+    document.querySelector(".map-key").hidden = true;
+    loadDataHubSummary();
   } else {
     state.coalLayer.clearLayers();
+    document.getElementById("datahub-surface").hidden = true;
     document.getElementById("coal-data-surface").hidden = true;
     document.getElementById("npp-power-surface").hidden = true;
     document.getElementById("map").hidden = false;
@@ -447,6 +478,288 @@ function activateMode(mode) {
   }
   renderPorts();
   updateActiveCounts();
+}
+
+const DATA_HUB_PROVIDER_LABELS = {
+  gtt: "GTT", kpler: "Kpler", oceanbolt: "Oceanbolt",
+  axs_marine: "AXS Marine", custom: "Custom data", hrp_app: "HRP app data"
+};
+
+async function loadDataHubSummary() {
+  try {
+    const response = await fetch("/api/data-hub/summary");
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.detail || "Data Hub is unavailable");
+    state.dataHubSummary = payload;
+    renderDataHubSummary();
+  } catch (error) {
+    document.getElementById("datahub-sidebar-status").textContent = "Unavailable";
+    const catalog = document.getElementById("datahub-catalog");
+    if (catalog) catalog.innerHTML = `<div class="datahub-empty"><strong>Data Hub unavailable</strong><span>${escapeHtml(error.message)}</span></div>`;
+  }
+}
+
+function renderDataHubSummary() {
+  const payload = state.dataHubSummary;
+  if (!payload) return;
+  const totals = payload.totals || {};
+  const values = {
+    "datahub-sidebar-datasets": totals.datasets || 0,
+    "datahub-sidebar-rows": Number(totals.rows || 0).toLocaleString(),
+    "datahub-sidebar-due": totals.overdue || 0,
+    "datahub-kpi-datasets": totals.datasets || 0,
+    "datahub-kpi-rows": Number(totals.rows || 0).toLocaleString(),
+    "datahub-kpi-overdue": totals.overdue || 0,
+    "datahub-kpi-relations": totals.approved_relationships || 0
+  };
+  Object.entries(values).forEach(([id, value]) => { document.getElementById(id).textContent = value; });
+  document.getElementById("datahub-sidebar-status").textContent = totals.overdue ? `${totals.overdue} update${totals.overdue === 1 ? "" : "s"} due` : "Master store";
+  document.getElementById("datahub-master-file").textContent = payload.master_file || "provider_master.sqlite3";
+  document.getElementById("datahub-provider-grid").innerHTML = (payload.providers || []).map(provider => {
+    const latest = provider.latest;
+    const freshness = provider.freshness || { status: "missing", label: "No data uploaded" };
+    return `<article class="datahub-provider-card ${escapeAttr(freshness.status)}" style="--provider-accent:${escapeAttr(provider.accent)}">
+      <header><div><span>${escapeHtml(provider.label)}</span><strong>${provider.dataset_count} dataset${provider.dataset_count === 1 ? "" : "s"}</strong></div><i></i></header>
+      <div class="datahub-provider-latest">
+        <small>LATEST DATA</small>
+        <b>${latest ? escapeHtml(latest.dataset_name) : "Awaiting first upload"}</b>
+        <span>${latest ? `${Number(latest.row_count).toLocaleString()} rows · ${formatDataHubDate(latest.data_end || latest.uploaded_at)}` : "Excel, CSV, JSON or PDF"}</span>
+      </div>
+      <div class="datahub-freshness"><i></i><span>${escapeHtml(freshness.label)}</span></div>
+      <footer><button type="button" data-provider-upload="${escapeAttr(provider.id)}">Upload data</button><button type="button" data-provider-api="${escapeAttr(provider.id)}">${provider.connection ? `API ${escapeHtml(provider.connection.key_mask)}` : "Connect API"}</button></footer>
+    </article>`;
+  }).join("");
+  document.querySelectorAll("[data-provider-upload]").forEach(button => button.addEventListener("click", () => openDataHubUpload(button.dataset.providerUpload)));
+  document.querySelectorAll("[data-provider-api]").forEach(button => button.addEventListener("click", () => openDataHubApi(button.dataset.providerApi)));
+  populateDataHubDatasetSelectors();
+  renderDataHubCatalog();
+}
+
+function formatDataHubDate(value) {
+  if (!value) return "coverage not detected";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function setDataHubTab(tab) {
+  document.querySelectorAll("[data-datahub-tab]").forEach(button => button.classList.toggle("active", button.dataset.datahubTab === tab));
+  document.querySelectorAll("[data-datahub-panel]").forEach(panel => { panel.hidden = panel.dataset.datahubPanel !== tab; });
+}
+
+function openDataHubUpload(provider) {
+  state.dataHubProvider = provider;
+  document.getElementById("datahub-upload-provider").value = provider;
+  document.getElementById("datahub-upload-title").textContent = `Upload ${DATA_HUB_PROVIDER_LABELS[provider]} data`;
+  document.getElementById("datahub-upload-name").value = "";
+  document.getElementById("datahub-file-input").value = "";
+  document.getElementById("datahub-selected-file").textContent = "No file selected";
+  document.getElementById("datahub-upload-message").textContent = "The file will be profiled for dates, measures, missingness and duplicates.";
+  document.getElementById("datahub-upload-dialog").showModal();
+}
+
+function openDataHubApi(provider) {
+  document.getElementById("datahub-api-provider").value = provider;
+  document.getElementById("datahub-api-title").textContent = `Connect ${DATA_HUB_PROVIDER_LABELS[provider]} API`;
+  document.getElementById("datahub-api-key").value = "";
+  document.getElementById("datahub-api-message").textContent = "The browser never receives the saved key back. Provider-specific field mapping is reviewed before scheduled ingestion.";
+  document.getElementById("datahub-api-dialog").showModal();
+}
+
+async function uploadDataHubDataset() {
+  const file = document.getElementById("datahub-file-input").files[0];
+  const provider = document.getElementById("datahub-upload-provider").value;
+  const datasetName = document.getElementById("datahub-upload-name").value.trim();
+  const frequency = document.getElementById("datahub-upload-frequency").value;
+  const message = document.getElementById("datahub-upload-message");
+  if (!file || !datasetName) { message.textContent = "Choose a file and enter a dataset name."; return; }
+  message.textContent = "Uploading, normalizing and profiling…";
+  const body = new FormData(); body.append("file", file);
+  try {
+    const url = `/api/data-hub/upload?provider=${encodeURIComponent(provider)}&dataset_name=${encodeURIComponent(datasetName)}&frequency=${encodeURIComponent(frequency)}`;
+    const response = await fetch(url, { method: "POST", body });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.detail || "Upload failed");
+    message.textContent = `${Number(payload.row_count).toLocaleString()} rows added. Quality: ${labelize(payload.quality_status)}.`;
+    await loadDataHubSummary();
+    window.setTimeout(() => document.getElementById("datahub-upload-dialog").close(), 700);
+  } catch (error) { message.textContent = error.message; }
+}
+
+async function saveDataHubApiConnection() {
+  const message = document.getElementById("datahub-api-message");
+  const body = {
+    provider: document.getElementById("datahub-api-provider").value,
+    endpoint_url: document.getElementById("datahub-api-endpoint").value.trim(),
+    api_key: document.getElementById("datahub-api-key").value.trim(),
+    connection_label: document.getElementById("datahub-api-label").value.trim() || "Default connection"
+  };
+  if (!body.api_key) { message.textContent = "Enter an API key."; return; }
+  message.textContent = "Saving connection metadata…";
+  try {
+    const response = await fetch("/api/data-hub/api-connections", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.detail || "Connection failed");
+    document.getElementById("datahub-api-key").value = "";
+    message.textContent = payload.message;
+    await loadDataHubSummary();
+  } catch (error) { message.textContent = error.message; }
+}
+
+function renderDataHubCatalog() {
+  const container = document.getElementById("datahub-catalog");
+  if (!container || !state.dataHubSummary) return;
+  const provider = document.getElementById("datahub-provider-filter").value;
+  const datasets = (state.dataHubSummary.datasets || []).filter(item => !provider || item.provider === provider);
+  if (!datasets.length) {
+    container.innerHTML = `<div class="datahub-empty"><strong>No datasets in this view</strong><span>Use a provider card above to upload a file or connect an API.</span></div>`;
+    return;
+  }
+  container.innerHTML = `<table><thead><tr><th>Dataset</th><th>Coverage</th><th>Shape</th><th>Quality</th><th>Freshness</th><th></th></tr></thead><tbody>${datasets.map(item => `<tr>
+    <td><strong>${escapeHtml(item.dataset_name)}</strong><small>${escapeHtml(DATA_HUB_PROVIDER_LABELS[item.provider])} · ${escapeHtml(item.original_name)}</small></td>
+    <td>${escapeHtml(formatDataHubDate(item.data_start))}<br><b>to ${escapeHtml(formatDataHubDate(item.data_end))}</b></td>
+    <td>${Number(item.row_count).toLocaleString()} rows<br><small>${item.column_count} fields</small></td>
+    <td><span class="datahub-quality ${escapeAttr(item.quality_status)}">${escapeHtml(labelize(item.quality_status))}</span><small>${Number(item.null_rate || 0).toLocaleString(undefined, { style: "percent", maximumFractionDigits: 0 })} missing</small></td>
+    <td><span class="datahub-freshness-tag ${escapeAttr(item.freshness.status)}">${escapeHtml(item.freshness.label)}</span></td>
+    <td><button type="button" data-datahub-preview="${escapeAttr(item.id)}">Preview</button></td>
+  </tr>`).join("")}</tbody></table>`;
+  container.querySelectorAll("[data-datahub-preview]").forEach(button => button.addEventListener("click", () => {
+    setDataHubTab("visualize");
+    document.getElementById("datahub-viz-dataset").value = button.dataset.datahubPreview;
+    loadDataHubPreview();
+  }));
+}
+
+function populateDataHubDatasetSelectors() {
+  const datasets = state.dataHubSummary?.datasets || [];
+  const options = datasets.map(item => `<option value="${escapeAttr(item.id)}">${escapeHtml(DATA_HUB_PROVIDER_LABELS[item.provider])} · ${escapeHtml(item.dataset_name)}</option>`).join("");
+  const relation = document.getElementById("datahub-relationship-datasets");
+  const viz = document.getElementById("datahub-viz-dataset");
+  const currentViz = viz.value;
+  relation.innerHTML = options;
+  viz.innerHTML = `<option value="">Choose dataset</option>${options}`;
+  if (datasets.some(item => item.id === currentViz)) viz.value = currentViz;
+}
+
+function selectedDataHubDatasetIds() {
+  return Array.from(document.getElementById("datahub-relationship-datasets").selectedOptions).map(option => option.value);
+}
+
+async function compareDataHubDatasets() {
+  const ids = selectedDataHubDatasetIds();
+  const container = document.getElementById("datahub-relationship-result");
+  if (ids.length < 2) { container.innerHTML = `<div class="datahub-empty"><strong>Select at least two datasets</strong><span>Use Ctrl or Cmd to select multiple sources.</span></div>`; return; }
+  container.innerHTML = `<div class="datahub-empty"><strong>Comparing source profiles…</strong></div>`;
+  try {
+    const response = await fetch(`/api/data-hub/compare?dataset_ids=${encodeURIComponent(ids.join(","))}`);
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.detail || "Comparison failed");
+    container.innerHTML = `<div class="datahub-compare-grid">${payload.datasets.map(item => `<article><span>${escapeHtml(DATA_HUB_PROVIDER_LABELS[item.provider])}</span><strong>${escapeHtml(item.dataset_name)}</strong><b>${Number(item.rows).toLocaleString()} rows</b><small>${escapeHtml(formatDataHubDate(item.data_start))} – ${escapeHtml(formatDataHubDate(item.data_end))}</small><small>${Number(item.null_rate || 0).toLocaleString(undefined, { style: "percent", maximumFractionDigits: 0 })} missing · ${item.duplicate_rows} duplicates</small></article>`).join("")}</div><div class="datahub-key-list"><strong>${payload.join_ready ? "Candidate shared fields" : "No shared fields detected"}</strong>${payload.shared_fields.map(field => `<span>${escapeHtml(field)}</span>`).join("")}<p>${escapeHtml(payload.warning)}</p></div>`;
+  } catch (error) { container.innerHTML = `<div class="datahub-empty"><strong>Comparison failed</strong><span>${escapeHtml(error.message)}</span></div>`; }
+}
+
+async function proposeDataHubRelationship() {
+  const ids = selectedDataHubDatasetIds();
+  const container = document.getElementById("datahub-relationship-result");
+  if (ids.length < 2) { await compareDataHubDatasets(); return; }
+  container.innerHTML = `<div class="datahub-empty"><strong>Building a relationship proposal…</strong><span>Checking candidate entity and time keys.</span></div>`;
+  try {
+    const response = await fetch("/api/data-hub/relationships/propose", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dataset_ids: ids, question: document.getElementById("datahub-relationship-question").value.trim() }) });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.detail || "Proposal failed");
+    renderDataHubRelationshipProposal(payload);
+  } catch (error) { container.innerHTML = `<div class="datahub-empty"><strong>Proposal failed</strong><span>${escapeHtml(error.message)}</span></div>`; }
+}
+
+function renderDataHubRelationshipProposal(payload) {
+  const container = document.getElementById("datahub-relationship-result");
+  container.innerHTML = `<div class="datahub-proposal"><header><div><span>PROPOSED · REVIEW REQUIRED</span><strong>${escapeHtml(payload.question || "Cross-source analytical relationship")}</strong></div><button type="button" data-approve-relation="${escapeAttr(payload.id)}">Approve relationship</button></header>${payload.links.map(link => `<article><strong>${escapeHtml(link.left_dataset)} ↔ ${escapeHtml(link.right_dataset)}</strong><small>${escapeHtml(labelize(link.status))}</small><div>${link.candidate_keys.length ? link.candidate_keys.map(key => `<span>${escapeHtml(key.left_field)} = ${escapeHtml(key.right_field)}</span>`).join("") : "<em>No safe shared key detected</em>"}</div></article>`).join("")}<footer>${payload.guardrails.map(item => `<span>${escapeHtml(item)}</span>`).join("")}</footer></div>`;
+  container.querySelector("[data-approve-relation]").addEventListener("click", event => approveDataHubRelationship(event.currentTarget.dataset.approveRelation));
+}
+
+async function approveDataHubRelationship(id) {
+  const button = document.querySelector(`[data-approve-relation="${CSS.escape(id)}"]`);
+  button.disabled = true; button.textContent = "Approving…";
+  try {
+    const response = await fetch(`/api/data-hub/relationships/${encodeURIComponent(id)}/approve`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ approved: true }) });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.detail || "Approval failed");
+    button.textContent = "Approved"; button.classList.add("approved");
+    await loadDataHubSummary();
+  } catch (error) { button.disabled = false; button.textContent = error.message; }
+}
+
+async function loadDataHubPreview() {
+  const datasetId = document.getElementById("datahub-viz-dataset").value;
+  if (!datasetId) return;
+  const chart = document.getElementById("datahub-chart");
+  chart.innerHTML = `<div class="datahub-empty"><strong>Loading preview…</strong></div>`;
+  try {
+    const response = await fetch(`/api/data-hub/datasets/${encodeURIComponent(datasetId)}/preview?limit=200`);
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.detail || "Preview failed");
+    state.dataHubPreview = payload;
+    const columns = payload.dataset.columns || [];
+    const numeric = new Set(payload.dataset.numeric_columns || []);
+    document.getElementById("datahub-viz-x").innerHTML = `<option value="">Select field</option>${columns.map(column => `<option value="${escapeAttr(column)}">${escapeHtml(column)}</option>`).join("")}`;
+    document.getElementById("datahub-viz-y").innerHTML = `<option value="">Select field</option>${columns.filter(column => numeric.has(column)).map(column => `<option value="${escapeAttr(column)}">${escapeHtml(column)}</option>`).join("")}`;
+    document.getElementById("datahub-viz-x").value = payload.dataset.date_columns?.[0] || columns.find(column => !numeric.has(column)) || columns[0] || "";
+    document.getElementById("datahub-viz-y").value = payload.dataset.numeric_columns?.[0] || "";
+    document.getElementById("datahub-chart-kicker").textContent = DATA_HUB_PROVIDER_LABELS[payload.dataset.provider];
+    document.getElementById("datahub-chart-title").textContent = payload.dataset.dataset_name;
+    document.getElementById("datahub-chart-subtitle").textContent = `${Number(payload.dataset.row_count).toLocaleString()} rows · ${formatDataHubDate(payload.dataset.data_start)} to ${formatDataHubDate(payload.dataset.data_end)}`;
+    document.getElementById("datahub-viz-source").textContent = `${DATA_HUB_PROVIDER_LABELS[payload.dataset.provider]} · ${payload.dataset.frequency || "ad hoc"} updates`;
+    document.getElementById("datahub-viz-rows").textContent = Number(payload.dataset.row_count).toLocaleString();
+    document.getElementById("datahub-viz-fields").textContent = Number(columns.length).toLocaleString();
+    const periodStart = formatDataHubDate(payload.dataset.data_start);
+    const periodEnd = formatDataHubDate(payload.dataset.data_end);
+    document.getElementById("datahub-viz-period").textContent = periodStart === periodEnd ? periodEnd : `${periodStart} – ${periodEnd}`;
+    document.getElementById("datahub-viz-quality").textContent = payload.dataset.quality_status === "profiled" ? "Profiled" : "Review";
+    document.getElementById("datahub-downloads").innerHTML = ["xlsx", "csv", "json"].map(format => `<a href="/api/data-hub/datasets/${encodeURIComponent(datasetId)}/export?format=${format}" download>${format.toUpperCase()}</a>`).join("");
+    renderDataHubVisualization();
+    renderDataHubPreviewTable();
+  } catch (error) { chart.innerHTML = `<div class="datahub-empty"><strong>Preview failed</strong><span>${escapeHtml(error.message)}</span></div>`; }
+}
+
+function renderDataHubVisualization() {
+  const payload = state.dataHubPreview;
+  if (!payload) return;
+  const xField = document.getElementById("datahub-viz-x").value;
+  const yField = document.getElementById("datahub-viz-y").value;
+  const type = document.getElementById("datahub-viz-type").value;
+  const container = document.getElementById("datahub-chart");
+  const points = (payload.rows || []).map(row => ({ x: row[xField], y: Number(row[yField]) })).filter(point => point.x !== null && point.x !== undefined && Number.isFinite(point.y));
+  if (!xField || !yField || points.length < 2) { container.innerHTML = `<div class="datahub-empty"><strong>Choose compatible X and Y fields</strong><span>A chart needs at least two valid observations.</span></div>`; return; }
+  const width = 900, height = 310, margin = { left: 62, right: 24, top: 24, bottom: 58 };
+  const innerW = width - margin.left - margin.right, innerH = height - margin.top - margin.bottom;
+  const values = points.map(point => point.y); const minY = type === "bar" ? 0 : Math.min(...values); const maxY = Math.max(...values); const spanY = maxY - minY || 1;
+  const yPos = value => margin.top + innerH - ((value - minY) / spanY) * innerH;
+  const xPos = index => margin.left + (points.length === 1 ? innerW / 2 : (index / (points.length - 1)) * innerW);
+  const ticks = [0, .25, .5, .75, 1];
+  let marks = "";
+  if (type === "bar") {
+    const barWidth = Math.max(2, Math.min(34, innerW / points.length * .68));
+    marks = points.map((point, index) => `<rect x="${xPos(index) - barWidth / 2}" y="${yPos(point.y)}" width="${barWidth}" height="${margin.top + innerH - yPos(point.y)}" fill="#0b5b9c"><title>${escapeHtml(String(point.x))}: ${point.y.toLocaleString()}</title></rect>`).join("");
+  } else if (type === "scatter") {
+    marks = points.map((point, index) => `<circle cx="${xPos(index)}" cy="${yPos(point.y)}" r="4" fill="#ef3d48" stroke="#fff" stroke-width="1.5"><title>${escapeHtml(String(point.x))}: ${point.y.toLocaleString()}</title></circle>`).join("");
+  } else {
+    const path = points.map((point, index) => `${index ? "L" : "M"}${xPos(index).toFixed(1)},${yPos(point.y).toFixed(1)}`).join(" ");
+    marks = `<path d="${path}" fill="none" stroke="#0b5b9c" stroke-width="3"/>${points.map((point, index) => `<circle cx="${xPos(index)}" cy="${yPos(point.y)}" r="3.5" fill="#fff" stroke="#0b5b9c" stroke-width="2"><title>${escapeHtml(String(point.x))}: ${point.y.toLocaleString()}</title></circle>`).join("")}`;
+  }
+  const labelIndexes = Array.from(new Set([0, Math.floor((points.length - 1) / 2), points.length - 1]));
+  container.innerHTML = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeAttr(yField)} by ${escapeAttr(xField)}">
+    ${ticks.map(tick => { const y = margin.top + innerH * (1 - tick); const value = minY + spanY * tick; return `<line x1="${margin.left}" x2="${width - margin.right}" y1="${y}" y2="${y}" stroke="#dce3e8"/><text x="${margin.left - 9}" y="${y + 4}" text-anchor="end">${Number(value.toFixed(2)).toLocaleString()}</text>`; }).join("")}
+    ${marks}
+    ${labelIndexes.map(index => `<text x="${xPos(index)}" y="${height - 30}" text-anchor="middle">${escapeHtml(String(points[index].x).slice(0, 24))}</text>`).join("")}
+    <text x="${width / 2}" y="${height - 5}" text-anchor="middle" class="axis-title">${escapeHtml(xField)}</text>
+    <text transform="translate(15 ${height / 2}) rotate(-90)" text-anchor="middle" class="axis-title">${escapeHtml(yField)}</text>
+  </svg>`;
+}
+
+function renderDataHubPreviewTable() {
+  const payload = state.dataHubPreview; const container = document.getElementById("datahub-preview-table");
+  if (!payload?.rows?.length) { container.innerHTML = ""; return; }
+  const columns = payload.dataset.columns.slice(0, 10);
+  container.innerHTML = `<table><thead><tr>${columns.map(column => `<th>${escapeHtml(column)}</th>`).join("")}</tr></thead><tbody>${payload.rows.slice(0, 20).map(row => `<tr>${columns.map(column => `<td>${escapeHtml(row[column] === null || row[column] === undefined ? "—" : String(row[column]))}</td>`).join("")}</tr>`).join("")}</tbody></table><small>Showing 20 of ${Number(payload.dataset.row_count).toLocaleString()} rows. Downloads contain the full normalized dataset.</small>`;
 }
 
 function setCoastalWeatherEnabled(enabled) {
@@ -1852,7 +2165,10 @@ function renderCoalLayers() {
     marker.bindTooltip(assetTooltip(config, point), {
       className: "asset-tooltip", direction: "top", opacity: 1
     });
-    marker.on("click", () => showAssetCard(config, point));
+    marker.on("click", event => {
+      if (event.originalEvent) L.DomEvent.stopPropagation(event.originalEvent);
+      showAssetCard(config, point);
+    });
     marker.addTo(state.coalLayer);
   });
   state.coalLayer._pointCount = state.coalLayer.getLayers().length;
@@ -2536,7 +2852,14 @@ function buildAssetLayer(id, points) {
     marker.on("mouseout", () => {
       marker.setStyle({ weight: config.mode === "commodities" ? 1 : 0.45, fillOpacity: 0.88 });
     });
-    marker.on("click", () => showAssetCard(config, point));
+    marker.on("click", event => {
+      if (event.originalEvent) L.DomEvent.stopPropagation(event.originalEvent);
+      if (["iron_ore_mines", "iron_ore_terminals", "steel_plants"].includes(id)) {
+        showCommodityAssetCard(config, { ...point, asset_kind: point.asset_kind || point.layer || id });
+      } else {
+        showAssetCard(config, point);
+      }
+    });
     marker.addTo(group);
   });
   return group;
@@ -2553,6 +2876,94 @@ function assetTooltip(config, point) {
   const role = point.asset_type ? `<br>${escapeHtml(point.asset_type)}` : "";
   return `<strong>${escapeHtml(point.name || config.label)}</strong>` +
     `${escapeHtml(point.country || "")}${point.status ? " · " + escapeHtml(point.status) : ""}${role}${capacity}${units}${expansion}`;
+}
+
+function commodityQuantity(value, unit = "ktpa") {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return null;
+  if (String(unit).toLowerCase() === "ktpa") {
+    return `${formatNumber(numeric / 1000, 2)} Mtpa`;
+  }
+  if (String(unit).toLowerCase() === "kt") {
+    return `${formatNumber(numeric / 1000, 2)} Mt`;
+  }
+  return `${formatNumber(numeric, 1)} ${unit}`;
+}
+
+function commodityLocation(point) {
+  return [point.location_address, point.municipality, point.subnational_unit, point.region]
+    .map(presentPlantValue)
+    .filter(Boolean)
+    .join(" · ");
+}
+
+function showCommodityAssetCard(config, point) {
+  const card = document.getElementById("port-card");
+  card.classList.remove("port-spec-card");
+  const kind = point.asset_kind || point.layer;
+  const capacity = commodityQuantity(point.capacity, point.capacity_unit || "ktpa");
+  const coordinates = Number.isFinite(Number(point.lat)) && Number.isFinite(Number(point.lon))
+    ? `${formatNumber(point.lat, 5)}, ${formatNumber(point.lon, 5)}`
+    : null;
+  const sourceLink = point.source_url
+    ? `<a class="detail-source-link" href="${escapeAttr(point.source_url)}" target="_blank" rel="noopener">Open GEM source record</a>`
+    : "";
+  const mineDetails = kind === "iron_ore_mines"
+    ? optionalDetailCell("2024 production", commodityQuantity(point.production_2024_ktpa)) +
+      optionalDetailCell("2023 production", commodityQuantity(point.production_2023_ktpa)) +
+      optionalDetailCell("2022 production", commodityQuantity(point.production_2022_ktpa)) +
+      optionalDetailCell("Proven + probable reserves", commodityQuantity(point.reserves_kt, "kt")) +
+      optionalDetailCell("Total resources", commodityQuantity(point.resources_kt, "kt"))
+    : "";
+  const steelDetails = kind === "steel_plants"
+    ? optionalDetailCell("Crude steel capacity", capacity) +
+      optionalDetailCell("Iron capacity", commodityQuantity(point.iron_capacity_ktpa)) +
+      optionalDetailCell("Blast-furnace capacity", commodityQuantity(point.bf_capacity_ktpa)) +
+      optionalDetailCell("DRI capacity", commodityQuantity(point.dri_capacity_ktpa)) +
+      optionalDetailCell("Pellet capacity", commodityQuantity(point.pellet_capacity_ktpa)) +
+      optionalDetailCell("Coking capacity", commodityQuantity(point.coking_capacity_ktpa)) +
+      optionalDetailCell("Main equipment", point.main_equipment) +
+      optionalDetailCell("Power source", point.power_source) +
+      optionalDetailCell("Iron ore source", point.iron_ore_source) +
+      optionalDetailCell("Met coal source", point.met_coal_source) +
+      optionalDetailCell("Steel products", point.product_type) +
+      optionalDetailCell("End users", point.steel_end_users) +
+      optionalDetailCell("Workforce", point.workforce_size)
+    : "";
+  const terminalDetails = kind === "iron_ore_terminals"
+    ? optionalDetailCell("Trade direction", point.asset_type) +
+      optionalDetailCell("Parent port", point.parent_port) +
+      optionalDetailCell("Product", point.product_type) +
+      optionalDetailCell("Evidence", point.evidence_level) +
+      optionalDetailCell("Source review", point.source_date)
+    : "";
+  const note = kind === "iron_ore_mines"
+    ? "Mine production, capacity, resources, ownership and location fields are from the GEM Global Iron Ore Mines Tracker. Unpublished values are omitted."
+    : kind === "steel_plants"
+      ? "Plant capacity, equipment, raw-material sourcing and ownership fields are from the GEM Global Iron and Steel Plant Tracker. Unpublished values are omitted."
+      : point.coverage_note || "Major iron-ore terminal catalogue; not exhaustive.";
+  document.getElementById("port-card-content").innerHTML =
+    `<span class="detail-eyebrow">${escapeHtml(config.label)}</span>` +
+    `<h2>${escapeHtml(point.name || config.label)}</h2>` +
+    `<p class="detail-meta">${escapeHtml(point.country || "Country unknown")}</p>` +
+    `<div class="detail-grid">` +
+    optionalDetailCell("Status", point.status) +
+    optionalDetailCell("Asset ID", point.id) +
+    (kind === "steel_plants" ? "" : optionalDetailCell("Capacity", capacity)) +
+    mineDetails + steelDetails + terminalDetails +
+    optionalDetailCell("Owner", point.owner) +
+    optionalDetailCell("Parent company", point.parent_company) +
+    optionalDetailCell("Start date", point.start_date) +
+    optionalDetailCell("Stop date", point.stop_date) +
+    optionalDetailCell("Plant age", point.plant_age) +
+    optionalDetailCell("Location", commodityLocation(point)) +
+    optionalDetailCell("Coordinate accuracy", point.coordinate_accuracy) +
+    optionalDetailCell("Coordinates", coordinates) +
+    `</div>` +
+    (sourceLink ? `<div class="detail-source-links">${sourceLink}</div>` : "") +
+    `<p class="detail-note">${escapeHtml(note)}${point.source_text ? ` Source: ${escapeHtml(point.source_text)}${point.source_date ? ` (${escapeHtml(point.source_date)})` : ""}.` : ""}</p>`;
+  card.classList.add("open");
+  card.setAttribute("aria-hidden", "false");
 }
 
 function handlePortClick(port) {
