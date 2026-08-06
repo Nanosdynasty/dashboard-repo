@@ -20,6 +20,8 @@ from maritime_extras import (
 )
 from port_catalog import PortCatalog
 from imd_coastal_weather import ImdCoastalWeatherManager
+from bmkg_marine_weather import BmkgMarineWeatherManager
+from sea_marine_weather import SeaMarineWeatherManager
 from data_hub import create_data_hub_router
 
 log = logging.getLogger("ais")
@@ -116,6 +118,10 @@ AIS_DATA_DIR.mkdir(exist_ok=True)
 AIS_TRAIL_DB_PATH = AIS_DATA_DIR / "observations.sqlite3"
 IMD_COASTAL_CACHE_DIR = UPLOAD_DIR / "_imd_coastal_weather"
 IMD_COASTAL_CACHE_PATH = IMD_COASTAL_CACHE_DIR / "latest.json"
+BMKG_MARINE_CACHE_DIR = UPLOAD_DIR / "_bmkg_marine_weather"
+BMKG_MARINE_CACHE_PATH = BMKG_MARINE_CACHE_DIR / "latest.json"
+SEA_MARINE_CACHE_DIR = UPLOAD_DIR / "_sea_marine_weather"
+SEA_MARINE_CACHE_PATH = SEA_MARINE_CACHE_DIR / "latest.json"
 
 
 def _init_ais_trail_db() -> None:
@@ -4133,6 +4139,10 @@ ais_live_manager = AisLiveManager()
 imd_coastal_weather_manager = ImdCoastalWeatherManager(
     IMD_COASTAL_CACHE_PATH
 )
+bmkg_marine_weather_manager = BmkgMarineWeatherManager(
+    BMKG_MARINE_CACHE_PATH
+)
+sea_marine_weather_manager = SeaMarineWeatherManager(SEA_MARINE_CACHE_PATH)
 
 
 @app.on_event("startup")
@@ -4152,6 +4162,18 @@ async def start_imd_coastal_weather_collection():
     imd_coastal_weather_manager.start()
 
 
+@app.on_event("startup")
+async def start_bmkg_marine_weather_collection():
+    """Refresh official Indonesian maritime forecasts in the background."""
+    bmkg_marine_weather_manager.start()
+
+
+@app.on_event("startup")
+async def start_sea_marine_weather_collection():
+    """Refresh official Southeast Asian marine forecasts in the background."""
+    sea_marine_weather_manager.start()
+
+
 @app.on_event("shutdown")
 async def stop_ais_live_manager():
     await ais_live_manager.stop()
@@ -4160,6 +4182,16 @@ async def stop_ais_live_manager():
 @app.on_event("shutdown")
 async def stop_imd_coastal_weather_collection():
     await imd_coastal_weather_manager.stop()
+
+
+@app.on_event("shutdown")
+async def stop_bmkg_marine_weather_collection():
+    await bmkg_marine_weather_manager.stop()
+
+
+@app.on_event("shutdown")
+async def stop_sea_marine_weather_collection():
+    await sea_marine_weather_manager.stop()
 
 
 def _imd_weather_payload(day: int) -> Dict[str, Any]:
@@ -4236,6 +4268,193 @@ async def export_imd_coastal_weather_csv():
                 'attachment; filename="imd_coastal_weather_latest.csv"'
             )
         },
+    )
+
+
+@app.get("/api/bmkg/marine-weather")
+async def bmkg_marine_weather(hours: int = Query(0, ge=0, le=96)):
+    if not bmkg_marine_weather_manager.payload:
+        try:
+            await bmkg_marine_weather_manager.refresh(force=True)
+        except Exception as exc:
+            raise HTTPException(
+                503, f"BMKG maritime weather is temporarily unavailable: {exc}"
+            ) from exc
+    return bmkg_marine_weather_manager.selected_payload(hours)
+
+
+@app.post("/api/bmkg/marine-weather/refresh")
+async def refresh_bmkg_marine_weather(hours: int = Query(0, ge=0, le=96)):
+    try:
+        await bmkg_marine_weather_manager.refresh(force=True)
+    except Exception as exc:
+        if not bmkg_marine_weather_manager.payload:
+            raise HTTPException(
+                503, f"BMKG maritime weather refresh failed: {exc}"
+            ) from exc
+    return bmkg_marine_weather_manager.selected_payload(hours)
+
+
+@app.get("/api/bmkg/marine-weather/export.csv")
+async def export_bmkg_marine_weather_csv():
+    if not bmkg_marine_weather_manager.payload:
+        try:
+            await bmkg_marine_weather_manager.refresh(force=True)
+        except Exception as exc:
+            raise HTTPException(
+                503, f"BMKG maritime weather is temporarily unavailable: {exc}"
+            ) from exc
+    fields = [
+        "location_type", "location_id", "location_name", "port_type", "water_code",
+        "latitude", "longitude", "issued_at", "valid_from", "valid_to",
+        "weather_condition", "warning_description", "wind_direction_from",
+        "wind_direction_to", "wind_speed_min_kn", "wind_speed_max_kn",
+        "wave_category", "wave_height_min_m", "wave_height_max_m",
+        "current_direction_from", "current_direction_to", "current_speed_min_source",
+        "current_speed_max_source", "current_speed_documented_unit", "visibility_source",
+        "visibility_documented_unit", "temperature_min_c",
+        "temperature_max_c", "humidity_min_pct", "humidity_max_pct",
+        "low_tide_height_m", "low_tide_time", "high_tide_height_m",
+        "high_tide_time", "severity", "source_url",
+    ]
+    buffer = io.StringIO()
+    writer = csv.DictWriter(buffer, fieldnames=fields, extrasaction="ignore")
+    writer.writeheader()
+    writer.writerows(bmkg_marine_weather_manager.payload.get("rows", []))
+    return StreamingResponse(
+        iter([buffer.getvalue()]),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": (
+                'attachment; filename="bmkg_marine_weather_latest.csv"'
+            )
+        },
+    )
+
+
+@app.get("/api/sea/marine-weather")
+async def sea_marine_weather(
+    country: Optional[str] = Query(None), hours: int = Query(0, ge=0, le=96),
+):
+    if not sea_marine_weather_manager.payload:
+        try:
+            await sea_marine_weather_manager.refresh(force=True)
+        except Exception as exc:
+            raise HTTPException(503, f"SEA maritime weather is temporarily unavailable: {exc}") from exc
+    return sea_marine_weather_manager.selected_payload(country, hours)
+
+
+@app.post("/api/sea/marine-weather/refresh")
+async def refresh_sea_marine_weather(
+    country: Optional[str] = Query(None), hours: int = Query(0, ge=0, le=96),
+):
+    try:
+        await sea_marine_weather_manager.refresh(force=True)
+    except Exception as exc:
+        if not sea_marine_weather_manager.payload:
+            raise HTTPException(503, f"SEA maritime weather refresh failed: {exc}") from exc
+    return sea_marine_weather_manager.selected_payload(country, hours)
+
+
+@app.get("/api/sea/marine-weather/export.csv")
+async def export_sea_marine_weather_csv(country: Optional[str] = Query(None)):
+    if not sea_marine_weather_manager.payload:
+        try:
+            await sea_marine_weather_manager.refresh(force=True)
+        except Exception as exc:
+            raise HTTPException(503, f"SEA maritime weather is temporarily unavailable: {exc}") from exc
+    rows = [row for row in sea_marine_weather_manager.payload.get("rows", []) if not country or str(row.get("country", "")).casefold() == country.casefold()]
+    fields = [
+        "provider", "provider_code", "country", "location_type", "location_id",
+        "location_name", "marine_area", "forecast_basis", "latitude", "longitude",
+        "issued_at", "valid_from", "valid_to", "weather_condition",
+        "weather_description", "warning_description", "wind_direction_from",
+        "wind_direction_to", "wind_speed_min_kn", "wind_speed_max_kn",
+        "wind_speed_min_kmph", "wind_speed_max_kmph", "wave_category",
+        "wave_height_min_m", "wave_height_max_m", "temperature_min_c",
+        "temperature_max_c", "humidity_min_pct", "humidity_max_pct", "severity",
+        "source_url",
+    ]
+    buffer = io.StringIO()
+    writer = csv.DictWriter(buffer, fieldnames=fields, extrasaction="ignore")
+    writer.writeheader(); writer.writerows(rows)
+    suffix = re.sub(r"[^a-z0-9]+", "_", (country or "all").lower()).strip("_")
+    return StreamingResponse(iter([buffer.getvalue()]), media_type="text/csv", headers={
+        "Content-Disposition": f'attachment; filename="sea_marine_weather_{suffix}.csv"'
+    })
+
+
+@app.get("/api/coastal-weather/export.csv")
+async def export_coastal_weather_csv(
+    source: str = Query("all", pattern="^(india|indonesia|malaysia|thailand|philippines|singapore|brunei|cambodia|myanmar|vietnam|china|sea|all|both)$"),
+):
+    rows: List[Dict[str, Any]] = []
+    if source in {"india", "both", "all"}:
+        if not imd_coastal_weather_manager.payload:
+            try:
+                await imd_coastal_weather_manager.refresh(force=True)
+            except Exception as exc:
+                if source == "india":
+                    raise HTTPException(503, f"IMD coastal weather is unavailable: {exc}") from exc
+        for item in imd_coastal_weather_manager.payload.get("rows", []):
+            rows.append({
+                "provider": "IMD", "country": "India", "location_type": "water",
+                "location_id": item.get("zone_id"), "location_name": item.get("zone_name"),
+                "valid_from": item.get("valid_date"),
+                "weather_condition": item.get("rainfall_category"),
+                "wind_speed_min_kmph": item.get("wind_speed_min_kmph"),
+                "wind_speed_max_kmph": item.get("wind_speed_max_kmph"),
+                "gust_kmph": item.get("gust_kmph"),
+                "wave_height_min_m": item.get("wave_height_min_m"),
+                "wave_height_max_m": item.get("wave_height_max_m"),
+                "severity": item.get("severity"), "summary": item.get("summary"),
+                "source_url": item.get("source_url"),
+            })
+    if source in {"indonesia", "both", "all"}:
+        if not bmkg_marine_weather_manager.payload:
+            try:
+                await bmkg_marine_weather_manager.refresh(force=True)
+            except Exception as exc:
+                if source == "indonesia" or not rows:
+                    raise HTTPException(503, f"BMKG maritime weather is unavailable: {exc}") from exc
+        rows.extend(bmkg_marine_weather_manager.payload.get("rows", []))
+    sea_countries = {
+        "malaysia": "Malaysia", "thailand": "Thailand",
+        "philippines": "Philippines", "singapore": "Singapore",
+        "brunei": "Brunei", "cambodia": "Cambodia", "myanmar": "Myanmar",
+        "vietnam": "Vietnam", "china": "China",
+    }
+    if source in {"sea", "all"} or source in sea_countries:
+        if not sea_marine_weather_manager.payload:
+            try:
+                await sea_marine_weather_manager.refresh(force=True)
+            except Exception as exc:
+                if not rows:
+                    raise HTTPException(503, f"SEA maritime weather is unavailable: {exc}") from exc
+        country = sea_countries.get(source)
+        sea_rows = sea_marine_weather_manager.payload.get("rows", [])
+        rows.extend(row for row in sea_rows if not country or row.get("country") == country)
+    fields = [
+        "provider", "country", "location_type", "location_id", "location_name",
+        "latitude", "longitude", "issued_at", "valid_from", "valid_to",
+        "weather_condition", "warning_description", "wind_direction_from",
+        "wind_direction_to", "wind_speed_min_kn", "wind_speed_max_kn",
+        "wind_speed_min_kmph", "wind_speed_max_kmph", "gust_kmph",
+        "wave_category", "wave_height_min_m", "wave_height_max_m",
+        "current_direction_from", "current_direction_to", "current_speed_min_source",
+        "current_speed_max_source", "current_speed_documented_unit", "visibility_source",
+        "visibility_documented_unit", "temperature_min_c",
+        "temperature_max_c", "humidity_min_pct", "humidity_max_pct",
+        "low_tide_height_m", "low_tide_time", "high_tide_height_m",
+        "high_tide_time", "marine_area", "forecast_basis", "severity", "summary", "source_url",
+    ]
+    buffer = io.StringIO()
+    writer = csv.DictWriter(buffer, fieldnames=fields, extrasaction="ignore")
+    writer.writeheader()
+    writer.writerows(rows)
+    return StreamingResponse(
+        iter([buffer.getvalue()]), media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="coastal_weather_latest.csv"'},
     )
 
 

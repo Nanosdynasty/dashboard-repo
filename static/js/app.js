@@ -143,10 +143,17 @@ const state = {
   weatherSymbolLayer: null,
   coastalWeatherEnabled: false,
   coastalWeatherRows: [],
-  coastalWeatherDay: 1,
+  coastalWeatherSource: "all",
+  coastalWeatherHours: 0,
   coastalWeatherAnimated: true,
-  coastalWeatherParameters: new Set(["rain", "wind", "wave"]),
+  coastalWeatherPolygonsVisible: false,
+  coastalWeatherParameters: new Set(["rain", "wind", "wave", "warning"]),
+  coastalWeatherView: "map",
+  coastalWeatherLocationType: "all",
+  coastalWeatherQuery: "",
   coastalWeatherLoading: false,
+  coastalWeatherPendingReload: false,
+  weatherPortTierCache: new Map(),
   coalAssets: [],
   coalSummary: null,
   coalAnalysis: null,
@@ -193,9 +200,13 @@ async function init() {
   state.routeLayer = L.layerGroup().addTo(state.map);
   state.weatherLayer = L.layerGroup();
   state.weatherSymbolLayer = L.layerGroup();
-  state.map.on("zoomend", renderPorts);
+  state.map.on("zoomend", () => {
+    renderPorts();
+    if (state.coastalWeatherEnabled) renderCoastalWeather();
+  });
   loadAisPreferences();
   bindControls();
+  updateCoastalWeatherDownload();
   await Promise.all([
     loadPortFacets(),
     loadWorkspaceFacets(),
@@ -296,9 +307,32 @@ function bindControls() {
   document.getElementById("coastal-weather-enabled").addEventListener("change", event => {
     setCoastalWeatherEnabled(event.target.checked);
   });
+  document.getElementById("coastal-weather-source").addEventListener("change", event => {
+    state.coastalWeatherSource = event.target.value;
+    updateCoastalWeatherDownload();
+    if (state.coastalWeatherEnabled) {
+      focusCoastalWeatherSource();
+      loadCoastalWeather();
+    }
+  });
   document.getElementById("coastal-weather-day").addEventListener("change", event => {
-    state.coastalWeatherDay = Number(event.target.value) || 1;
+    state.coastalWeatherHours = Number(event.target.value) || 0;
     if (state.coastalWeatherEnabled) loadCoastalWeather();
+  });
+  document.querySelectorAll("[data-weather-view]").forEach(button => {
+    button.addEventListener("click", () => {
+      if (state.mode !== "weather") activateMode("weather");
+      setCoastalWeatherView(button.dataset.weatherView);
+    });
+  });
+  document.getElementById("coastal-weather-location-type").addEventListener("change", event => {
+    state.coastalWeatherLocationType = event.target.value;
+    renderCoastalWeather();
+    renderWeatherWorkspace();
+  });
+  document.getElementById("weather-workspace-search").addEventListener("input", event => {
+    state.coastalWeatherQuery = event.target.value.trim().toLowerCase();
+    renderWeatherWorkspace();
   });
   document.querySelectorAll(".weather-parameters input").forEach(input => {
     input.addEventListener("change", () => {
@@ -311,6 +345,10 @@ function bindControls() {
   });
   document.getElementById("coastal-weather-animation").addEventListener("change", event => {
     state.coastalWeatherAnimated = event.target.checked;
+    renderCoastalWeather();
+  });
+  document.getElementById("coastal-weather-polygons").addEventListener("change", event => {
+    state.coastalWeatherPolygonsVisible = event.target.checked;
     renderCoastalWeather();
   });
   document.getElementById("coastal-weather-refresh").addEventListener("click", () => {
@@ -452,6 +490,7 @@ function activateMode(mode) {
   }
   const coalHeader = document.getElementById("coal-workspace-header");
   coalHeader.hidden = mode !== "coal";
+  document.getElementById("weather-data-surface").hidden = true;
   document.getElementById("datahub-surface").hidden = !dataHubOnly;
   if (mode === "coal") {
     document.getElementById("datahub-surface").hidden = true;
@@ -474,6 +513,7 @@ function activateMode(mode) {
     document.getElementById("map").hidden = false;
     document.querySelector(".map-topbar").hidden = false;
     document.querySelector(".map-key").hidden = false;
+    if (mode === "weather") setCoastalWeatherView(state.coastalWeatherView);
     setTimeout(() => state.map.invalidateSize(), 0);
   }
   renderPorts();
@@ -767,6 +807,7 @@ function setCoastalWeatherEnabled(enabled) {
   const count = document.getElementById("weather-layer-count");
   const key = document.querySelector(".weather-key-item");
   if (!state.coastalWeatherEnabled) {
+    setCoastalWeatherView("map");
     state.weatherLayer.clearLayers();
     state.weatherSymbolLayer.clearLayers();
     if (state.map.hasLayer(state.weatherLayer)) state.map.removeLayer(state.weatherLayer);
@@ -777,39 +818,155 @@ function setCoastalWeatherEnabled(enabled) {
       "Layer is switched off.";
     const detailCard = document.getElementById("port-card");
     if (detailCard.classList.contains("weather-detail-card")) closePortCard();
+    renderPorts();
     return;
   }
   state.weatherLayer.addTo(state.map);
   state.weatherSymbolLayer.addTo(state.map);
   key.hidden = false;
+  focusCoastalWeatherSource();
+  renderPorts();
   loadCoastalWeather();
 }
 
+function focusCoastalWeatherSource() {
+  const views = {
+    india: [[20, 79], 4], indonesia: [[-2.5, 118], 5],
+    malaysia: [[4.2, 109], 5], thailand: [[11, 101], 5],
+    philippines: [[12.5, 122], 5], singapore: [[1.28, 103.82], 9],
+    brunei: [[4.7, 114.7], 7], cambodia: [[11.3, 103.8], 6],
+    myanmar: [[16, 96], 5], vietnam: [[14.5, 108.5], 5], china: [[29, 119], 4],
+    sea: [[5, 111], 4], all: [[8, 103], 3]
+  };
+  const target = views[state.coastalWeatherSource];
+  if (target) state.map.flyTo(target[0], target[1]);
+}
+
+function setCoastalWeatherView(view) {
+  if (!new Set(["map", "table", "cards"]).has(view)) view = "map";
+  state.coastalWeatherView = view;
+  document.querySelectorAll("[data-weather-view]").forEach(button => {
+    button.classList.toggle("active", button.dataset.weatherView === view);
+  });
+  const surface = document.getElementById("weather-data-surface");
+  const showSurface = state.mode === "weather" && view !== "map";
+  surface.hidden = !showSurface;
+  if (state.mode === "weather") {
+    document.getElementById("map").hidden = showSurface;
+    document.querySelector(".map-topbar").hidden = showSurface;
+    document.querySelector(".map-key").hidden = showSurface;
+  }
+  document.getElementById("weather-workspace-table").hidden = view !== "table";
+  document.getElementById("weather-workspace-cards").hidden = view !== "cards";
+  if (showSurface) renderWeatherWorkspace();
+  else if (view === "map") setTimeout(() => state.map.invalidateSize(), 0);
+}
+
+function updateCoastalWeatherDownload() {
+  const source = state.coastalWeatherSource;
+  const href = source === "india"
+    ? "/api/imd/coastal-weather/export.csv"
+    : source === "indonesia"
+      ? "/api/bmkg/marine-weather/export.csv"
+      : `/api/coastal-weather/export.csv?source=${encodeURIComponent(source)}`;
+  document.getElementById("coastal-weather-download").href = href;
+}
+
+function imdForecastDay() {
+  return Math.min(5, Math.floor(state.coastalWeatherHours / 24) + 1);
+}
+
+async function requestCoastalWeather(provider, force) {
+  let endpoint;
+  if (provider === "imd") {
+    endpoint = `/api/imd/coastal-weather${force ? "/refresh" : ""}?day=${imdForecastDay()}`;
+  } else if (provider === "bmkg") {
+    endpoint = `/api/bmkg/marine-weather${force ? "/refresh" : ""}?hours=${state.coastalWeatherHours}`;
+  } else {
+    const country = new Set(["malaysia", "thailand", "philippines", "singapore", "brunei", "cambodia", "myanmar", "vietnam", "china"])
+      .has(state.coastalWeatherSource)
+      ? `&country=${encodeURIComponent(state.coastalWeatherSource[0].toUpperCase() + state.coastalWeatherSource.slice(1))}`
+      : "";
+    endpoint = `/api/sea/marine-weather${force ? "/refresh" : ""}?hours=${state.coastalWeatherHours}${country}`;
+  }
+  const response = await fetch(endpoint, { method: force ? "POST" : "GET" });
+  if (!response.ok) {
+    const detail = await response.json().catch(() => ({}));
+    throw new Error(detail.detail || `${provider.toUpperCase()} request failed (${response.status})`);
+  }
+  return response.json();
+}
+
+function normalizeImdWeather(row) {
+  return {
+    ...row,
+    provider_code: "imd",
+    provider: "IMD",
+    country: "India",
+    location_type: "water",
+    location_id: `imd-${row.zone_id}`,
+    location_name: row.zone_name,
+    valid_from: row.valid_date,
+    weather_condition: row.rainfall_category,
+    weather_description: row.summary,
+    warning_description: row.severity === "warning" ? row.summary : null,
+    wind_speed_min_display: row.wind_speed_min_kmph,
+    wind_speed_max_display: row.wind_speed_max_kmph,
+    wind_speed_unit: "km/h"
+  };
+}
+
 async function loadCoastalWeather(force = false) {
-  if (!state.coastalWeatherEnabled || state.coastalWeatherLoading) return;
+  if (!state.coastalWeatherEnabled) return;
+  if (state.coastalWeatherLoading) {
+    state.coastalWeatherPendingReload = true;
+    return;
+  }
   state.coastalWeatherLoading = true;
   const status = document.getElementById("coastal-weather-status");
   const refreshButton = document.getElementById("coastal-weather-refresh");
   refreshButton.disabled = true;
   status.textContent = force
-    ? "Refreshing official IMD bulletins…"
-    : "Loading normalized IMD coastal forecast…";
+    ? "Refreshing official coastal forecasts…"
+    : "Loading official coastal forecasts…";
+  const providers = state.coastalWeatherSource === "all"
+    ? ["imd", "bmkg", "sea"]
+    : state.coastalWeatherSource === "both"
+      ? ["imd", "bmkg"]
+      : state.coastalWeatherSource === "india"
+        ? ["imd"]
+        : state.coastalWeatherSource === "indonesia"
+          ? ["bmkg"]
+          : ["sea"];
   try {
-    const endpoint = `/api/imd/coastal-weather${force ? "/refresh" : ""}?day=${state.coastalWeatherDay}`;
-    const response = await fetch(endpoint, { method: force ? "POST" : "GET" });
-    if (!response.ok) {
-      const detail = await response.json().catch(() => ({}));
-      throw new Error(detail.detail || `Weather request failed (${response.status})`);
-    }
-    const payload = await response.json();
-    state.coastalWeatherRows = Array.isArray(payload.rows) ? payload.rows : [];
+    const results = await Promise.allSettled(
+      providers.map(provider => requestCoastalWeather(provider, force))
+    );
+    const rows = [];
+    const updated = [];
+    const errors = [];
+    results.forEach((result, index) => {
+      const provider = providers[index];
+      if (result.status === "rejected") {
+        errors.push(result.reason?.message || `${provider.toUpperCase()} unavailable`);
+        return;
+      }
+      const payload = result.value;
+      const payloadRows = Array.isArray(payload.rows) ? payload.rows : [];
+      rows.push(...(provider === "imd" ? payloadRows.map(normalizeImdWeather) : payloadRows));
+      if (payload.fetched_at) updated.push(new Date(payload.fetched_at).getTime());
+    });
+    if (!rows.length) throw new Error(errors.join("; ") || "No published weather values returned");
+    state.coastalWeatherRows = rows;
+    state.weatherPortTierCache.clear();
     renderCoastalWeather();
-    const fetched = payload.fetched_at
-      ? new Date(payload.fetched_at).toLocaleString()
-      : "time unavailable";
-    const visible = weatherVisibleRows().length;
-    status.textContent =
-      `Day ${state.coastalWeatherDay}: ${visible} areas with published values · updated ${fetched}.`;
+    renderWeatherWorkspace();
+    const visible = weatherVisibleRows();
+    const portCount = visible.filter(row => row.location_type === "port").length;
+    const areaCount = visible.filter(row => row.location_type !== "port").length;
+    const latest = updated.length ? new Date(Math.max(...updated)).toLocaleString() : "time unavailable";
+    status.textContent = `${areaCount} forecast areas · ${portCount} port forecasts · updated ${latest}` +
+      (errors.length ? ` · ${errors.join("; ")}` : "");
   } catch (error) {
     status.textContent = `Weather unavailable: ${error.message}`;
     state.weatherLayer.clearLayers();
@@ -818,15 +975,62 @@ async function loadCoastalWeather(force = false) {
   } finally {
     state.coastalWeatherLoading = false;
     refreshButton.disabled = false;
+    if (state.coastalWeatherPendingReload && state.coastalWeatherEnabled) {
+      state.coastalWeatherPendingReload = false;
+      setTimeout(() => loadCoastalWeather(force), 0);
+    }
   }
+}
+
+function hasRainSignal(row) {
+  return Boolean(row.rainfall_category) || /hujan|rain|badai|storm/i.test(
+    `${row.weather_condition || ""} ${row.weather_description || ""}`
+  );
+}
+
+function weatherAdverseCondition(row) {
+  const text = [
+    row.warning_description,
+    row.weather_condition,
+    row.weather_description,
+    row.summary,
+    row.station_remark
+  ].filter(Boolean).join(" ");
+  const hazards = [];
+  if (/\btsunami\b/i.test(text)) hazards.push("Tsunami");
+  if (/\btyphoon\b|\btopan\b/i.test(text)) hazards.push("Typhoon");
+  if (/\b(?:tropical\s+)?cyclone\b|\bsiklon(?:\s+tropis)?\b/i.test(text)) hazards.push("Cyclone");
+  return Array.from(new Set(hazards)).join(" · ");
+}
+
+function weatherWarningReason(row) {
+  const condition = weatherAdverseCondition(row);
+  return condition ? `${condition} warning` : "";
+}
+
+function portWeatherAlertReason(row) {
+  return row.location_type === "port" ? weatherWarningReason(row) : "";
 }
 
 function weatherVisibleRows() {
   const params = state.coastalWeatherParameters;
   return state.coastalWeatherRows.filter(row => (
-    (params.has("rain") && row.rainfall_category) ||
-    (params.has("wind") && (row.wind_speed_max_kmph != null || row.gust_kmph != null)) ||
-    (params.has("wave") && row.wave_height_max_m != null)
+    (state.coastalWeatherLocationType === "all" || row.location_type === state.coastalWeatherLocationType)
+  )).filter(row => (
+    (row.location_type === "port" && params.size > 0) ||
+    (params.has("rain") && hasRainSignal(row)) ||
+    (params.has("wind") && (
+      row.wind_speed_max_kmph != null || row.wind_speed_max_kn != null || row.gust_kmph != null
+    )) ||
+    (params.has("wave") && row.wave_height_max_m != null) ||
+    (params.has("warning") && Boolean(weatherWarningReason(row))) ||
+    (params.has("current") && row.current_speed_max_source != null) ||
+    (params.has("visibility") && row.visibility_source != null) ||
+    (params.has("air") && (
+      row.temperature_min_c != null || row.temperature_max_c != null ||
+      row.humidity_min_pct != null || row.humidity_max_pct != null
+    )) ||
+    (params.has("tide") && (row.high_tide_height_m != null || row.low_tide_height_m != null))
   ));
 }
 
@@ -842,87 +1046,307 @@ function weatherValue(value, suffix = "") {
     : `${Number(value).toLocaleString()}${suffix ? ` ${suffix}` : ""}`;
 }
 
+function weatherRange(minimum, maximum, unit) {
+  if (maximum == null && minimum == null) return "Not quantified";
+  if (minimum == null || Number(minimum) === Number(maximum)) return weatherValue(maximum ?? minimum, unit);
+  return `${weatherValue(minimum)}–${weatherValue(maximum, unit)}`;
+}
+
+function weatherPeriod(row) {
+  if (row.valid_from && row.valid_to) {
+    const parseForecastTime = value => new Date(String(value).replace(" UTC", "Z").replace(" ", "T"));
+    return `${parseForecastTime(row.valid_from).toLocaleString()} – ${parseForecastTime(row.valid_to).toLocaleString()}`;
+  }
+  return row.valid_date || row.source_issue_time || "Latest published forecast";
+}
+
+function weatherWindRange(row) {
+  return row.wind_speed_min_kn != null || row.wind_speed_max_kn != null
+    ? weatherRange(row.wind_speed_min_kn, row.wind_speed_max_kn, "kt")
+    : weatherRange(row.wind_speed_min_kmph, row.wind_speed_max_kmph, "km/h");
+}
+
+function weatherDirectionRange(from, to, mode = "from") {
+  const start = String(from || "").trim();
+  const end = String(to || "").trim();
+  if (!start && !end) return "";
+  const prefix = mode === "toward" ? "Toward" : "From";
+  if (!start || !end) return `${prefix} ${start || end}`;
+  if (start.toLowerCase() === end.toLowerCase()) {
+    return `${prefix} ${start} (steady direction)`;
+  }
+  return `${prefix} ${start}–${end}`;
+}
+
 function coastalWeatherTooltip(row) {
+  const warningReason = weatherWarningReason(row);
+  const warning = state.coastalWeatherParameters.has("warning") && warningReason
+    ? `<div><span>Warning</span><strong>${escapeHtml(warningReason)}</strong></div>`
+    : "";
   const rain = state.coastalWeatherParameters.has("rain")
-    ? `<div><span>Rainfall</span><strong>${escapeHtml(row.rainfall_category || "Not quantified")}</strong></div>`
+    && (row.weather_condition || row.rainfall_category)
+    ? `<div><span>Weather</span><strong>${escapeHtml(row.weather_condition || row.rainfall_category)}</strong></div>`
     : "";
-  const wind = state.coastalWeatherParameters.has("wind")
-    ? `<div><span>Wind</span><strong>${
-        row.wind_speed_max_kmph == null
-          ? "Not quantified"
-          : `${weatherValue(row.wind_speed_min_kmph)}–${weatherValue(row.wind_speed_max_kmph, "km/h")}`
-      }</strong></div>
-      <div><span>Gust</span><strong>${weatherValue(row.gust_kmph, "km/h")}</strong></div>`
+  const wind = state.coastalWeatherParameters.has("wind") && (
+    row.wind_speed_min_kn != null || row.wind_speed_max_kn != null ||
+    row.wind_speed_min_kmph != null || row.wind_speed_max_kmph != null || row.gust_kmph != null
+  )
+    ? `<div><span>Wind</span><strong>${weatherWindRange(row)}</strong></div>`
     : "";
-  const waves = state.coastalWeatherParameters.has("wave")
-    ? `<div><span>Wave height</span><strong>${
-        row.wave_height_max_m == null
-          ? "Not quantified"
-          : `${row.wave_height_min_m}–${row.wave_height_max_m} m`
-      }</strong></div>`
+  const waves = state.coastalWeatherParameters.has("wave") && (row.wave_height_min_m != null || row.wave_height_max_m != null)
+    ? `<div><span>Wave height</span><strong>${weatherRange(row.wave_height_min_m, row.wave_height_max_m, "m")}</strong></div>`
+    : "";
+  const current = state.coastalWeatherParameters.has("current") && row.current_speed_max_source != null
+    ? `<div><span>Current (source)</span><strong>${weatherRange(row.current_speed_min_source, row.current_speed_max_source, "")}</strong></div>`
+    : "";
+  const visibility = state.coastalWeatherParameters.has("visibility") && row.visibility_source != null
+    ? `<div><span>Visibility (source)</span><strong>${weatherValue(row.visibility_source)}</strong></div>`
+    : "";
+  const air = state.coastalWeatherParameters.has("air")
+    ? (row.temperature_min_c != null || row.temperature_max_c != null
+        ? `<div><span>Temperature</span><strong>${weatherRange(row.temperature_min_c, row.temperature_max_c, "°C")}</strong></div>` : "") +
+      (row.humidity_min_pct != null || row.humidity_max_pct != null
+        ? `<div><span>Humidity</span><strong>${weatherRange(row.humidity_min_pct, row.humidity_max_pct, "%")}</strong></div>` : "")
+    : "";
+  const tides = state.coastalWeatherParameters.has("tide")
+    ? (row.high_tide_height_m != null
+        ? `<div><span>High tide</span><strong>${weatherValue(row.high_tide_height_m, "m")}</strong></div>` : "") +
+      (row.low_tide_height_m != null
+        ? `<div><span>Low tide</span><strong>${weatherValue(row.low_tide_height_m, "m")}</strong></div>` : "")
     : "";
   const source = row.source_url
-    ? `<a href="${escapeHtml(row.source_url)}" target="_blank" rel="noopener">Open IMD source</a>`
+    ? `<a href="${escapeHtml(row.source_url)}" target="_blank" rel="noopener">Open ${escapeHtml(row.provider || "official")} source</a>`
     : "No quantified source entry";
   return `
     <div class="weather-tooltip">
-      <span class="weather-tooltip-kicker">IMD / DAY ${row.day}</span>
-      <h3>${escapeHtml(row.zone_name)}</h3>
-      ${rain}${wind}${waves}
-      <small>${escapeHtml(row.valid_date || row.source_issue_time || "Latest published bulletin")}</small>
-      <small>${source} · generalized region, not for navigation</small>
+      <span class="weather-tooltip-kicker">${escapeHtml(row.provider || "OFFICIAL")} · ${escapeHtml((row.location_type || "area").toUpperCase())}</span>
+      <h3>${escapeHtml(row.location_name || row.zone_name)}</h3>
+      ${warning}${rain}${wind}${waves}${current}${visibility}${air}${tides}
+      <small>${escapeHtml(weatherPeriod(row))}</small>
+      <small>${source} · forecast, not for navigation</small>
     </div>`;
 }
 
-function weatherSymbolHtml(row) {
+function weatherDominantSignal(row) {
   const animated = state.coastalWeatherAnimated ? " animated" : "";
-  const parts = [];
-  if (state.coastalWeatherParameters.has("rain") && row.rainfall_category) {
-    parts.push(`<span class="weather-rain${animated}" title="Rainfall"><i></i><i></i><i></i></span>`);
+  const locationName = row.location_name || row.zone_name || (row.location_type === "port" ? "Port" : "Marine area");
+  const warningReason = weatherWarningReason(row);
+  if (state.coastalWeatherParameters.has("warning") && warningReason) {
+    return {
+      kind: "warning",
+      label: `${warningReason}: ${locationName}`,
+      html: `<span class="weather-warning-dot${animated}" title="${escapeAttr(`${locationName}: ${warningReason}`)}"></span>`
+    };
   }
-  if (
-    state.coastalWeatherParameters.has("wind") &&
-    (row.wind_speed_max_kmph != null || row.gust_kmph != null)
-  ) {
-    parts.push(`<span class="weather-wind${animated}" title="Wind"><i></i><i></i><i></i></span>`);
+  if (state.coastalWeatherParameters.has("rain") && hasRainSignal(row)) {
+    return {
+      kind: "rain",
+      label: "Rain forecast",
+      html: `<span class="weather-rain${animated}" title="Rain forecast"><i></i><i></i><i></i></span>`
+    };
+  }
+  const wave = Number(row.wave_height_max_m || 0);
+  const wind = Number(row.wind_speed_max_kn || row.wind_speed_max_kmph || row.gust_kmph || 0);
+  if (state.coastalWeatherParameters.has("wave") && wave >= 2.5) {
+    return {
+      kind: "wave",
+      label: "High waves",
+      html: `<span class="weather-wave${animated}" title="High waves"><i></i><i></i></span>`
+    };
+  }
+  if (state.coastalWeatherParameters.has("wind") && wind >= 20) {
+    return {
+      kind: "wind",
+      label: "Strong wind",
+      html: `<span class="weather-wind${animated}" title="Strong wind"><i></i><i></i><i></i></span>`
+    };
+  }
+  if (state.coastalWeatherParameters.has("current") && row.current_speed_max_source != null) {
+    return {
+      kind: "current",
+      label: "Ocean current",
+      html: `<span class="weather-current${animated}" title="Ocean current"><i></i><i></i></span>`
+    };
+  }
+  if (state.coastalWeatherParameters.has("visibility") && row.visibility_source != null) {
+    return {
+      kind: "visibility",
+      label: "Visibility forecast",
+      html: `<span class="weather-data-symbol weather-visibility-symbol" title="Visibility forecast">VIS</span>`
+    };
+  }
+  if (state.coastalWeatherParameters.has("tide") && (row.high_tide_height_m != null || row.low_tide_height_m != null)) {
+    return {
+      kind: "tide",
+      label: "Tide forecast",
+      html: `<span class="weather-data-symbol weather-tide-symbol" title="Tide forecast">↕</span>`
+    };
+  }
+  if (state.coastalWeatherParameters.has("air") && (row.temperature_min_c != null || row.temperature_max_c != null)) {
+    return {
+      kind: "air",
+      label: "Air conditions",
+      html: `<span class="weather-data-symbol weather-air-symbol" title="Temperature and humidity">°C</span>`
+    };
   }
   if (state.coastalWeatherParameters.has("wave") && row.wave_height_max_m != null) {
-    parts.push(`<span class="weather-wave${animated}" title="Waves"><i></i><i></i></span>`);
+    return {
+      kind: "wave",
+      label: "Wave forecast",
+      html: `<span class="weather-wave${animated}" title="Wave forecast"><i></i><i></i></span>`
+    };
   }
-  const motionClass = state.coastalWeatherAnimated ? " weather-motion" : "";
-  return `<div class="weather-symbols severity-${row.severity}${motionClass}">${parts.join("")}</div>`;
+  if (state.coastalWeatherParameters.has("wind") && wind) {
+    return {
+      kind: "wind",
+      label: "Wind forecast",
+      html: `<span class="weather-wind${animated}" title="Wind forecast"><i></i><i></i><i></i></span>`
+    };
+  }
+  return null;
+}
+
+function weatherSymbolHtml(row) {
+  const signal = weatherDominantSignal(row);
+  if (!signal) return "";
+  const showRain = state.coastalWeatherParameters.has("rain") && hasRainSignal(row);
+  const secondaryRain = showRain && signal.kind !== "rain"
+    ? `<span class="weather-secondary-signal" aria-label="Rain forecast"><span class="weather-rain${state.coastalWeatherAnimated ? " animated" : ""}" title="Rain forecast"><i></i><i></i><i></i></span></span>`
+    : "";
+  return `<div class="weather-symbols weather-symbol-single signal-${signal.kind}${secondaryRain ? " has-secondary-rain" : ""} severity-${row.severity}" aria-label="${escapeAttr(signal.label)}">${signal.html}${secondaryRain}</div>`;
+}
+
+function weatherSignalIsNoteworthy(row) {
+  const wave = Number(row.wave_height_max_m || 0);
+  const wind = Number(row.wind_speed_max_kn || row.wind_speed_max_kmph || row.gust_kmph || 0);
+  return hasRainSignal(row) || Boolean(weatherWarningReason(row)) || wave > 2.5 || wind >= 20;
+}
+
+function weatherDetailEntries(row) {
+  const details = [];
+  const add = (label, value) => {
+    if (value !== null && value !== undefined && String(value).trim() && value !== "Not quantified") {
+      details.push({ label, value: String(value) });
+    }
+  };
+  add("Weather", row.weather_condition || row.rainfall_category);
+  add("Adverse weather", weatherAdverseCondition(row) || "None reported");
+  if (row.wind_speed_min_kn != null || row.wind_speed_max_kn != null || row.wind_speed_min_kmph != null || row.wind_speed_max_kmph != null) {
+    add("Wind speed", weatherWindRange(row));
+  }
+  add("Maximum gust", row.gust_kmph == null ? null : weatherValue(row.gust_kmph, "km/h"));
+  add("Wind direction", weatherDirectionRange(row.wind_direction_from, row.wind_direction_to, "from"));
+  if (row.wave_height_min_m != null || row.wave_height_max_m != null) {
+    add("Wave height", weatherRange(row.wave_height_min_m, row.wave_height_max_m, "m"));
+  }
+  add("Wave category", row.wave_category);
+  add("Wave description", row.wave_description);
+  if (row.current_speed_min_source != null || row.current_speed_max_source != null) {
+    add(`Current speed (${row.provider || "official"} source)`, weatherRange(row.current_speed_min_source, row.current_speed_max_source, ""));
+  }
+  add("Current direction", weatherDirectionRange(row.current_direction_from, row.current_direction_to, "toward"));
+  add(`Visibility (${row.provider || "official"} source)`, row.visibility_source == null ? null : weatherValue(row.visibility_source));
+  add("Official marine area", row.marine_area);
+  add("Forecast basis", row.forecast_basis);
+  if (row.temperature_min_c != null || row.temperature_max_c != null) {
+    add("Temperature", weatherRange(row.temperature_min_c, row.temperature_max_c, "°C"));
+  }
+  if (row.humidity_min_pct != null || row.humidity_max_pct != null) {
+    add("Humidity", weatherRange(row.humidity_min_pct, row.humidity_max_pct, "%"));
+  }
+  add("High tide", row.high_tide_height_m == null ? null : `${weatherValue(row.high_tide_height_m, "m")} · ${row.high_tide_time || "time unavailable"}`);
+  add("Low tide", row.low_tide_height_m == null ? null : `${weatherValue(row.low_tide_height_m, "m")} · ${row.low_tide_time || "time unavailable"}`);
+  add("Port type", row.port_type);
+  add("Station note", row.station_remark);
+  return details;
+}
+
+function weatherWorkspaceRows() {
+  const query = state.coastalWeatherQuery;
+  return state.coastalWeatherRows
+    .filter(row => state.coastalWeatherLocationType === "all" || row.location_type === state.coastalWeatherLocationType)
+    .filter(row => !query || `${row.location_name || row.zone_name || ""} ${row.country || ""} ${row.weather_condition || ""}`.toLowerCase().includes(query))
+    .sort((a, b) => {
+      const severityRank = { warning: 0, advisory: 1, normal: 2 };
+      const adverseRank = row => weatherAdverseCondition(row) ? 0 : 1;
+      return adverseRank(a) - adverseRank(b) ||
+        (severityRank[a.severity] ?? 3) - (severityRank[b.severity] ?? 3) ||
+        String(a.country || "").localeCompare(String(b.country || "")) ||
+        String(a.location_name || a.zone_name || "").localeCompare(String(b.location_name || b.zone_name || ""));
+    });
+}
+
+function renderWeatherWorkspace() {
+  const table = document.getElementById("weather-workspace-table");
+  const cards = document.getElementById("weather-workspace-cards");
+  if (!table || !cards) return;
+  const rows = weatherWorkspaceRows();
+  const typeLabel = state.coastalWeatherLocationType === "port"
+    ? "ports" : state.coastalWeatherLocationType === "water" ? "marine areas" : "ports and marine areas";
+  document.getElementById("weather-workspace-count").textContent = `${rows.length.toLocaleString()} forecasts`;
+  document.getElementById("weather-surface-subtitle").textContent =
+    `${typeLabel} · ${state.coastalWeatherHours ? `+${state.coastalWeatherHours} hours` : "current forecast"}`;
+  const commonColumns = [
+    ["Location", row => row.location_name || row.zone_name || "Unknown"],
+    ["Country", row => row.country || "—"],
+    ["Type", row => row.location_type === "port" ? "Port" : "Marine area"],
+    ["Forecast area", row => row.marine_area || "—"],
+    ["Condition", row => row.weather_condition || row.rainfall_category || "—"],
+    ["Wind", row => (row.wind_speed_max_kn != null || row.wind_speed_max_kmph != null) ? weatherWindRange(row) : "—"],
+    ["Waves", row => row.wave_height_max_m == null ? "—" : weatherRange(row.wave_height_min_m, row.wave_height_max_m, "m")],
+    ["Adverse weather", row => weatherAdverseCondition(row) || "—"]
+  ];
+  const portColumns = [
+    ["Current", row => row.current_speed_max_source == null ? "—" : weatherRange(row.current_speed_min_source, row.current_speed_max_source, "")],
+    ["Temperature", row => row.temperature_max_c == null ? "—" : weatherRange(row.temperature_min_c, row.temperature_max_c, "°C")],
+    ["Tide", row => row.high_tide_height_m == null ? "—" : weatherValue(row.high_tide_height_m, "m")]
+  ];
+  const columns = state.coastalWeatherLocationType === "port" ? [...commonColumns, ...portColumns] : commonColumns;
+  table.innerHTML = rows.length ? `<table><thead><tr>${columns.map(([label]) => `<th>${escapeHtml(label)}</th>`).join("")}<th></th></tr></thead><tbody>${rows.map(row => `<tr class="severity-${weatherAdverseCondition(row) ? "warning" : "normal"}">${columns.map(([, value]) => `<td>${escapeHtml(value(row))}</td>`).join("")}<td><button type="button" data-weather-location="${escapeAttr(row.location_id)}">Details</button></td></tr>`).join("")}</tbody></table>` : `<div class="weather-empty-state">No forecasts match these filters.</div>`;
+  cards.innerHTML = rows.length ? rows.slice(0, 160).map(row => {
+    const details = weatherDetailEntries(row);
+    const warning = weatherWarningReason(row);
+    const displaySeverity = warning ? "warning" : "normal";
+    return `<article class="weather-workspace-card severity-${displaySeverity}">
+      <header><div><span>${escapeHtml(row.provider || "Official")} · ${row.location_type === "port" ? "PORT" : "MARINE AREA"}</span><h2>${escapeHtml(row.location_name || row.zone_name)}</h2></div><b>${displaySeverity}</b></header>
+      <p class="weather-workspace-period">${escapeHtml(weatherPeriod(row))}</p>
+      ${warning ? `<p class="weather-workspace-warning">${escapeHtml(warning)}</p>` : ""}
+      <div class="weather-workspace-metrics">${details.map(item => `<div><span>${escapeHtml(item.label)}</span><strong>${escapeHtml(item.value)}</strong></div>`).join("")}</div>
+      ${row.weather_description || row.summary ? `<p class="weather-workspace-summary">${escapeHtml(row.weather_description || row.summary)}</p>` : ""}
+      <button type="button" data-weather-location="${escapeAttr(row.location_id)}">Open detailed forecast</button>
+    </article>`;
+  }).join("") : `<div class="weather-empty-state">No forecasts match these filters.</div>`;
+  document.querySelectorAll("[data-weather-location]").forEach(button => {
+    button.addEventListener("click", () => {
+      const row = state.coastalWeatherRows.find(item => item.location_id === button.dataset.weatherLocation);
+      if (row) showCoastalWeatherCard(row);
+    });
+  });
 }
 
 function showCoastalWeatherCard(row) {
   const card = document.getElementById("port-card");
   card.classList.remove("port-spec-card");
   card.classList.add("weather-detail-card");
-  const windRange = row.wind_speed_max_kmph == null
-    ? "Not quantified"
-    : `${weatherValue(row.wind_speed_min_kmph)}–${weatherValue(row.wind_speed_max_kmph, "km/h")}`;
-  const waveRange = row.wave_height_max_m == null
-    ? "Not quantified"
-    : `${weatherValue(row.wave_height_min_m)}–${weatherValue(row.wave_height_max_m, "m")}`;
-  const severity = row.severity === "warning"
-    ? "Warning"
-    : row.severity === "advisory" ? "Advisory" : "Normal";
+  const warningReason = weatherWarningReason(row);
+  const severity = warningReason ? "Warning" : "Normal";
   const sourceLink = row.source_url
-    ? `<a class="official-port-link weather-source-link" href="${escapeAttr(row.source_url)}" target="_blank" rel="noopener">Open official IMD source</a>`
+    ? `<a class="official-port-link weather-source-link" href="${escapeAttr(row.source_url)}" target="_blank" rel="noopener">Open official ${escapeHtml(row.provider || "weather")} source</a>`
     : "";
+  const details = weatherDetailEntries(row);
+  const summary = row.weather_description || row.summary;
+  const portAlert = portWeatherAlertReason(row);
   document.getElementById("port-card-content").innerHTML =
-    `<span class="detail-eyebrow">IMD coastal weather · Day ${Number(row.day)}</span>` +
-    `<h2>${escapeHtml(row.zone_name)}</h2>` +
-    `<p class="detail-meta">${escapeHtml(row.valid_date || row.source_issue_time || "Latest published bulletin")}</p>` +
-    `<div class="weather-card-severity severity-${escapeAttr(row.severity || "normal")}">${severity}</div>` +
-    `<div class="detail-grid weather-detail-grid">` +
-    detailCell("Rainfall", row.rainfall_category || "Not quantified") +
-    detailCell("Wind speed", windRange) +
-    detailCell("Maximum gust", weatherValue(row.gust_kmph, "km/h")) +
-    detailCell("Wave height", waveRange) +
-    `</div>` +
-    `<p class="weather-card-summary">${escapeHtml(row.summary || "No quantified warning in the source bulletin")}</p>` +
+    `<span class="detail-eyebrow">${escapeHtml(row.provider || "Official")} ${escapeHtml(row.location_type === "port" ? "port" : "marine-area")} forecast</span>` +
+    `<h2>${escapeHtml(row.location_name || row.zone_name)}</h2>` +
+    `<p class="detail-meta">${escapeHtml(weatherPeriod(row))}</p>` +
+    (portAlert ? `<div class="weather-port-alert-banner"><strong>Adverse weather</strong><span>${escapeHtml(portAlert)}</span></div>` : "") +
+    `<div class="weather-card-severity severity-${warningReason ? "warning" : "normal"}">${severity}</div>` +
+    (warningReason && !portAlert ? `<p class="weather-card-warning-copy">${escapeHtml(warningReason)}</p>` : "") +
+    `<div class="detail-grid weather-detail-grid">${details.map(item => detailCell(item.label, item.value)).join("")}</div>` +
+    (summary ? `<p class="weather-card-summary">${escapeHtml(summary)}</p>` : "") +
     sourceLink +
-    `<p class="detail-note">Generalized offshore forecast region—not for navigation. Blank values mean IMD did not quantify that field in the parsed bulletin.</p>`;
+    `<p class="detail-note">Official forecast, not a live observation and not for navigation. Source: ${escapeHtml(row.provider || "official meteorological agency")}.${row.provider_code === "bmkg" ? " BMKG documents the current field as cm/s but its port pages also present currents in knots; visibility has no declared API unit. Those values are shown without inferred conversion." : " Port values mapped from a marine area are labelled as area-based forecasts, not port observations."}</p>`;
   card.classList.add("open");
   card.setAttribute("aria-hidden", "false");
 }
@@ -933,57 +1357,92 @@ function renderCoastalWeather() {
   state.weatherSymbolLayer.clearLayers();
   if (!state.coastalWeatherEnabled) return;
   const rows = weatherVisibleRows();
+  const mapZoom = state.map.getZoom();
+  const symbolCells = new Set();
   rows.forEach(row => {
-    if (!row.geometry) return;
-    const color = weatherColor(row.severity);
+    const color = row.location_type === "port" ? "#2c91b4" : weatherColor(row.severity);
+    const darkMap = state.mapSkin === "dark" || state.mapSkin === "satellite";
+    const polygonStroke = darkMap ? "#f2f5f6" : "#17232b";
     const openWeatherDetails = event => {
       if (event?.originalEvent) L.DomEvent.stopPropagation(event.originalEvent);
       showCoastalWeatherCard(row);
     };
-    const polygon = L.geoJSON(row.geometry, {
-      interactive: true,
+    let center = null;
+    if (row.geometry) {
+      const polygon = L.geoJSON(row.geometry, {
+      interactive: state.coastalWeatherPolygonsVisible,
       style: {
-        color,
-        weight: 1.2,
-        opacity: 0.85,
-        fillColor: color,
-        fillOpacity: row.severity === "warning" ? 0.2 : 0.12,
+        color: polygonStroke,
+        weight: row.severity === "warning" ? 1.35 : 0.9,
+        opacity: darkMap ? 0.9 : 0.82,
+        fill: false,
+        fillOpacity: 0,
         dashArray: row.severity === "normal" ? "4 3" : null
       }
-    }).bindTooltip(coastalWeatherTooltip(row), {
-      sticky: true,
-      direction: "top",
-      className: "weather-leaflet-tooltip",
-      opacity: 1
-    });
-    polygon.on("click", openWeatherDetails);
-    polygon.eachLayer(layer => {
-      layer.on("click", openWeatherDetails);
-      if (layer.getElement) {
-        layer.on("add", () => {
-          const element = layer.getElement();
-          if (element) element.style.cursor = "pointer";
+      });
+      center = polygon.getBounds().getCenter();
+      if (state.coastalWeatherPolygonsVisible) {
+        polygon.bindTooltip(coastalWeatherTooltip(row), {
+          sticky: true,
+          direction: "top",
+          className: "weather-leaflet-tooltip",
+          opacity: 1
         });
+        polygon.on("click", openWeatherDetails);
+        polygon.eachLayer(layer => layer.on("click", openWeatherDetails));
+        polygon.addTo(state.weatherLayer);
       }
-    });
-    polygon.addTo(state.weatherLayer);
-    const center = polygon.getBounds().getCenter();
+    } else if (row.latitude != null && row.longitude != null) {
+      center = L.latLng(Number(row.latitude), Number(row.longitude));
+      const marker = L.circleMarker(center, {
+        radius: mapZoom >= 7 ? 5 : 3.5,
+        color: "#ffffff",
+        weight: 1,
+        fillColor: color,
+        fillOpacity: 0.95,
+        interactive: true
+      }).bindTooltip(coastalWeatherTooltip(row), {
+        sticky: true,
+        direction: "top",
+        className: "weather-leaflet-tooltip",
+        opacity: 1
+      });
+      marker.on("click", openWeatherDetails);
+      marker.addTo(state.weatherLayer);
+    }
+    if (!center) return;
+    const portAlert = state.coastalWeatherParameters.has("warning")
+      ? portWeatherAlertReason(row)
+      : "";
+    if (row.location_type === "port" && !portAlert && !weatherPortVisibleAtZoom(row, mapZoom)) return;
+    if (
+      row.location_type === "water" && row.provider_code === "bmkg" &&
+      mapZoom <= 5 && !weatherSignalIsNoteworthy(row)
+    ) return;
+    if (row.location_type === "water" && row.provider_code === "bmkg" && mapZoom < 8) {
+      const cellSize = mapZoom <= 5 ? 8 : mapZoom === 6 ? 5 : 3;
+      const cell = `${Math.round(center.lat / cellSize)}:${Math.round(center.lng / cellSize)}`;
+      if (symbolCells.has(cell)) return;
+      symbolCells.add(cell);
+    }
+    const symbolHtml = weatherSymbolHtml(row);
+    if (!symbolHtml) return;
     const weatherMarker = L.marker(center, {
       interactive: true,
       keyboard: true,
-      title: `Open ${row.zone_name} weather report`,
+      title: `Open ${row.location_name || row.zone_name} weather report`,
       icon: L.divIcon({
         className: "weather-symbol-marker",
-        html: weatherSymbolHtml(row),
-        iconSize: [104, 44],
-        iconAnchor: [52, 22]
+        html: symbolHtml,
+        iconSize: [34, 34],
+        iconAnchor: [17, 17]
       })
     });
     weatherMarker.on("click", openWeatherDetails);
     weatherMarker.addTo(state.weatherSymbolLayer);
   });
   document.getElementById("weather-layer-count").textContent =
-    rows.length ? `${rows.length} areas` : "No values";
+    rows.length ? `${rows.length} forecasts` : "No values";
 }
 
 function loadAisPreferences() {
@@ -1479,6 +1938,7 @@ function setMapSkin(skin) {
   document.getElementById("map")?.setAttribute("data-map-skin", skin);
   const selector = document.getElementById("map-skin");
   if (selector) selector.value = skin;
+  if (state.coastalWeatherEnabled) renderCoastalWeather();
 }
 
 function addEnglishMapLabels() {
@@ -2640,6 +3100,7 @@ async function loadPorts() {
     if (!response.ok) throw new Error("Could not load ports");
     state.ports = await response.json();
     state.filteredPorts = state.ports;
+    state.weatherPortTierCache.clear();
     if (!state.routePortCatalog.length) {
       state.routePortCatalog = [...state.ports].sort((left, right) =>
         String(left.name || "").localeCompare(String(right.name || "")) ||
@@ -2673,6 +3134,62 @@ function portVisibleAtZoom(port, zoom) {
   return true;
 }
 
+function weatherPortMatchName(value) {
+  return normalizedPortQuery(value)
+    .replace(/\b(?:port|harbour|harbor|pelabuhan|terminal)\b/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function weatherPortTradingTier(row) {
+  const cacheKey = row.location_id || `${row.location_name}:${row.latitude}:${row.longitude}`;
+  if (state.weatherPortTierCache.has(cacheKey)) return state.weatherPortTierCache.get(cacheKey);
+  const weatherName = weatherPortMatchName(row.location_name || row.zone_name);
+  let match = null;
+  if (weatherName) {
+    match = state.ports.find(port => {
+      const names = [port.name, ...(port.search_aliases || [])]
+        .map(weatherPortMatchName)
+        .filter(Boolean);
+      return names.some(name => name === weatherName || (
+        Math.min(name.length, weatherName.length) >= 5 &&
+        (name.includes(weatherName) || weatherName.includes(name))
+      ));
+    });
+  }
+  if (!match && row.latitude != null && row.longitude != null) {
+    const lat = Number(row.latitude);
+    const lon = Number(row.longitude);
+    let nearestDistance = Infinity;
+    state.ports.forEach(port => {
+      const portLat = Number(port.lat);
+      const portLon = Number(port.lon);
+      if (!Number.isFinite(portLat) || !Number.isFinite(portLon)) return;
+      const latDelta = portLat - lat;
+      const lonDelta = (portLon - lon) * Math.cos(lat * Math.PI / 180);
+      const distance = latDelta * latDelta + lonDelta * lonDelta;
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        match = port;
+      }
+    });
+    // Roughly 25 km at the equator: close enough to treat a BMKG forecast
+    // point as belonging to the matched trading port, without merging cities.
+    if (nearestDistance > 0.05) match = null;
+  }
+  const tier = match ? portDisplayTier(match) : 4;
+  state.weatherPortTierCache.set(cacheKey, tier);
+  return tier;
+}
+
+function weatherPortVisibleAtZoom(row, zoom) {
+  const tier = weatherPortTradingTier(row);
+  if (zoom <= 5) return tier === 1;
+  if (zoom === 6) return tier <= 2;
+  if (zoom === 7) return tier <= 3;
+  return true;
+}
+
 function renderPorts() {
   state.portLayer.clearLayers();
   state.renderedPortCount = 0;
@@ -2696,7 +3213,7 @@ function renderPorts() {
       radius: tier === 1 ? 3.2 : tier === 2 ? 2.7 : 2.25,
       color: "#ffffff",
       weight: tier === 1 ? 0.9 : 0.5,
-      fillColor: portColor(port.categories),
+      fillColor: state.coastalWeatherEnabled ? "#2c91b4" : portColor(port.categories),
       fillOpacity: tier === 1 ? 0.94 : 0.82
     });
     marker.bindTooltip(portTooltip(port), { className: "port-tooltip", direction: "top", opacity: 1 });

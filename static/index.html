@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Howe Robinson | Global Assets Map</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="/static/css/style.css?v=20260804-04" />
+  <link rel="stylesheet" href="/static/css/style.css?v=20260806-weather-contrast-01" />
 </head>
 <body>
   <div class="app-shell">
@@ -338,7 +338,7 @@
           </div>
         </details>
 
-        <details class="filter-section weather-section">
+        <details class="filter-section weather-section" data-mode="weather">
           <summary>
             <span><i class="section-icon weather-icon"></i>Coastal weather</span>
             <span class="section-count" id="weather-layer-count">Off</span>
@@ -346,19 +346,51 @@
           <div class="weather-card">
             <label class="weather-toggle">
               <span>
-                <strong>Show IMD coastal forecast</strong>
-                <small>Optional map layer; refreshed every five hours</small>
+                <strong>Show coastal forecast</strong>
+                <small>Official India and Southeast Asia maritime layers</small>
               </span>
               <input id="coastal-weather-enabled" type="checkbox" role="switch" />
+            </label>
+            <label class="weather-field" for="coastal-weather-source">
+              <span>Weather source</span>
+              <select id="coastal-weather-source">
+                <option value="all" selected>All official sources</option>
+                <option value="india">India · IMD</option>
+                <option value="indonesia">Indonesia · BMKG</option>
+                <option value="malaysia">Malaysia · METMalaysia</option>
+                <option value="thailand">Thailand · TMD</option>
+                <option value="philippines">Philippines · PAGASA</option>
+                <option value="singapore">Singapore · NEA / MSS</option>
+                <option value="brunei">Brunei · METMalaysia regional</option>
+                <option value="cambodia">Cambodia · TMD Gulf forecast</option>
+                <option value="myanmar">Myanmar · TMD Andaman forecast</option>
+                <option value="vietnam">Vietnam · NCHMF</option>
+                <option value="china">China · CMA / NMC</option>
+                <option value="sea">Southeast Asia · all available</option>
+              </select>
             </label>
             <label class="weather-field" for="coastal-weather-day">
               <span>Forecast period</span>
               <select id="coastal-weather-day">
-                <option value="1" selected>Day 1</option>
-                <option value="2">Day 2</option>
-                <option value="3">Day 3</option>
-                <option value="4">Day 4</option>
-                <option value="5">Day 5</option>
+                <option value="0" selected>Current forecast</option>
+                <option value="12">Next 12 hours</option>
+                <option value="24">Next 24 hours</option>
+                <option value="48">Next 48 hours</option>
+                <option value="72">Next 72 hours</option>
+                <option value="96">Next 96 hours</option>
+              </select>
+            </label>
+            <div class="view-switch weather-view-switch" aria-label="Coastal weather view">
+              <button type="button" class="active" data-weather-view="map">Map</button>
+              <button type="button" data-weather-view="table">Table</button>
+              <button type="button" data-weather-view="cards">Cards</button>
+            </div>
+            <label class="weather-field" for="coastal-weather-location-type">
+              <span>Forecast coverage</span>
+              <select id="coastal-weather-location-type">
+                <option value="all" selected>Ports + marine areas</option>
+                <option value="port">Ports only</option>
+                <option value="water">Marine areas only</option>
               </select>
             </label>
             <fieldset class="weather-parameters">
@@ -366,22 +398,32 @@
               <label><input type="checkbox" value="rain" checked /><span class="weather-param-dot rain"></span>Rainfall</label>
               <label><input type="checkbox" value="wind" checked /><span class="weather-param-dot wind"></span>Wind &amp; gusts</label>
               <label><input type="checkbox" value="wave" checked /><span class="weather-param-dot wave"></span>Wave height</label>
+              <label><input type="checkbox" value="warning" checked /><span class="weather-param-dot warning"></span>Marine warnings</label>
+              <label><input type="checkbox" value="current" /><span class="weather-param-dot current"></span>Currents</label>
+              <label><input type="checkbox" value="visibility" /><span class="weather-param-dot visibility"></span>Visibility</label>
+              <label><input type="checkbox" value="air" /><span class="weather-param-dot air"></span>Temperature &amp; humidity</label>
+              <label><input type="checkbox" value="tide" /><span class="weather-param-dot tide"></span>Tides</label>
             </fieldset>
             <label class="weather-animation-toggle">
               <input id="coastal-weather-animation" type="checkbox" checked />
               Animate weather symbols
             </label>
+            <label class="weather-animation-toggle">
+              <input id="coastal-weather-polygons" type="checkbox" />
+              Show forecast area outlines
+            </label>
             <div class="weather-actions">
               <button type="button" id="coastal-weather-refresh" class="secondary-button">Refresh now</button>
-              <a class="secondary-button" href="/api/imd/coastal-weather/export.csv">Download CSV</a>
+              <a id="coastal-weather-download" class="secondary-button" href="/api/imd/coastal-weather/export.csv">Download CSV</a>
             </div>
             <div id="coastal-weather-status" class="weather-status">
               Layer is switched off.
             </div>
             <p class="source-note">
-              Official IMD coastal bulletins and five-day fishermen warnings.
-              Shaded regions are generalized offshore display areas—not for navigation.
-              Blank values mean IMD did not quantify that field.
+              Official IMD, BMKG, METMalaysia, TMD, PAGASA, NEA/MSS, NCHMF and CMA/NMC forecasts.
+              Where an agency publishes sea-area rather than port forecasts, the card
+              clearly identifies the official marine area used for that port.
+              Forecasts are not observations or navigational advice.
             </p>
           </div>
         </details>
@@ -437,6 +479,21 @@
 
     <main class="map-panel">
       <div id="map"></div>
+      <section id="weather-data-surface" class="weather-data-surface" hidden>
+        <header class="weather-surface-header">
+          <div>
+            <span>OFFICIAL COASTAL FORECASTS</span>
+            <h1>Port and marine-area weather</h1>
+            <p id="weather-surface-subtitle">Current normalized official meteorological records</p>
+          </div>
+          <div class="weather-surface-actions">
+            <label>Search<input id="weather-workspace-search" type="search" placeholder="Port or marine area" /></label>
+            <strong id="weather-workspace-count">0 forecasts</strong>
+          </div>
+        </header>
+        <div id="weather-workspace-table" class="weather-workspace-table"></div>
+        <div id="weather-workspace-cards" class="weather-workspace-cards" hidden></div>
+      </section>
       <header id="coal-workspace-header" class="coal-workspace-header" hidden>
         <div>
           <span>HRP MARKET INTELLIGENCE / INDIA COAL</span>
@@ -730,6 +787,6 @@
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/static/js/app.js?v=20260804-04"></script>
+  <script src="/static/js/app.js?v=20260806-weather-contrast-01"></script>
 </body>
 </html>
