@@ -683,6 +683,7 @@ class PortApiTests(unittest.TestCase):
         self.assertNotIn("JWC area traversable", html)
         self.assertIn('id="show-eca-zones"', html)
         self.assertIn('id="show-piracy-zones"', html)
+        self.assertIn('IMO ECA regions (screening)', html)
 
     def test_country_port_weather_report_matches_reference_columns(self):
         payload = {

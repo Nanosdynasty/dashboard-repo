@@ -292,9 +292,9 @@ function renderRiskZones() {
   if (!state.riskZoneLayer) return;
   state.riskZoneLayer.clearLayers();
   const enabled = {
-    jwc: document.getElementById("show-jwc-zones")?.checked !== false,
-    piracy: document.getElementById("show-piracy-zones")?.checked !== false,
-    eca: document.getElementById("show-eca-zones")?.checked !== false
+    jwc: document.getElementById("show-jwc-zones")?.checked === true,
+    piracy: document.getElementById("show-piracy-zones")?.checked === true,
+    eca: document.getElementById("show-eca-zones")?.checked === true
   };
   const styles = {
     jwc: { color: "#9b2d30", fillColor: "#e26a6a", fillOpacity: 0.12 },
@@ -305,6 +305,9 @@ function renderRiskZones() {
     const props = feature.properties || {};
     const family = String(props.risk_family || "").toLowerCase();
     if (!enabled[family]) return;
+    // The current IMO ECA records are screening envelopes. Keep them in the
+    // API and route analysis, but never paint coarse rectangles on the map.
+    if (family === "eca" && props.boundary_quality === "official_area_envelope") return;
     const layer = L.geoJSON(feature, { style: styles[family] || styles.eca });
     layer.bindPopup(`<strong>${escapeHtml(props.name || "Maritime zone")}</strong><br>${escapeHtml(props.description || "")}<br><small>${escapeHtml(props.source_title || "Source")}</small>`);
     layer.addTo(state.riskZoneLayer);
