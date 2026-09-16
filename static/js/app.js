@@ -152,6 +152,8 @@ const state = {
   ports: [],
   filteredPorts: [],
   routeLayer: null,
+  riskZoneLayer: null,
+  riskZoneFeatures: [],
   routeMode: false,
   routePickIndex: 0,
   routePorts: [],
@@ -250,6 +252,7 @@ async function init() {
   state.aisLayer = L.layerGroup().addTo(state.map);
   state.aisTrailLayer = L.layerGroup().addTo(state.map);
   state.routeLayer = L.layerGroup().addTo(state.map);
+  state.riskZoneLayer = L.layerGroup().addTo(state.map);
   state.weatherLayer = L.layerGroup();
   state.weatherSymbolLayer = L.layerGroup();
   state.portDisruptionLayer = L.layerGroup();
@@ -269,7 +272,43 @@ async function init() {
     loadDataHubSummary()
   ]);
   await loadPorts();
+  await loadRiskZones();
   activateMode("ports");
+}
+
+async function loadRiskZones() {
+  try {
+    const response = await fetch("/api/zones");
+    if (!response.ok) throw new Error("Could not load maritime risk zones");
+    const payload = await response.json();
+    state.riskZoneFeatures = payload.features || [];
+    renderRiskZones();
+  } catch (error) {
+    setStatus(error.message);
+  }
+}
+
+function renderRiskZones() {
+  if (!state.riskZoneLayer) return;
+  state.riskZoneLayer.clearLayers();
+  const enabled = {
+    jwc: document.getElementById("show-jwc-zones")?.checked !== false,
+    piracy: document.getElementById("show-piracy-zones")?.checked !== false,
+    eca: document.getElementById("show-eca-zones")?.checked !== false
+  };
+  const styles = {
+    jwc: { color: "#9b2d30", fillColor: "#e26a6a", fillOpacity: 0.12 },
+    piracy: { color: "#8a4b08", fillColor: "#f0a72f", fillOpacity: 0.16 },
+    eca: { color: "#175d91", fillColor: "#4da3d9", fillOpacity: 0.10 }
+  };
+  state.riskZoneFeatures.forEach(feature => {
+    const props = feature.properties || {};
+    const family = String(props.risk_family || "").toLowerCase();
+    if (!enabled[family]) return;
+    const layer = L.geoJSON(feature, { style: styles[family] || styles.eca });
+    layer.bindPopup(`<strong>${escapeHtml(props.name || "Maritime zone")}</strong><br>${escapeHtml(props.description || "")}<br><small>${escapeHtml(props.source_title || "Source")}</small>`);
+    layer.addTo(state.riskZoneLayer);
+  });
 }
 
 function bindControls() {
@@ -332,6 +371,14 @@ function bindControls() {
   document.querySelectorAll("#energy-layers input, #renewable-layers input, #nuclear-layers input, #coal-layers input, #iron-layers input, #cement-layers input")
     .forEach(input => input.addEventListener("change", () => toggleAssetLayer(input)));
   document.getElementById("show-ports").addEventListener("change", renderPorts);
+  ["show-jwc-zones", "show-piracy-zones", "show-eca-zones"].forEach(id => {
+    document.getElementById(id)?.addEventListener("change", renderRiskZones);
+  });
+  ["avoid-piracy", "avoid-jwc"].forEach(id => {
+    document.getElementById(id)?.addEventListener("change", () => {
+      if (state.routePorts[0] && state.routePorts[1]) calculateRoute();
+    });
+  });
   document.getElementById("energy-show-ports").addEventListener("change", renderPorts);
   document.getElementById("commodity-show-ports").addEventListener("change", renderPorts);
   document.getElementById("ais-enabled").addEventListener("change", event => {
@@ -4953,6 +5000,8 @@ async function calculateRoute() {
   const avoid = Array.from(
     document.querySelectorAll(".route-restrictions input:checked")
   ).map(input => input.value);
+  const avoidPiracy = document.getElementById("avoid-piracy")?.checked !== false;
+  const avoidJwc = document.getElementById("avoid-jwc")?.checked === true;
   const result = document.getElementById("route-result");
   result.textContent = "Calculating sea route…";
   try {
@@ -4965,6 +5014,8 @@ async function calculateRoute() {
         speed_knots: speed, sea_margin_pct: seaMargin,
         port_time_hours: portHours, canal_delay_hours: canalHours,
         avoid,
+        avoid_piracy: avoidPiracy,
+        avoid_jwc: avoidJwc,
         from_name: from.name, to_name: to.name
       })
     });
@@ -5029,6 +5080,7 @@ async function calculateRoute() {
       `${Number(route.port_time_hours) ? ` + ${formatNumber(route.port_time_hours, 0)} hr port time` : ""}` +
       `${Number(route.canal_delay_hours) ? ` + ${formatNumber(route.canal_delay_hours, 0)} hr canal delay` : ""}</p>` +
       routePorts +
+      `${route.zones?.eca_zones?.length ? `<p><b>ECA exposure</b> · ${formatNumber(route.zones.eca_distance_nm || route.zones.eca_zones.reduce((sum, zone) => sum + Number(zone.distance_nm || 0), 0), 0)} nm · ${route.zones.requires_mgo ? "MGO review required" : "No MGO flag"}</p>` : ""}` +
       `<small>${escapeHtml(route.coordinate_source || "Selected port coordinates")} · ` +
       `${Number(route.waypoint_count || 0).toLocaleString()} route points · analytical estimate, not for navigation.</small>`;
   } catch (error) {

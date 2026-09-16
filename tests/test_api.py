@@ -299,8 +299,8 @@ class PortApiTests(unittest.TestCase):
             "searoute 1.6 maritime network + endpoint connector legs",
         )
         self.assertAlmostEqual(payload["distance_nm"], baseline["distance_nm"], delta=1)
-        self.assertNotIn("zones", payload)
-        self.assertNotIn("risk_avoidance", payload)
+        self.assertIn("zones", payload)
+        self.assertIn("risk_avoidance", payload)
 
     def test_nacala_yanbu_has_no_mandatory_risk_waypoints(self):
         route = _compute_route(
@@ -373,7 +373,7 @@ class PortApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         payload = response.json()
         self.assertAlmostEqual(payload["distance_nm"], 4496, delta=25)
-        self.assertNotIn("zones", payload)
+        self.assertIn("zones", payload)
         self.assertEqual(
             payload["coordinate_source"], "Verified sea-side port approaches"
         )
@@ -677,14 +677,12 @@ class PortApiTests(unittest.TestCase):
         self.assertIn('list="route-port-options"', html)
         self.assertIn('id="route-port-options"', html)
         self.assertIn('id="map-skin"', html)
-        self.assertNotIn('id="avoid-piracy"', html)
-        self.assertNotIn('id="avoid-jwc"', html)
+        self.assertIn('id="avoid-piracy"', html)
+        self.assertIn('id="avoid-jwc"', html)
         self.assertNotIn("JWC area avoided", html)
         self.assertNotIn("JWC area traversable", html)
-        self.assertNotIn('id="show-eca-zones"', html)
-        self.assertNotIn('id="show-piracy-zones"', html)
-        self.assertNotIn(">ECA<", html)
-        self.assertNotIn("Security watch", html)
+        self.assertIn('id="show-eca-zones"', html)
+        self.assertIn('id="show-piracy-zones"', html)
 
     def test_country_port_weather_report_matches_reference_columns(self):
         payload = {
@@ -796,11 +794,11 @@ class PortApiTests(unittest.TestCase):
             item["properties"]["zone_type"] == "jwc_listed_area"
             for item in features
         ))
-        self.assertFalse(any(
+        self.assertTrue(any(
             item["properties"]["zone_type"] == "piracy_watch"
             for item in features
         ))
-        self.assertFalse(any(
+        self.assertTrue(any(
             item["properties"]["zone_type"] == "ECA" for item in features
         ))
         self.assertIn("PK", payload["listed_country_codes"]["jwc"])
@@ -835,11 +833,10 @@ class PortApiTests(unittest.TestCase):
         self.assertIn("World_Ocean_Base", javascript)
         self.assertIn("World_Ocean_Reference", javascript)
         self.assertIn("portVisibleAtZoom", javascript)
-        self.assertNotIn("loadRiskZones", javascript)
-        self.assertNotIn("avoid_jwc", javascript)
-        self.assertNotIn("avoid_piracy", javascript)
-        self.assertNotIn("risk_avoidance", javascript)
-        self.assertNotIn("show-piracy-zones", javascript)
+        self.assertIn("loadRiskZones", javascript)
+        self.assertIn("avoid_jwc", javascript)
+        self.assertIn("avoid_piracy", javascript)
+        self.assertIn("show-piracy-zones", javascript)
 
     def test_npp_transform_reconciles_requested_power_visuals(self):
         reporting_date = 1_720_000_000_000

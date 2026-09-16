@@ -3,8 +3,10 @@
   "metadata": {
     "title": "HRP maritime risk routing zones",
     "as_of": "2026-07-29",
-    "jwc_current_circular": "JWLA-033",
-    "jwc_current_circular_date": "2026-03-03",
+    "jwc_current_circular": "JWLA-034",
+    "jwc_current_circular_date": "2026-07-29",
+    "jwc_snapshot_circular": "JWLA-033",
+    "jwc_latest_circular_checked": "JWLA-034",
     "last_amendment_check": "2026-07-29",
     "disclaimer": "Analytical voyage-planning aid only. JWC wording, IMO/IMB incident reporting and current security advice supersede this display. Not for navigation, insurance placement, or operational passage planning."
   },

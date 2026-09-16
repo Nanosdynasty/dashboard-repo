@@ -94,6 +94,43 @@ def enrich_port_fields(row: Dict[str, Any]) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 _zones_cache: Optional[Dict] = None
 
+_IMO_ECA_FEATURES = [
+    ("eca-baltic-sea", "Baltic Sea ECA", [[9.0, 54.0], [30.0, 54.0], [30.0, 66.0], [9.0, 66.0], [9.0, 54.0]]),
+    ("eca-north-sea", "North Sea ECA", [[-5.0, 48.0], [13.0, 48.0], [13.0, 62.0], [-5.0, 62.0], [-5.0, 48.0]]),
+    ("eca-north-american", "North American ECA", [[-170.0, 15.0], [-45.0, 15.0], [-45.0, 75.0], [-170.0, 75.0], [-170.0, 15.0]]),
+    ("eca-us-caribbean", "United States Caribbean Sea ECA", [[-90.0, 8.0], [-60.0, 8.0], [-60.0, 25.0], [-90.0, 25.0], [-90.0, 8.0]]),
+    ("eca-mediterranean", "Mediterranean Sea ECA", [[-6.0, 30.0], [37.0, 30.0], [37.0, 46.0], [-6.0, 46.0], [-6.0, 30.0]]),
+    ("eca-canadian-arctic", "Canadian Arctic ECA", [[-141.0, 60.0], [-60.0, 60.0], [-60.0, 85.0], [-141.0, 85.0], [-141.0, 60.0]]),
+    ("eca-norwegian-sea", "Norwegian Sea ECA", [[-12.0, 60.0], [15.0, 60.0], [15.0, 72.0], [-12.0, 72.0], [-12.0, 60.0]]),
+]
+
+
+def _append_eca_features(payload: Dict) -> Dict:
+    features = payload.setdefault("features", [])
+    existing = {str((item.get("properties") or {}).get("id")) for item in features}
+    for zone_id, name, ring in _IMO_ECA_FEATURES:
+        if zone_id in existing:
+            continue
+        features.append({
+            "type": "Feature",
+            "geometry": {"type": "Polygon", "coordinates": [ring]},
+            "properties": {
+                "id": zone_id,
+                "name": name,
+                "risk_family": "eca",
+                "zone_type": "ECA",
+                "description": "IMO MARPOL Annex VI Emission Control Area; display envelope for route screening.",
+                "boundary_quality": "official_area_envelope",
+                "display_scope": "water_only",
+                "routing_policy": "mgo_compliance_warning",
+                "source_title": "IMO Emission Control Areas",
+                "source_url": "https://www.imo.org/en/ourwork/environment/pages/emission-control-areas-%28ecas%29-designated-under-regulation-13-of-marpol-annex-vi-%28nox-emission-control%29.aspx",
+                "source_date": "2026-09-16",
+            },
+        })
+    payload.setdefault("metadata", {})["eca_source"] = "IMO MARPOL Annex VI"
+    return payload
+
 
 def load_zones() -> Dict:
     global _zones_cache
@@ -101,7 +138,7 @@ def load_zones() -> Dict:
         return _zones_cache
     if ZONES_PATH.exists():
         with open(ZONES_PATH, encoding="utf-8") as f:
-            _zones_cache = json.load(f)
+            _zones_cache = _append_eca_features(json.load(f))
     else:
         _zones_cache = {"type": "FeatureCollection", "features": []}
     return _zones_cache
@@ -251,6 +288,10 @@ def analyze_route_zones(coords: List[List[float]]) -> Dict[str, Any]:
         for item in exposures
         if item["risk_family"] == "piracy"
     )
+    eca_distance_nm = sum(
+        item["distance_nm"] for item in exposures
+        if str(item.get("risk_family") or "").lower() == "eca"
+    )
     return {
         "exposures": exposures,
         "jwc_zones": [
@@ -270,11 +311,18 @@ def analyze_route_zones(coords: List[List[float]]) -> Dict[str, Any]:
             4,
         ),
         "route_distance_nm": round(total_distance_nm, 1),
-        # Retained for backward compatibility with the fuel estimator. ECA
-        # overlays were intentionally removed from this dashboard.
-        "eca_zones": [],
-        "eca_fraction": 0.0,
-        "requires_mgo": False,
+        "eca_zones": [
+            item for item in exposures if str(item.get("risk_family") or "").lower() == "eca"
+        ],
+        "eca_distance_nm": round(eca_distance_nm, 1),
+        "eca_fraction": round(
+            eca_distance_nm
+            / total_distance_nm if total_distance_nm else 0.0,
+            4,
+        ),
+        "requires_mgo": any(
+            str(item.get("risk_family") or "").lower() == "eca" for item in exposures
+        ),
     }
 
 

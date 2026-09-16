@@ -3584,11 +3584,7 @@ async def get_zones():
     payload = load_zones()
     return {
         **payload,
-        "features": [
-            feature
-            for feature in payload.get("features", [])
-            if (feature.get("properties") or {}).get("risk_family") == "jwc"
-        ],
+        "features": payload.get("features", []),
     }
 
 @app.get("/api/weather")
@@ -3647,7 +3643,13 @@ async def sea_route(req: RouteRequest):
         ) or _compute_route(
             route_from_lon, route_from_lat, route_to_lon, route_to_lat, speed, avoid
         )
-        primary = baseline
+        # Screen piracy-watch envelopes automatically and measure the final
+        # rendered track, so the displayed distance matches the route line.
+        primary = _apply_local_piracy_detours(baseline, speed, avoid)
+        if primary.get("coordinates") == baseline.get("coordinates"):
+            # A clear route keeps its original profile and benchmark metadata.
+            primary = {**baseline, "risk_families_avoided": []}
+        primary["distance_nm"] = round(_polyline_distance_nm(primary.get("coordinates") or []), 1)
         calm_sea_hours = primary["distance_nm"] / speed
         sea_margin_hours = calm_sea_hours * sea_margin_pct / 100.0
         sailing_hours = calm_sea_hours + sea_margin_hours
@@ -3682,6 +3684,7 @@ async def sea_route(req: RouteRequest):
                 alt = None
 
         coords = primary.get("coordinates") or []
+        zone_summary = analyze_route_zones(coords)
         mid = coords[len(coords) // 2] if coords else [from_lon, from_lat]
         bunker, origin_weather, midpoint_weather, destination_weather = (
             await asyncio.gather(
@@ -3719,6 +3722,12 @@ async def sea_route(req: RouteRequest):
             warnings.append(
                 "A selected port is more than 20 nm from the nearest network node; review the connector leg."
             )
+        if zone_summary.get("piracy_zones"):
+            warnings.append("Piracy-watch areas were screened and avoided where a detour was available.")
+        if zone_summary.get("jwc_zones"):
+            warnings.append("JWC listed-area exposure is advisory; review the latest circular before sailing.")
+        if zone_summary.get("eca_zones"):
+            warnings.append("Route intersects an IMO ECA; verify MARPOL fuel and reporting requirements.")
         result = {
             **primary,
             "from_name": from_name,
@@ -3747,6 +3756,12 @@ async def sea_route(req: RouteRequest):
                 str(req.to_port_id) if to_port else None,
                 limit=5,
             ),
+            "zones": zone_summary,
+            "risk_avoidance": {
+                "piracy": True,
+                "jwc": bool(req.avoid_jwc),
+                "policy": "automatic_piracy_avoidance",
+            },
         }
         if alt and alt["distance_nm"] > primary["distance_nm"]:
             alt_calm_hours = alt["distance_nm"] / speed
