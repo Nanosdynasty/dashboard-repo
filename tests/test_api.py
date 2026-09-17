@@ -12,6 +12,7 @@ from app import (
     NPP_CACHE_TTL_SECONDS,
     _compute_route,
     _compute_curated_corridor,
+    _compute_beira_port_sudan_corridor,
     _haversine_nm,
     _infer_passage,
     _route_with_endpoints,
@@ -253,6 +254,15 @@ class PortApiTests(unittest.TestCase):
         self.assertIn("Strait of Malacca", route["passages"])
         self.assertIn(route["route_confidence"], {"high", "medium", "low"})
         self.assertGreater(route["waypoint_count"], 10)
+
+    def test_beira_port_sudan_uses_smooth_outer_jwc_corridor(self):
+        route = _compute_beira_port_sudan_corridor("46890", "47940", 12)
+        self.assertEqual(route["routing_profile"], "outer-jwc-boundary-corridor")
+        self.assertGreater(route["waypoint_count"], 50)
+        self.assertEqual(route["coordinates"][0], [34.833333, -19.833333])
+        self.assertEqual(route["coordinates"][-1], [37.233333, 19.6])
+        self.assertIn("east_of_madagascar", route["corridor_preference"])
+        self.assertGreater(route["distance_nm"], route["great_circle_nm"])
 
     def test_dar_es_salaam_port_qasim_uses_normal_maritime_network(self):
         baseline = _compute_route(

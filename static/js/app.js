@@ -5083,6 +5083,7 @@ async function calculateRoute() {
       `${Number(route.port_time_hours) ? ` + ${formatNumber(route.port_time_hours, 0)} hr port time` : ""}` +
       `${Number(route.canal_delay_hours) ? ` + ${formatNumber(route.canal_delay_hours, 0)} hr canal delay` : ""}</p>` +
       routePorts +
+      `${route.corridor_preference ? `<p><b>Routing preference</b><br>${escapeHtml(String(route.corridor_preference).replaceAll("_", " "))}</p>` : ""}` +
       `${route.zones?.eca_zones?.length ? `<p><b>ECA exposure</b> · ${formatNumber(route.zones.eca_distance_nm || route.zones.eca_zones.reduce((sum, zone) => sum + Number(zone.distance_nm || 0), 0), 0)} nm · ${route.zones.requires_mgo ? "MGO review required" : "No MGO flag"}</p>` : ""}` +
       `<small>${escapeHtml(route.coordinate_source || "Selected port coordinates")} · ` +
       `${Number(route.waypoint_count || 0).toLocaleString()} route points · analytical estimate, not for navigation.</small>`;

@@ -2062,6 +2062,56 @@ def _compute_curated_corridor(
     }
 
 
+def _compute_beira_port_sudan_corridor(from_id, to_id, speed_knots):
+    """Smooth offshore corridor requested for the Beira–Port Sudan voyage."""
+    if {str(from_id), str(to_id)} != {"46890", "47940"}:
+        return None
+    forward = str(from_id) == "46890"
+    origin = [34.833333, -19.833333]
+    destination = [37.233333, 19.6]
+    # Keep the track east of Madagascar/Comoros, then approach the JWC edge
+    # through a broad arc instead of a single projected boundary vertex.
+    waypoints = [
+        [39.0, -19.0], [43.0, -14.0], [47.0, -8.0],
+        [50.5, -1.0], [52.5, 6.0], [51.0, 11.0],
+        [47.0, 15.0], [42.0, 17.5],
+    ]
+    if not forward:
+        origin, destination = destination, origin
+        waypoints.reverse()
+    coordinates = _densify_geodesic_route(
+        [origin, *waypoints, destination], max_leg_nm=30.0
+    )
+    distance_nm = _polyline_distance_nm(coordinates)
+    direct_nm = _haversine_nm(origin, destination)
+    duration_hours = distance_nm / speed_knots if speed_knots > 0 else 0.0
+    return {
+        "distance_nm": round(distance_nm, 1),
+        "network_distance_nm": round(distance_nm, 1),
+        "great_circle_nm": round(direct_nm, 1),
+        "detour_factor": round(distance_nm / direct_nm, 3) if direct_nm else 1.0,
+        "origin_connector_nm": 0.0,
+        "destination_connector_nm": 0.0,
+        "route_confidence": "high",
+        "waypoint_count": len(coordinates),
+        "distance_miles": round(distance_nm * 1.150779, 1),
+        "distance_km": round(distance_nm * 1.852, 1),
+        "duration_hours": round(duration_hours, 2),
+        "duration_days": round(duration_hours / 24.0, 2),
+        "speed_knots": speed_knots,
+        "coordinates": coordinates,
+        "units": "nm",
+        "via": "Outer JWC boundary corridor",
+        "passages": [],
+        "passage_ids": [],
+        "restrictions": [],
+        "routing_profile": "outer-jwc-boundary-corridor",
+        "corridor_id": "beira-port-sudan-offshore-2026",
+        "corridor_preference": "east_of_madagascar_comoros_and_outer_jwc_edge",
+        "risk_families_avoided": ["jwc_western_indian_ocean"],
+    }
+
+
 def _infer_passage(coords):
     if not coords:
         return None
@@ -3638,14 +3688,20 @@ async def sea_route(req: RouteRequest):
         )
         route_to_lon = float(to_approach["longitude"] if to_approach else to_lon)
         route_to_lat = float(to_approach["latitude"] if to_approach else to_lat)
-        baseline = _compute_curated_corridor(
+        baseline = _compute_beira_port_sudan_corridor(
+            req.from_port_id, req.to_port_id, speed
+        ) or _compute_curated_corridor(
             req.from_port_id, req.to_port_id, speed, avoid
         ) or _compute_route(
             route_from_lon, route_from_lat, route_to_lon, route_to_lat, speed, avoid
         )
         # Screen piracy-watch envelopes automatically and measure the final
         # rendered track, so the displayed distance matches the route line.
-        primary = _apply_local_piracy_detours(baseline, speed, avoid)
+        primary = (
+            baseline
+            if baseline.get("routing_profile") == "outer-jwc-boundary-corridor"
+            else _apply_local_piracy_detours(baseline, speed, avoid)
+        )
         if primary.get("coordinates") == baseline.get("coordinates"):
             # A clear route keeps its original profile and benchmark metadata.
             primary = {**baseline, "risk_families_avoided": []}
